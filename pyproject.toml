@@ -23,5 +23,9 @@ dependencies = [
     'loguru',
     'adbutils',
     'pyav',
-    'numpy'
+    'numpy',
+
+    # GUI
+    'dearpygui', 'pygame', 'easygui',
+    'click'
 ]
