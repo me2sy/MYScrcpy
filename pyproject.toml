@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myscrcpy"
+version = "1.0.0"
+authors = [
+    {name = "Me2sY", email = "me2sy@outlook.com"}
+]
+description = "MYScrcpy"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["scrcpy", "android", "pyav"]
+license = {text = "MIT"}
+classifiers = [
+    "Topic :: Scrcpy",
+    "Framework :: adbutils",
+    "Programming Language :: Python :: 3"
+]
+
+dependencies = [
+    'loguru',
+    'adbutils',
+    'pyav',
+    'numpy'
+]
