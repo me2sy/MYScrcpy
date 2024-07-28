@@ -2,9 +2,12 @@
 """
     Video Window
     ~~~~~~~~~~~~~~~~~~
-    设配操作窗口
+    设备操作窗口
 
     Log:
+        2024-07-28 1.0.1 Me2sY
+            新增 ZMQ Server
+
         2024-07-28 1.0.0 Me2sY
             发布初版
 
@@ -44,7 +47,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 __all__ = [
     'WindowVideo', 'WindowInputPad'
@@ -476,6 +479,15 @@ class WindowVideo:
         dpg.add_button(label='PYG_Ctrl', **btn_cfg, callback=self.open_pyg)
         # dpg.add_button(label='Scope', **btn_cfg, callback=self.open_scope)
 
+        dpg.add_separator()
+
+        def open_zmq():
+            self.device.create_zmq_server(dpg.get_value(zmq_url))
+            dpg.disable_item(zmq_btn)
+
+        zmq_url = dpg.add_input_text(label='url', default_value='tcp://127.0.0.1:55556')
+        zmq_btn = dpg.add_button(label='zmq', **btn_cfg, callback=open_zmq)
+
         with dpg.handler_registry():
             dpg.add_key_release_handler(dpg.mvKey_Insert, callback=self.open_win_twin)
 
@@ -536,7 +548,9 @@ def run():
 
     dpg.create_viewport(
         title='MYScrcpy - Me2sY', width=2100, height=1280, clear_color=(0, 0, 0, 0), vsync=False,
-        x_pos=10, y_pos=10
+        x_pos=10, y_pos=10,
+        small_icon=Param.PATH_STATICS_ICON.__str__(),
+        large_icon=Param.PATH_STATICS_ICON.__str__(),
     )
     dpg.setup_dearpygui()
     dpg.show_viewport()

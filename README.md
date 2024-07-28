@@ -32,7 +32,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 - [x] 实现了视频流解析，生成numpy.ndarray，可自行使用opencv、image等进行图形处理
 - [x] 实现了控制按键映射
 - [x] 实现了UHID-Keyboard UHID-Mouse与鼠标点击混用，可以实现Android界面中鼠标与PC混用模式
-- [X] 实现了SharedMemory,不同进程间共享视频画面
+- [X] 实现了SharedMemory，不同进程间共享视频画面
 
 
 ## 基本使用

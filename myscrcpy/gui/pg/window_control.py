@@ -66,8 +66,8 @@ class PGControlWindow:
         pygame.display.init()
 
         main_surface = pygame.display.set_mode(pgv.coordinate)
-        pygame.display.set_caption('MyScrcpy - Me2sY')
-        pygame.display.set_icon(pygame.image.load(Param.PATH_STATICS.joinpath('myscrcpy.ico')))
+        pygame.display.set_caption('MYScrcpy - Me2sY')
+        pygame.display.set_icon(pygame.image.load(Param.PATH_STATICS_ICON))
 
         clock = pygame.time.Clock()
 
@@ -147,3 +147,7 @@ def run():
             dev, None, Path(file_path)
         )
     dev.close()
+
+
+if __name__ == '__main__':
+    run()

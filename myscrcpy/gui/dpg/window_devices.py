@@ -154,13 +154,11 @@ def main():
     from myscrcpy.gui.dpg.loop_register import LoopRegister
     from myscrcpy.utils import Param
 
-    icon_path = Param.PATH_STATICS / 'myscrcpy.ico'
-
     dpg.create_context()
     dpg.create_viewport(
         title='MYScrcpy - Devices', width=1920, height=1080,
-        small_icon=icon_path.__str__(),
-        large_icon=icon_path.__str__(),
+        small_icon=Param.PATH_STATICS_ICON.__str__(),
+        large_icon=Param.PATH_STATICS_ICON.__str__(),
     )
 
     dw = WindowDevices()

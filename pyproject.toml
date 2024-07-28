@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "myscrcpy"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -24,8 +24,11 @@ dependencies = [
     'adbutils',
     'pyav',
     'numpy',
-
+    'pyzmq',
     # GUI
-    'dearpygui', 'pygame', 'easygui',
+    'dearpygui', 'pygame', 'easygui', 'nicegui', 'opencv-python',
     'click'
 ]
+
+[tool.setuptools]
+py-modules = []

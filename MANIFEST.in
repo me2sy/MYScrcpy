@@ -3,3 +3,5 @@ include README.md
 include myscrcpy/configs *
 include myscrcpy/libs *
 include myscrcpy/static *
+
+exclude files

@@ -4,6 +4,9 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-07-28 1.0.1 Me2sY
+            新增 ZMQController
+
         2024-07-28 1.0.0 Me2sY
             发布
 
@@ -31,17 +34,19 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 __all__ = [
-    'DeviceController', 'DeviceFactory'
+    'DeviceController', 'DeviceFactory', 'ZMQController'
 ]
 
 import warnings
 import threading
 import time
+from queue import Queue
 from typing import Tuple, Dict
 
+import zmq
 from adbutils import adb, Network, AdbError, AdbConnection
 from loguru import logger
 
@@ -67,6 +72,45 @@ CMD = [
     'stay_awake=true',
     'video=true'
 ]
+
+
+class ZMQController:
+
+    STOP = b'Me2sYSayBye'
+
+    def __init__(self, device: 'DeviceController',  url: str = 'tcp://127.0.0.1:55556'):
+        self.device = device
+        self.url = url
+        self.is_running = True
+        self.socket = None
+
+        threading.Thread(target=self._control_thread).start()
+
+    def _control_thread(self):
+        logger.info(f"ZMQ Control Pull Running At {self.url}")
+        context = zmq.Context()
+        self.socket = context.socket(zmq.PULL)
+        self.socket.bind(self.url)
+
+        while self.is_running and self.device.cs.is_running:
+            _ = self.socket.recv()
+            if _ == self.STOP:
+                self.is_running = False
+                break
+            self.device.cs.send_packet(_)
+
+        logger.warning(f"ZMQ Control Pull Shutting Down")
+
+    @classmethod
+    def stop(cls, url: str = 'tcp://127.0.0.1:55556'):
+        cls.create_sender(url).send(cls.STOP)
+
+    @classmethod
+    def create_sender(cls, url: str = 'tcp://127.0.0.1:55556'):
+        context = zmq.Context()
+        sender = context.socket(zmq.PUSH)
+        sender.connect(url)
+        return sender
 
 
 class DeviceController:
@@ -99,6 +143,9 @@ class DeviceController:
         self.stream: AdbConnection
         self.vs: VideoSocket
         self.cs: ControlSocket
+
+        self.zmq_url = None
+        self.zmq: ZMQController = None
 
         msg = f"{self.adb_dev} Ready! Device Rotation:{self.rotation}"
         msg += f" Width:{self.coordinate.width} Height:{self.coordinate.height}"
@@ -144,6 +191,12 @@ class DeviceController:
         try:
             del self.device_factory.DEVICES[self.serial]
         except KeyError:
+            pass
+
+        try:
+            if self.zmq is not None:
+                self.zmq.stop(self.zmq_url)
+        except:
             pass
 
         self.set_power(False)
@@ -280,6 +333,13 @@ class DeviceController:
         self.is_scrcpy_running = True
 
         return self.vs, self.cs
+
+    def create_zmq_server(self, zmq_url: str = 'tcp://127.0.0.1:55556'):
+        if self.is_scrcpy_running and self.cs.is_running:
+            self.zmq_url = zmq_url
+            self.zmq = ZMQController(self, zmq_url)
+        else:
+            logger.warning('Scrcpy is not running')
 
 
 class DeviceFactory:
