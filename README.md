@@ -13,9 +13,11 @@ MYScrcpy 开发初期，是想解决在某些场景下，鼠标移动出域等�
 同时在某些控制代理场景，使用[pygame](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。pygame提供了鼠标隐藏、按键事件监听等功能，
 适用于第一人称相关应用的按键映射。
 
-在视频流解析中，采用numpy.ndarray保存单帧视频，在5900x + gtx1080 + 三星Galaxy Tab S9 8gen2/小米11pro 888 1920x1080分辨率下，
-可以达到6~20ms的延迟。同时使用SharedMemory,可以将视频帧进行内存共享，实现[Nicegui](https://github.com/zauberzeug/nicegui)的网页绘制展现、
-OpenCV图像处理等。
+在视频流解析中，采用numpy.ndarray保存单帧视频
+
+在5900x + gtx1080 + 三星Galaxy Tab S9 8gen2/小米11pro 888 1920x1080分辨率下， 可以达到6~20ms的延迟。
+
+使用SharedMemory，将视频帧进行内存共享，实现[Nicegui](https://github.com/zauberzeug/nicegui)的网页绘制展现、 OpenCV图像处理等。
 
 MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善这一项目及相关应用。方向涉及图形分析、AI接入（YOLO）、自动控制等。
 
@@ -26,7 +28,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 ## 特性
 
-- [x] 有线连接安卓设配
+- [x] 有线连接安卓设备
 - [x] 实现了视频流解析，生成numpy.ndarray，可自行使用opencv、image等进行图形处理
 - [x] 实现了控制按键映射
 - [x] 实现了UHID-Keyboard UHID-Mouse与鼠标点击混用，可以实现Android界面中鼠标与PC混用模式
