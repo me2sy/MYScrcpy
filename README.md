@@ -87,3 +87,11 @@ python -m myscrcpy.run
 ```bash
 python -m myscrcpy.run -g
 ```
+
+
+## Screenshot
+DearPyGui Gui Screenshot
+![dpg Screenshot](files/images/dpg_gui.jpg)
+
+Nicegui Web Gui Screenshot
+![Nicegui Demo](files/images/web_gui_demo_nicegui.jpg)
