@@ -79,7 +79,7 @@ class Param:
 
     PATH_STATICS = PROJECT_PATH.joinpath('static')
     PATH_STATICS.mkdir(parents=True, exist_ok=True)
-    PATH_STATICS_ICON = PATH_STATICS.joinpath('myscrcpy-client.ico')
+    PATH_STATICS_ICON = PATH_STATICS.joinpath('myscrcpy.ico')
 
     PATH_LIBS = PROJECT_PATH.joinpath('libs')
     PATH_LIBS.mkdir(parents=True, exist_ok=True)
