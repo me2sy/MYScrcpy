@@ -53,7 +53,6 @@ from typing import Dict
 from adbutils import adb, Network, AdbError, AdbConnection
 from loguru import logger
 
-
 from myscrcpy.utils import Param, Coordinate
 from myscrcpy.controller.video_socket_controller import VideoSocketController
 from myscrcpy.controller.audio_socket_controller import AudioSocketController
@@ -220,7 +219,7 @@ class DeviceController:
             ]
         )
 
-        if not (is_init_video_socket or is_init_audio_socket or is_init_control_socket):
+        if socket_num == 0:
             raise RuntimeError('Create at least one socket!')
 
         cmd = CMD
@@ -277,7 +276,7 @@ class DeviceController:
         _conn = None
         for _ in range(5000):
             try:
-                _conn = self.adb_dev.create_connection(Network.LOCAL_ABSTRACT, "scrcpy")  # 有可能一次创建不成功
+                _conn = self.adb_dev.create_connection(Network.LOCAL_ABSTRACT, "scrcpy")
                 _conn_list.append(_conn)
                 break
             except AdbError:
