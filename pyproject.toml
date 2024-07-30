@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "myscrcpy"
-version = "1.0.1"
+version = "1.1.0"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
-description = "MYScrcpy"
+description = "MYScrcpy, A Scrcpy Python Client."
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["scrcpy", "android", "pyav"]
@@ -22,8 +22,11 @@ classifiers = [
 dependencies = [
     'loguru',
     'adbutils',
-    'pyav',
-    'numpy',
+    # Video
+    'pyav', 'numpy',
+    # Audio
+    'pyaudio', 'pyflac',
+    # Control
     'pyzmq',
     # GUI
     'dearpygui', 'pygame', 'easygui', 'nicegui', 'opencv-python',
