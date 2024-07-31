@@ -96,13 +96,13 @@ python -m myscrcpy.run -g
 ## 程序截图
 
 主界面
-![dpg Screenshot](files/images/dpg_gui.jpg)
+![dpg Screenshot](myscrcpy/files/images/dpg_gui.jpg)
 
 Nicegui Web 界面 （DEMO）
-![Nicegui Demo](files/images/web_gui_demo_nicegui.jpg)
+![Nicegui Demo](myscrcpy/files/images/web_gui_demo_nicegui.jpg)
 
 按键映射编辑器
-![Touch Proxy Editor](files/images/edit_touch_proxy.jpg)
+![Touch Proxy Editor](myscrcpy/files/images/edit_touch_proxy.jpg)
 
 ## 所思所想
 作为从 Scrcpy 1.X时代就开始使用的老玩家，感叹于Scrcpy的发展及神奇的功能的同时，也一直想做点什么。不过碍于有其他项目（~~懒~~）一直迟迟没有动手。 

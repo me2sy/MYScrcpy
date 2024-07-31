@@ -38,6 +38,7 @@ class AudioSocketController(ScrcpySocket):
     SOURCE_MIC = 'mic'
 
     # Wrong Steaminfo but can RUN.
+    # 详见 https://xiph.org/flac/format.html#metadata_block_streaminfo
     # Replace Scrcpy Flac METADATA
     FLAC_METADATA_STEAMINFO = b'\x00\x00\x00"\x04\x80\x04\x80\x00\x00\x00\x00\x00\x00\n\xc4B\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
     FLAC_METADATA_COMMENT = b'\x84\x00\x00\x00'

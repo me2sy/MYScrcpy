@@ -32,6 +32,3 @@ dependencies = [
     'dearpygui', 'pygame', 'easygui', 'nicegui', 'opencv-python',
     'click'
 ]
-
-[tool.setuptools]
-py-modules = []

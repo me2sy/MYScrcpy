@@ -8,7 +8,6 @@
         2024-07-30 1.1.0 Me2sY
             1.抽离形成单独部分
             2.修改部分功能结构
-
 """
 
 __author__ = 'Me2sY'
@@ -279,13 +278,13 @@ class ControlSocketController(ScrcpySocket):
         return struct.pack(
             '>BBQiiHHHII',
             *[
-                cls.MessageType.INJECT_TOUCH_EVENT.value,  # 1 B  Event Type
-                action,  # 2 B  Action
-                touch_id,  # 3 Q pointerId
-                int(x), int(y),  # 4 ii position x, y
-                width, height,  # 5 HH width height
-                0 if action == Action.RELEASE.value else 0xffff,  # 6 H pressure
-                1, 1  # 7 II actionButton/buttons
+                cls.MessageType.INJECT_TOUCH_EVENT.value,           # 1 B  Event Type
+                action,                                                 # 2 B  Action
+                touch_id,                                               # 3 Q pointerId
+                int(x), int(y),                                         # 4 ii position x, y
+                width, height,                                          # 5 HH width height
+                0 if action == Action.RELEASE.value else 0xffff,        # 6 H pressure
+                1, 1                                                    # 7 II actionButton/buttons
             ]
         )
 
@@ -377,9 +376,9 @@ class ControlSocketController(ScrcpySocket):
         return struct.pack(
             '>BhH',
             *[
-                cls.MessageType.UHID_CREATE.value,  # 1 type                B
-                keyboard_id,  # 2 mouse_id  Short     H
-                len(UHID_KEYBOARD_REPORT_DESC),  # 3 byte_size           h
+                cls.MessageType.UHID_CREATE.value,      # 1 type                B
+                keyboard_id,                                # 2 mouse_id  Short     H
+                len(UHID_KEYBOARD_REPORT_DESC),             # 3 byte_size           h
             ]
         ) + UHID_KEYBOARD_REPORT_DESC
 
@@ -403,12 +402,12 @@ class ControlSocketController(ScrcpySocket):
         return struct.pack(
             '>BhHBbBBBBBB',
             *[
-                cls.MessageType.UHID_INPUT.value,  # 1 Type
-                keyboard_id,  # 2 id
-                8,  # 3 size
-                modifiers,  # 4 modifiers byte0
-                0,  # 5 reserved always0 byte1
-                *key_scan_codes  # 6 - 11 key scancode  byte2-7
+                cls.MessageType.UHID_INPUT.value,   # 1 Type
+                keyboard_id,                            # 2 id
+                8,                                      # 3 size
+                modifiers,                              # 4 modifiers byte0
+                0,                                      # 5 reserved always0 byte1
+                *key_scan_codes                         # 6 - 11 key scancode  byte2-7
             ]
         )
 
