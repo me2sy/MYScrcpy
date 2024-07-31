@@ -6,7 +6,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 同时在某些控制代理场景，使用[pygame](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。pygame提供了鼠标隐藏、按键事件监听等功能，
 适用于第一人称相关应用的按键映射。
 
-在5900x + gtx1080 + 三星Galaxy Tab S9 8gen2/小米11pro 888 1920x1080分辨率下， 可以达到6~30ms的延迟。
+在5900x + gtx1080 + 三星Galaxy Tab S9 8gen2/小米11pro 888 1920x1080分辨率下， Pygame控制模式可以达到6~30ms的延迟。
 
 使用SharedMemory，将视频帧通过内存共享，可以实现 [Nicegui](https://github.com/zauberzeug/nicegui) 的网页绘制展现、
 [OpenCV](https://opencv.org/) 图像处理等。
@@ -42,7 +42,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
    4. **gui/ng**
    Nicegui Web UI, 使用 SharedMemory 读取视频Frame
    4. **controller/***
-   2024-07-30 1.1.0 版本，实现了Audio解析，同时改进结构。后期以该版本升级GUI
+   视频流、音频流、控制流、设备控制器等
    5. **homepath/.myscrcpy/tps/*.json**
    保存TouchProxy配置文件，.json格式。
 
