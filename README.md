@@ -105,7 +105,7 @@ Nicegui Web 界面 （DEMO）
 ![Touch Proxy Editor](files/images/edit_touch_proxy.jpg)
 
 ## 所思所想
-作为从 Scrcpy 1.X时代就开始使用的老玩家，感叹于Scrcpy的发展及神奇的功能得同时，也一直想做点什么。不过碍于有其他项目（~~懒~~）一直迟迟没有动手。 
+作为从 Scrcpy 1.X时代就开始使用的老玩家，感叹于Scrcpy的发展及神奇的功能的同时，也一直想做点什么。不过碍于有其他项目（~~懒~~）一直迟迟没有动手。 
 直到遇到了[Scrcpy Mask](https://github.com/AkiChase/scrcpy-mask) 这一优秀项目，感觉我也要做点什么了。
 
 遂于24年6月1日开始，阅读Scrcpy源码，使用python语言，借由pyav、adbutils、numpy、pyflac等优秀工具包，形成了MYScrcpy这一项目。
