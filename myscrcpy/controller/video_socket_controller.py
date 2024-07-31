@@ -5,13 +5,16 @@
     视频控制器，使用h264
 
     Log:
-        2024-07-30 1.1.0 Me2sY
-            抽离
+        2024-07-31 1.1.1 Me2sY
+            1.send_frame_meta=false 降低数据包解析延迟
+            2.修复 MacOS下 share_memory文件名限制31长度下的缺陷，缩短shm文件名长度
+
+        2024-07-30 1.1.0 Me2sY 抽离，形成发布初版
 
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 __all__ = [
     'VideoSocketController', 'VideoStream'
@@ -128,7 +131,7 @@ class VideoSocketController(ScrcpySocket):
 
         while self.is_running:
             try:
-                packets = self.code_context.parse(self.decode_packet())
+                packets = self.code_context.parse(self._conn.recv(self.buffer_size))
                 for packet in packets:
                     for _frame in self.code_context.decode(packet):
                         self.last_frame = _frame.to_ndarray(format='rgb24')
@@ -141,7 +144,7 @@ class VideoSocketController(ScrcpySocket):
         """
             创建SharedFrame
         """
-        f_name = f"video_frame_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{random.randrange(100, 999)}"
+        f_name = f"vf_{datetime.datetime.now().strftime('%m%d%H%M%S')}_{random.randrange(10000, 99999)}"
         try:
             self.video_shm = shared_memory.SharedMemory(name=f_name, create=True, size=size)
         except FileExistsError:
@@ -186,6 +189,8 @@ class VideoSocketController(ScrcpySocket):
     def start(self):
         if self.is_running:
             self._start_thread()
+            while self.get_frame() is None:
+                time.sleep(0.001)
         else:
             warnings.warn(f"Video Socket Connection Not Ready!")
 

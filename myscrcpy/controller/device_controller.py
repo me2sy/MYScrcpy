@@ -4,42 +4,41 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-07-31 1.1.1 Me2sY
+            1.send_frame_meta=false 降低数据包解析延迟
+            2.修复 ControlSocketController 未启动线程缺陷
+
         2024-07-30 1.1.0 Me2sY
             1.抽离ZMQController
             2.新增AudioSocketController
             3.修改连接Scrcpy方式，支持V/A/C自选连接
 
-        2024-07-28 1.0.1 Me2sY
-            新增 ZMQController
+        2024-07-28 1.0.1 Me2sY 新增 ZMQController
 
-        2024-07-28 1.0.0 Me2sY
-            发布
+        2024-07-28 1.0.0 Me2sY 发布
 
         2024-07-23 0.2.0 Me2sY
             1.改用 Scrcpy-server-v2.5
             https://github.com/Genymobile/scrcpy/releases/tag/v2.5
             2.移除自动开锁功能，采用ADB keyevent方式自行输入，解决不同设备黑屏输入解锁码问题
 
-        2024-07-11 0.1.3 Me2sY
-            新增锁屏判断及自动开锁功能
+        2024-07-11 0.1.3 Me2sY 新增锁屏判断及自动开锁功能
 
         2024-06-04 0.1.2 Me2sY
             1.新增 DeviceFactory
             2.抽离 ScrcpySockets
             3.将 VS， CS 包含在 Device对象中，新增关闭功能
 
-        2024-06-03 0.1.1 Me2sY
-            新增 Size(Width, Height, Rotation)
+        2024-06-03 0.1.1 Me2sY 新增 Size(Width, Height, Rotation)
 
         2024-06-01 0.1.0 Me2sY
             1. 去除与 Device 无关项， 简化结构
             2. 新增 ScrcpySocket 类 包装视频及控制流
             3. 设置为单例模式
-
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 __all__ = [
     'DeviceController', 'DeviceFactory'
@@ -71,7 +70,7 @@ CMD = [
     '2.5',
     'log_level=info',
     'tunnel_forward=true',
-    'send_frame_meta=true',
+    'send_frame_meta=false',
     'stay_awake=true',
 ]
 
@@ -315,6 +314,7 @@ class DeviceController:
             if is_init_control_socket:
                 logger.info('Init Control Socket')
                 self.csc: ControlSocketController = csc.setup_socket_connection(conn)
+                self.csc.start()
                 break
 
         self.is_scrcpy_running = True

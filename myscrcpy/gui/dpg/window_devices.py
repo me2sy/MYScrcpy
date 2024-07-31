@@ -5,28 +5,29 @@
     主窗口，显示所有设备，进行下一步操作
 
     Log:
-        2024-07-28 1.0.0 Me2sY
-            发布初版
+        2024-07-31 1.1.1 Me2sY  适配新Controller
 
-        2024-06-18 0.1.1 Me2sY
-            重构
+        2024-07-28 1.0.0 Me2sY  发布初版
 
-        2024-06-04 0.1.0 Me2sY
-            创建
+        2024-06-18 0.1.1 Me2sY  重构
 
+        2024-06-04 0.1.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.1.1'
 
-__all__ = []
+__all__ = [
+    'main'
+]
 
 import time
 
 import dearpygui.dearpygui as dpg
 
-from myscrcpy.device_controller import DeviceController, DeviceFactory
 from myscrcpy.gui.dpg.window_video import WindowVideo
+from myscrcpy.controller import DeviceController, DeviceFactory
+from myscrcpy.controller import VideoSocketController, AudioSocketController, ControlSocketController
 
 
 class WindowDevice:
@@ -40,28 +41,22 @@ class WindowDevice:
         self.tag_win = dpg.generate_uuid()
         self.tag_ipt_fps = dpg.generate_uuid()
         self.tag_ipt_max_size = dpg.generate_uuid()
-        self.tag_cb_zmq_c = dpg.generate_uuid()
-        self.tag_ipt_zmq_c_url = dpg.generate_uuid()
-        self.tag_ipt_record_frames = dpg.generate_uuid()
 
-        self.tag_cb_zmq_v = dpg.generate_uuid()
-        self.tag_ipt_zmq_v_url = dpg.generate_uuid()
         self.tag_btn_connect = dpg.generate_uuid()
         self.tag_btn_close = dpg.generate_uuid()
         self.tag_txt_device = dpg.generate_uuid()
 
     def connect(self):
         dpg.configure_item(self.tag_btn_connect, enabled=False)
-
-        self.device.connect_to_scrcpy(
-            max_size=dpg.get_value(self.tag_ipt_max_size),
-            fps=dpg.get_value(self.tag_ipt_fps),
-            record_frames=dpg.get_value(self.tag_ipt_record_frames),
-            v_zmq_publish=dpg.get_value(self.tag_cb_zmq_v),
-            v_zmq_url=dpg.get_value(self.tag_ipt_zmq_v_url),
-            c_zmq_pull=dpg.get_value(self.tag_cb_zmq_c),
-            c_zmq_url=dpg.get_value(self.tag_ipt_zmq_c_url)
+        self.device.connect(
+            vsc=VideoSocketController(
+                max_size=dpg.get_value(self.tag_ipt_max_size),
+                fps=dpg.get_value(self.tag_ipt_fps)
+            ),
+            asc=AudioSocketController(),
+            csc=ControlSocketController()
         )
+
         time.sleep(1)
         dpg.configure_item(self.tag_btn_connect, label='Connected!')
         dpg.set_value(self.tag_txt_device, self.device_info())
@@ -86,13 +81,9 @@ class WindowDevice:
 
             dpg.add_separator()
             dpg.add_text('VideoSocket:')
-            dpg.add_checkbox(
-                label='close Screen', default_value=True,
-                callback=lambda s, a: self.device.cs.set_screen_on(not a)
-            )
             dpg.add_drag_int(
                 label='max_size',
-                default_value=device_height // 1.5,
+                default_value=1366,
                 min_value=device_height // 10, max_value=self.device.coordinate.max_size,
                 speed=self.device.coordinate.height // 10,
                 tag=self.tag_ipt_max_size
@@ -156,7 +147,7 @@ def main():
 
     dpg.create_context()
     dpg.create_viewport(
-        title='MYScrcpy - Devices', width=1920, height=1080,
+        title=f"{Param.PROJECT_NAME} - {Param.AUTHOR}", width=1920, height=1080,
         small_icon=Param.PATH_STATICS_ICON.__str__(),
         large_icon=Param.PATH_STATICS_ICON.__str__(),
     )

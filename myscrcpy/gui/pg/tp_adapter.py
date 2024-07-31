@@ -5,15 +5,15 @@
     按键映射适配器
 
     Log:
-        2024-07-28 1.0.0 Me2sY
-            初版
+        2024-07-31 1.1.1 Me2sY  适配新Controller
+
+        2024-07-28 1.0.0 Me2sY  发布初版
 
         2024-07-24 0.3.0 Me2sY
             1.适配 Scrcpy Server 2.5
             2.新增 UHID Mouse，可以在界面内显示鼠标指针
 
-        2024-07-21 0.2.2 Me2sY
-            新增 TouchWatch 观察按钮
+        2024-07-21 0.2.2 Me2sY  新增 TouchWatch 观察按钮
 
         2024-07-10 0.2.1 Me2sY
             1. Aim新增fast_attack 选项，选中后变为repeat点击
@@ -22,11 +22,10 @@
         2024-07-07 0.2.0 Me2sY
             重构，适配新架构。
             完成 Mouse 及 TouchAim 编写
-
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.1.1'
 
 __all__ = [
     'TouchType',
@@ -42,8 +41,8 @@ from typing import Set
 from loguru import logger
 import pygame
 
-from myscrcpy.device_controller import DeviceController
 from myscrcpy.utils import ScalePoint, Coordinate, Action, CfgHandler, UnifiedKey, UnifiedKeyMapper
+from myscrcpy.controller import DeviceController
 
 
 class TouchType(Enum):
@@ -76,7 +75,7 @@ class TouchProxy:
             *args, **kwargs
     ):
         self.tpa = tpa
-        self.cs = self.tpa.device.cs
+        self.csc = self.tpa.device.csc
 
         self.touch_type = touch_type
         self.touch_x = touch_x
@@ -89,8 +88,8 @@ class TouchProxy:
 
         self.sp = ScalePoint(touch_x, touch_y)
 
-        self.device_coord = self.tpa.device.vs.coordinate.d
-        self.tp = self.tpa.device.vs.coordinate.to_point(self.sp).d
+        self.frame_coord = self.tpa.device.vsc.coordinate.d
+        self.tp = self.tpa.device.vsc.coordinate.to_point(self.sp).d
 
         self.last_down_ms = time.time()
         self.last_release_ms = time.time()
@@ -112,11 +111,9 @@ class TouchProxy:
             self.key_release()
 
     def action(self, action: Action):
-        self.cs.send_packet(
-            self.cs.touch_packet(
-                action=action, touch_id=self.touch_id,
-                **self.tp, **self.device_coord
-            )
+        self.csc.f_touch(
+            action=action, touch_id=self.touch_id,
+            **self.tp, **self.frame_coord
         )
 
     def touch_down(self):
@@ -130,7 +127,7 @@ class TouchProxy:
         self.is_touched = False
 
     def touch_move(self, scale_point: ScalePoint):
-        self.tp = self.tpa.device.vs.coordinate.to_point(scale_point).d
+        self.tp = self.tpa.device.vsc.coordinate.to_point(scale_point).d
         self.action(Action.MOVE)
 
     def pg_loop_handler(self, *args, **kwargs):
@@ -250,7 +247,6 @@ class TouchScope(TouchProxy):
         )
 
         self.y_fix = 0.07
-        self.wr = tpa.device.coordinate.width
         self.a = (self.pmax.x - self.pmin.x) / 2
         self.b = (self.pmax.y - self.pmin.y) / 2
 
@@ -285,7 +281,7 @@ class TouchScope(TouchProxy):
             yr = (ms_sp.y - gc_sp.y) / (self.b + (ec_sp.y - gc_sp.y))
 
         x = xr * self.sc_joystick_r
-        y = yr * (self.sc_joystick_r * self.device_coord['width'] / self.device_coord['height'])
+        y = yr * (self.sc_joystick_r * self.frame_coord['width'] / self.frame_coord['height'])
 
         return self.sp + ScalePoint(x, y)
 
@@ -316,7 +312,7 @@ class TouchCross(TouchProxy):
         self.sc_joystick_r = sc_joystick_r
 
         self.x = self.sc_joystick_r
-        self.y = self.sc_joystick_r * self.device_coord['width'] / self.device_coord['height']
+        self.y = self.sc_joystick_r * self.frame_coord['width'] / self.frame_coord['height']
 
         self.need_loop = True
 
@@ -439,7 +435,7 @@ class TouchAim(TouchProxy):
                 self.sp = self._sp
                 self.key_down()
 
-                self.cs.send_packet(self.cs.uhid_mouse_create_packet())
+                self.csc.f_uhid_mouse_create()
 
             else:
                 self.tpa.tp_aim = None
@@ -453,9 +449,9 @@ class TouchAim(TouchProxy):
             uhid_mouse = pygame.key.get_mods() & pygame.KMOD_LSHIFT
             if uhid_mouse:
                 self.attack.set_on(False)
-                self.cs.send_packet(self.cs.uhid_mouse_input_packet(
+                self.csc.f_uhid_mouse_input(
                     event.rel[0], event.rel[1], left_button=pygame.mouse.get_pressed()[0]
-                ))
+                )
                 return
             else:
                 self.attack.set_on(True)
@@ -484,9 +480,9 @@ class TouchAim(TouchProxy):
     def pg_loop_handler(self, *args, **kwargs):
 
         if pygame.key.get_mods() & pygame.KMOD_LSHIFT:
-            self.cs.send_packet(self.cs.uhid_mouse_input_packet(
+            self.csc.f_uhid_mouse_input(
                 0, 0, left_button=pygame.mouse.get_pressed()[0]
-            ))
+            )
             return
 
         # Fix
@@ -514,7 +510,7 @@ class TouchMouse(TouchProxy):
     def pg_event_handler(self, event: pygame.event.Event, *args, **kwargs):
         if event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = self.tpa.coord.to_scale_point(*event.pos)
-            self.tp = self.tpa.device.vs.coordinate.to_point(mouse_pos).d
+            self.tp = self.tpa.device.vsc.coordinate.to_point(mouse_pos).d
             self.key_down()
             self.need_move = True
 
@@ -572,6 +568,10 @@ class TouchWatch(TouchProxy):
 
 
 class TouchProxyAdapter:
+    """
+        触摸代理适配器
+    """
+
     TOUCH_ID_START = 100
     TOUCH_ID_RANGE = 300
 

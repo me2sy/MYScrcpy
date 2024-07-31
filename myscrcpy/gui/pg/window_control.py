@@ -2,26 +2,27 @@
 """
     控制窗口
     ~~~~~~~~~~~~~~~~~~
-
+    pygame框架下设备控制窗口，适用于低延迟需求应用。
 
     Log:
-         2024-07-28 1.0.0 Me2sY
-            发布初版
+         2024-07-31 1.1.1 Me2sY 切换新controller
+
+         2024-07-28 1.0.0 Me2sY 发布初版
 
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.1.1'
 
 __all__ = [
-    'PGControlWindow'
+    'PGControlWindow', 'run'
 ]
 
 import pathlib
 
 import pygame
 
-from myscrcpy.device_controller import DeviceController
+from myscrcpy.controller import DeviceController
 from myscrcpy.gui.pg.tp_adapter import TouchProxyAdapter
 from myscrcpy.gui.pg.video_controller import PGVideoController
 
@@ -31,6 +32,7 @@ from myscrcpy.utils import Param
 class PGControlWindow:
     """
         pygame 控制窗口
+        为提高性能及刷新频率，采用固定显示大小，剔除旋转、缩放等运算
     """
 
     def __init__(self):
@@ -66,7 +68,7 @@ class PGControlWindow:
         pygame.display.init()
 
         main_surface = pygame.display.set_mode(pgv.coordinate)
-        pygame.display.set_caption('MYScrcpy - Me2sY')
+        pygame.display.set_caption(f"{Param.PROJECT_NAME} - {Param.AUTHOR}")
         pygame.display.set_icon(pygame.image.load(Param.PATH_STATICS_ICON))
 
         clock = pygame.time.Clock()
@@ -107,11 +109,11 @@ class PGControlWindow:
 
 
 def run():
-    from pathlib import Path
 
     from loguru import logger
     import easygui
-    from myscrcpy.device_controller import DeviceFactory
+
+    from myscrcpy.controller import DeviceFactory, VideoSocketController, ControlSocketController, AudioSocketController
     from myscrcpy.utils import Param
 
     devices = DeviceFactory.init_all_devices()
@@ -142,9 +144,13 @@ def run():
     logger.info(f'file_path: {file_path}')
 
     if file_path is not None and size > 0:
-        dev.connect_to_scrcpy(size, screen_on=True)
+        dev.connect(
+            vsc=VideoSocketController(max_size=size),
+            asc=AudioSocketController(),
+            csc=ControlSocketController()
+        )
         PGControlWindow().run(
-            dev, None, Path(file_path)
+            dev, None, pathlib.Path(file_path)
         )
     dev.close()
 

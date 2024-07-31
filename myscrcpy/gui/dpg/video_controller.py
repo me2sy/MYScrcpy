@@ -2,22 +2,20 @@
 """
     Dearpygui Video Controller
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+    视频控制器，用于将RGB Frame 转为 DPG raw_texture
 
     Log:
-        2024-07-28 1.0.0 Me2sY
-            发布初版
+        2024-07-31 1.1.1 Me2sY  适配新Controller
 
-        2024-07-23 0.1.1 Me2sY
-            适配 scrcpy-server-2.5
+        2024-07-28 1.0.0 Me2sY  发布初版
 
-        2024-06-28 0.1.0 Me2sY
-            创建，形成Controller 统一处理 Resize Rotation等事件后的重绘制工作
+        2024-07-23 0.1.1 Me2sY  适配 scrcpy-server-2.5
 
+        2024-06-28 0.1.0 Me2sY  创建，形成Controller 统一处理 Resize Rotation等事件后的重绘制工作
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.1.1'
 
 __all__ = [
     'DpgVideoController'
@@ -26,7 +24,7 @@ __all__ = [
 import numpy as np
 import dearpygui.dearpygui as dpg
 
-from myscrcpy.device_controller import DeviceController
+from myscrcpy.controller import DeviceController
 from myscrcpy.utils import Coordinate, Param
 
 
@@ -46,7 +44,7 @@ class DpgVideoController:
         if not self.device.is_scrcpy_running:
             raise RuntimeError('Connect Scrcpy First!')
 
-        self.vs = device.vs
+        self.vsc = device.vsc
         self.frame = None
         self.raw_texture_value = None
 
@@ -84,7 +82,8 @@ class DpgVideoController:
                 default_value=self.raw_texture_value, format=dpg.mvFormat_Float_rgb
             )
 
-    def to_raw_texture_value(self, frame: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def to_raw_texture_value(frame: np.ndarray) -> np.ndarray:
         """
             输出一维 float RGB
         :param frame:
@@ -97,7 +96,7 @@ class DpgVideoController:
             加载Frame，检测Coordinate变化
         :return:
         """
-        self.frame = self.vs.get_frame() if not self.is_pause else self.frame
+        self.frame = self.vsc.get_frame() if not self.is_pause else self.frame
         self.raw_texture_value = self.to_raw_texture_value(self.frame)
 
         h, w, d = self.frame.shape

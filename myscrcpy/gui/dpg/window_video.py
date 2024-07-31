@@ -5,11 +5,11 @@
     设备操作窗口
 
     Log:
-        2024-07-28 1.0.1 Me2sY
-            新增 ZMQ Server
+        2024-07-31 1.1.1 Me2sY  适配新Controller
 
-        2024-07-28 1.0.0 Me2sY
-            发布初版
+        2024-07-28 1.0.1 Me2sY  新增 ZMQ Server
+
+        2024-07-28 1.0.0 Me2sY  发布初版
 
         2024-07-28 0.4.2 Me2sY
             1.新增右键虚拟点 用于缩放等操作
@@ -19,17 +19,13 @@
             1.新增 input pad 用于输入解锁密码、中文等
             2.适配 scrcpy-server-2.5
 
-        2024-06-29 0.4.0 Me2sY
-            重构，使用 DpgVideoController 统一控制 Resize Reset 等, 增加 MouseCtrl，用于开关鼠标控制
+        2024-06-29 0.4.0 Me2sY  重构，使用 DpgVideoController 统一控制 Resize Reset 等, 增加 MouseCtrl，用于开关鼠标控制
 
-        2024-06-18 0.3.0 Me2sY
-            重构，去掉控制功能，由pygame接管，保留基础点击及编辑按钮功能
+        2024-06-18 0.3.0 Me2sY  重构，去掉控制功能，由pygame接管，保留基础点击及编辑按钮功能
 
-        2024-06-15 0.2.1 Me2sY
-            新增TouchCross
+        2024-06-15 0.2.1 Me2sY  新增TouchCross
 
-        2024-06-13 0.2.0 Me2sY
-            重构结构
+        2024-06-13 0.2.0 Me2sY  重构结构
 
         2024-06-06 0.1.2 Me2sY
             1.新增TouchProxy加载配置文件设置
@@ -41,13 +37,11 @@
             3.实现 Rotation 窗口任意大小等功能
             4.功能栏新增 Resize Pause功能
 
-        2024-06-04 0.1.0 Me2sY
-            创建
-
+        2024-06-04 0.1.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.1'
+__version__ = '1.1.1'
 
 __all__ = [
     'WindowVideo', 'WindowInputPad'
@@ -60,9 +54,7 @@ import time
 from loguru import logger
 import dearpygui.dearpygui as dpg
 
-from myscrcpy.device_controller import DeviceController
-
-from myscrcpy.socket_adapter import KeyboardWatcher
+from myscrcpy.controller import DeviceController, KeyboardWatcher
 
 from myscrcpy.gui.dpg.loop_register import LoopRegister
 from myscrcpy.gui.dpg.video_controller import DpgVideoController
@@ -70,7 +62,7 @@ from myscrcpy.gui.dpg.window_mask import WindowTwin
 
 from myscrcpy.gui.pg.window_control import PGControlWindow
 
-from myscrcpy.utils import Coordinate, Action, Param, ScalePoint, ADBKeyCode, UnifiedKey, UnifiedKeyMapper
+from myscrcpy.utils import Coordinate, Action, Param, ScalePoint, ADBKeyCode, UnifiedKeyMapper
 
 
 class WindowInputPad:
@@ -85,15 +77,11 @@ class WindowInputPad:
         self.tag_ipt_psw = dpg.generate_uuid()
         self.tag_ipt_txt = dpg.generate_uuid()
 
-        self.device.cs.send_packet(
-            self.device.cs.uhid_keyboard_create_packet()
-        )
+        self.device.csc.f_uhid_keyboard_create()
 
         def _send(modifiers, key_scan_codes):
-            self.device.cs.send_packet(
-                self.device.cs.uhid_keyboard_input_packet(
-                    modifiers=modifiers, key_scan_codes=key_scan_codes
-                )
+            self.device.csc.f_uhid_keyboard_input(
+                modifiers=modifiers, key_scan_codes=key_scan_codes
             )
 
         self.key_watcher = KeyboardWatcher(uhid_keyboard_send_method=_send)
@@ -170,7 +158,7 @@ class WindowInputPad:
             def callback_input():
                 txt = dpg.get_value(self.tag_ipt_txt)
                 if txt != '':
-                    self.device.cs.send_packet(self.device.cs.text_paste_packet(txt))
+                    self.device.csc.f_text_paste(txt)
                     dpg.set_value(self.tag_ipt_txt, '')
 
             dpg.add_input_text(tag=self.tag_ipt_txt, width=165, on_enter=True, callback=callback_input)
@@ -288,31 +276,19 @@ class WindowVideo:
                 if not dpg.is_item_hovered(self.tag_drawlist_main):
                     return
 
-                self.device.cs.send_packet(
-                    self.device.cs.touch_packet(
-                        Action.DOWN.value,
-                        **self.dvc.to_touch_d(dpg.get_drawing_mouse_pos()),
-                        touch_id=self.touch_id
-                    )
+                self.device.csc.f_touch(
+                    Action.DOWN.value, **self.dvc.to_touch_d(dpg.get_drawing_mouse_pos()), touch_id=self.touch_id
                 )
 
             def _release(sender, app_data):
-                self.device.cs.send_packet(
-                    self.device.cs.touch_packet(
-                        Action.RELEASE.value,
-                        **self.dvc.to_touch_d(dpg.get_drawing_mouse_pos()),
-                        touch_id=self.touch_id
-                    )
+                self.device.csc.f_touch(
+                    Action.RELEASE.value, **self.dvc.to_touch_d(dpg.get_drawing_mouse_pos()), touch_id=self.touch_id
                 )
 
             def _move(sender, app_data):
                 if dpg.is_item_hovered(self.tag_drawlist_main) and dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
-                    self.device.cs.send_packet(
-                        self.device.cs.touch_packet(
-                            Action.MOVE.value,
-                            **self.dvc.to_touch_d(dpg.get_drawing_mouse_pos()),
-                            touch_id=self.touch_id
-                        )
+                    self.device.csc.f_touch(
+                        Action.MOVE.value, **self.dvc.to_touch_d(dpg.get_drawing_mouse_pos()), touch_id=self.touch_id
                     )
 
             dpg.add_mouse_click_handler(button=dpg.mvMouseButton_Left, callback=_down)
@@ -329,23 +305,11 @@ class WindowVideo:
                 global r_pos
                 r_pos = dpg.get_drawing_mouse_pos()
 
-                self.device.cs.send_packet(
-                    self.device.cs.touch_packet(
-                        Action.DOWN.value,
-                        **self.dvc.to_touch_d(r_pos),
-                        touch_id=self.touch_id_sec
-                    )
-                )
+                self.device.csc.f_touch(Action.DOWN.value, **self.dvc.to_touch_d(r_pos), touch_id=self.touch_id_sec)
 
             def _release_r(sender, app_data):
                 global r_pos
-                self.device.cs.send_packet(
-                    self.device.cs.touch_packet(
-                        Action.RELEASE.value,
-                        **self.dvc.to_touch_d(r_pos),
-                        touch_id=self.touch_id_sec
-                    )
-                )
+                self.device.csc.f_touch(Action.RELEASE.value, **self.dvc.to_touch_d(r_pos), touch_id=self.touch_id_sec)
 
             dpg.add_mouse_click_handler(button=dpg.mvMouseButton_Right, callback=_down_r)
             dpg.add_mouse_release_handler(button=dpg.mvMouseButton_Right, callback=_release_r)
@@ -362,68 +326,57 @@ class WindowVideo:
                 step = 10 * (1 if app_data > 0 else -1)
 
                 if dpg.is_key_down(dpg.mvKey_Control):
-
-                    self.device.cs.send_packet(
-                        self.device.cs.touch_packet(
-                            Action.DOWN.value,
-                            **self.dvc.to_touch_d([m_pos[0] + 50, m_pos[1] + 50]),
-                            touch_id=self.touch_id_wheel
-                        )
+                    # Ctrl Press Then Wheel to Zoom
+                    self.device.csc.f_touch(
+                        Action.DOWN.value,
+                        **self.dvc.to_touch_d([m_pos[0] + 50, m_pos[1] + 50]),
+                        touch_id=self.touch_id_wheel
                     )
 
-                    self.device.cs.send_packet(
-                        self.device.cs.touch_packet(
-                            Action.DOWN.value,
-                            **self.dvc.to_touch_d(sec_pos),
-                            touch_id=self.touch_id_sec
-                        )
+                    self.device.csc.f_touch(
+                        Action.DOWN.value,
+                        **self.dvc.to_touch_d(sec_pos),
+                        touch_id=self.touch_id_sec
                     )
+
                     for i in range(3):
                         n_pos = [m_pos[0] + 50 - i * step, m_pos[1] + 50 - i * step]
-                        self.device.cs.send_packet(
-                            self.device.cs.touch_packet(
-                                Action.MOVE.value,
-                                **self.dvc.to_touch_d(n_pos),
-                                touch_id=self.touch_id_wheel
-                            )
+
+                        self.device.csc.f_touch(
+                            Action.MOVE.value,
+                            **self.dvc.to_touch_d(n_pos),
+                            touch_id=self.touch_id_wheel
                         )
+
                         time.sleep(0.05)
 
                 else:
-
-                    self.device.cs.send_packet(
-                        self.device.cs.touch_packet(
-                            Action.DOWN.value,
-                            **self.dvc.to_touch_d(m_pos),
-                            touch_id=self.touch_id_wheel
-                        )
+                    # Wheel to swipe
+                    self.device.csc.f_touch(
+                        Action.DOWN.value,
+                        **self.dvc.to_touch_d(m_pos),
+                        touch_id=self.touch_id_wheel
                     )
 
                     for i in range(10):
                         n_pos = [m_pos[0], m_pos[1] + i * step]
-                        self.device.cs.send_packet(
-                            self.device.cs.touch_packet(
-                                Action.MOVE.value,
-                                **self.dvc.to_touch_d(n_pos),
-                                touch_id=self.touch_id_wheel
-                            )
+                        self.device.csc.f_touch(
+                            Action.MOVE.value,
+                            **self.dvc.to_touch_d(n_pos),
+                            touch_id=self.touch_id_wheel
                         )
                         time.sleep(0.01)
 
-                self.device.cs.send_packet(
-                    self.device.cs.touch_packet(
-                        Action.RELEASE.value,
-                        **self.dvc.to_touch_d(n_pos),
-                        touch_id=self.touch_id_wheel
-                    )
+                self.device.csc.f_touch(
+                    Action.RELEASE.value,
+                    **self.dvc.to_touch_d(n_pos),
+                    touch_id=self.touch_id_wheel
                 )
 
-                self.device.cs.send_packet(
-                    self.device.cs.touch_packet(
-                        Action.RELEASE.value,
-                        **self.dvc.to_touch_d(sec_pos),
-                        touch_id=self.touch_id_sec
-                    )
+                self.device.csc.f_touch(
+                    Action.RELEASE.value,
+                    **self.dvc.to_touch_d(sec_pos),
+                    touch_id=self.touch_id_sec
                 )
 
             dpg.add_mouse_wheel_handler(callback=_wheel)
@@ -461,7 +414,7 @@ class WindowVideo:
 
         # Screen Switch
         def _screen(sender, app_data):
-            self.device.cs.set_screen_on(app_data)
+            self.device.csc.f_set_screen(app_data)
 
         dpg.add_checkbox(label='ScreenOn', callback=_screen, default_value=False)
 
@@ -536,24 +489,31 @@ class WindowVideo:
 
 
 def run():
-    from myscrcpy.device_controller import DeviceFactory
+    from myscrcpy.controller import DeviceFactory
+    from myscrcpy.controller import VideoSocketController, AudioSocketController, ControlSocketController
 
     dpg.create_context()
 
     dev = DeviceFactory.device()
-    dev.connect_to_scrcpy(1600, screen_on=True)
+    dev.connect(
+        vsc=VideoSocketController(max_size=1366),
+        asc=AudioSocketController(),
+        csc=ControlSocketController()
+    )
 
     vw = WindowVideo(dev)
     vw.init()
 
     dpg.create_viewport(
-        title='MYScrcpy - Me2sY', width=2100, height=1280, clear_color=(0, 0, 0, 0), vsync=False,
+        title=f"{Param.PROJECT_NAME} - {Param.AUTHOR}", width=1900, height=1060, clear_color=(0, 0, 0, 0), vsync=False,
         x_pos=10, y_pos=10,
         small_icon=Param.PATH_STATICS_ICON.__str__(),
         large_icon=Param.PATH_STATICS_ICON.__str__(),
     )
     dpg.setup_dearpygui()
     dpg.show_viewport()
+
+    dev.set_screen(False)
 
     while dpg.is_dearpygui_running():
         try:

@@ -9,7 +9,6 @@
             1.抽离形成单独部分
             2.修改部分功能结构
 
-
 """
 
 __author__ = 'Me2sY'
@@ -209,7 +208,11 @@ class ControlSocketController(ScrcpySocket):
         self.__packet_queue.put(self.CLOSE_PACKET)
         logger.warning(f"{self.__class__.__name__} Socket Closed.")
 
+    def start(self):
+        threading.Thread(target=self._main_thread).start()
+
     def _main_thread(self):
+        logger.success(f"Control Socket Connected!")
         while self.is_running:
             self._conn.send(self.__packet_queue.get())
         self._conn.close()

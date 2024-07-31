@@ -2,9 +2,11 @@
 """
     Nicegui Web Gui DEMO
     ~~~~~~~~~~~~~~~~~~
-    
+    用于演示SharedMemory WebGUI 等相关功能
 
     Log:
+        2024-07-31 0.1.1 Me2sY  适配新Controller
+
         2024-07-28 0.1.0 Me2sY
             创建，使用Nicegui框架，建立WebGui
             处于Demo阶段
@@ -12,7 +14,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 __all__ = []
 
@@ -24,9 +26,9 @@ import cv2
 from fastapi import Response
 from nicegui import app, run, ui
 
-from myscrcpy.socket_adapter import VideoStream, ControlSocket
-from myscrcpy.device_controller import ZMQController
 from myscrcpy.utils import Action
+from myscrcpy.controller import ControlSocketController as CSC
+from myscrcpy.controller import ZMQController, VideoStream
 
 
 class NGController:
@@ -72,7 +74,7 @@ def mobile_page():
 
         if event.type == 'mousedown':
             ngc.zmq_sender.send(
-                ControlSocket.touch_packet(
+                CSC.packet__touch(
                     Action.DOWN.value,
                     x=event.image_x, y=event.image_y,
                     **ngc.coord.d,
@@ -82,7 +84,7 @@ def mobile_page():
             ngc.pressed = True
         elif event.type == 'mouseup':
             ngc.zmq_sender.send(
-                ControlSocket.touch_packet(
+                CSC.packet__touch(
                     Action.RELEASE.value,
                     x=event.image_x, y=event.image_y,
                     **ngc.coord.d,
@@ -92,7 +94,7 @@ def mobile_page():
             ngc.pressed = False
         elif ngc.pressed and event.type == 'mousemove':
             ngc.zmq_sender.send(
-                ControlSocket.touch_packet(
+                CSC.packet__touch(
                     Action.MOVE.value,
                     x=event.image_x, y=event.image_y,
                     **ngc.coord.d,
@@ -103,7 +105,7 @@ def mobile_page():
     def connect():
         global ngc
         ngc.zmq_sender = ZMQController.create_sender(zmq_url.value)
-        ngc.vs = VideoStream.create(shm_name.value)
+        ngc.vs = VideoStream.create_by_name(shm_name.value)
         ngc.is_ready = True
 
         video_image = ui.interactive_image(

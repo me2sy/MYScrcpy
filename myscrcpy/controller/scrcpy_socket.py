@@ -5,8 +5,7 @@
     基础类
 
     Log:
-        2024-07-30 1.1.0 Me2sY
-            从原有结构中抽离
+        2024-07-30 1.1.0 Me2sY 从原有结构中抽离,形成发布初版
 
 """
 
@@ -50,6 +49,10 @@ class ScrcpySocket(metaclass=ABCMeta):
         return self
 
     def decode_packet(self) -> bytes:
+        """
+            当 设置 send_frame_meta = True时，解析数据包
+            为降低延迟，暂时关闭send_frame_meta
+        """
         self._conn.recv(8)
         (size, ) = struct.unpack('>I', self._conn.recv(4))
         data = self._conn.recv(int(size))

@@ -5,13 +5,13 @@
     音频控制器，使用flac
 
     Log:
-        2024-07-30 1.1.0 Me2sY
-            创建
+        2024-07-31 1.1.1 Me2sY 设置send_frame_meta = false 降低延迟
 
+        2024-07-30 1.1.0 Me2sY 创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 __all__ = [
     'AudioSocketController'
@@ -83,12 +83,12 @@ class AudioSocketController(ScrcpySocket):
         logger.success(f"Audio Socket Connected! Codec: {_audio_codec}")
 
         # Drop Strange Flac MetaDataBlock
-        self.decode_packet()
+        self._conn.recv(34)
 
         self.flac_steam_decoder.process(self.FLAC_METADATA)
 
         while self.is_running:
-            self.flac_steam_decoder.process(self.decode_packet())
+            self.flac_steam_decoder.process(self._conn.recv(4096))
 
         self.flac_steam_decoder.finish()
         self.player.close()

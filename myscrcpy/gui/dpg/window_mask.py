@@ -5,22 +5,19 @@
     定义控制映射
 
     Log:
-        2024-07-28 1.0.0 Me2sY
-            发布初版
+        2024-07-31 1.1.1 Me2sY  适配新Controller
 
-        2024-07-21 0.2.1 Me2sY
-            新增 TouchWatch 观察按钮
+        2024-07-28 1.0.0 Me2sY  发布初版
 
-        2024-06-30 0.2.0 Me2sY
-            重构，变成ScalePoint，实现Resize等功能。
+        2024-07-21 0.2.1 Me2sY  新增 TouchWatch 观察按钮
 
-        2024-06-27 0.1.0 Me2sY
-            创建，实现控制映射配置功能
+        2024-06-30 0.2.0 Me2sY  重构，变成ScalePoint，实现Resize等功能。
 
+        2024-06-27 0.1.0 Me2sY  创建，实现控制映射配置功能
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.1.1'
 
 __all__ = [
     'WindowTwin', 'TouchProxyIndicatorFactory'
@@ -32,7 +29,7 @@ import time
 import dearpygui.dearpygui as dpg
 from loguru import logger
 
-from myscrcpy.device_controller import DeviceController
+from myscrcpy.controller import DeviceController
 
 from myscrcpy.gui.dpg.indicator import *
 

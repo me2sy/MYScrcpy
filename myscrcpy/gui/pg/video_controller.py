@@ -2,19 +2,18 @@
 """
     Pygame Video Controller
     ~~~~~~~~~~~~~~~~~~
-
+    Pygame surfarray 适配器
 
     Log:
-        2024-07-28 1.0.0 Me2sY
-            发布初版
+        2024-07-31 1.1.1 Me2sY   适配新Controller
 
-        2024-07-09 0.1.0 Me2sY
-            创建
+        2024-07-28 1.0.0 Me2sY  发布初版
 
+        2024-07-09 0.1.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.1.1'
 
 __all__ = [
     'PGVideoController'
@@ -24,8 +23,8 @@ from loguru import logger
 import numpy as np
 import pygame as pg
 
-from myscrcpy.device_controller import DeviceController
 from myscrcpy.utils import Coordinate
+from myscrcpy.controller import DeviceController
 
 
 class PGVideoController:
@@ -43,7 +42,7 @@ class PGVideoController:
         if not self.device.is_scrcpy_running:
             raise RuntimeError('Connect Scrcpy First!')
 
-        self.vs = device.vs
+        self.vs = device.vsc
         self.surface_video: pg.Surface = pg.surfarray.make_surface(self.transformed_frame(self.vs.get_frame()))
 
     @staticmethod

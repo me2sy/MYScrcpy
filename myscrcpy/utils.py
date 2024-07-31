@@ -5,8 +5,7 @@
 
 
     Log:
-        2024-07-28 1.0.0 Me2sY
-            发布
+        2024-07-28 1.0.0 Me2sY  发布
 
         2024-07-25 0.2.1 Me2sY
             1.UnifiedKeyMapper 新增 uk2scrcpy 方法，用于支持scrcpy uhid keyboard
@@ -16,25 +15,19 @@
             1.项目重构，去除路径方法，新增Param类存储变量
             2.改用 path.home路径存储配置文件
 
-        2024-07-07 0.1.5 Me2sY
-            UnifiedKeyMapper 新增 pg2uk 同时使用@cache 加速转换
+        2024-07-07 0.1.5 Me2sY  UnifiedKeyMapper 新增 pg2uk 同时使用@cache 加速转换
 
         2024-06-29 0.1.4 Me2sY
             1.Coordinate 新增部分方法
             2.新增 Action
 
-        2024-06-19 0.1.3 Me2sY
-            新增 UnifiedKey, UnifiedKeyMapper 统一各类按键码
+        2024-06-19 0.1.3 Me2sY  新增 UnifiedKey, UnifiedKeyMapper 统一各类按键码
 
-        2024-06-10 0.1.2 Me2sY
-            新增 ScalePoint Coordinate Vector
+        2024-06-10 0.1.2 Me2sY  新增 ScalePoint Coordinate Vector
 
-        2024-06-06 0.1.1 Me2sY
-            改造 适配Dearpygui
+        2024-06-06 0.1.1 Me2sY  改造 适配Dearpygui
 
-        2024-06-01 0.1.0 Me2sY
-            创建
-
+        2024-06-01 0.1.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
@@ -72,6 +65,8 @@ class Param:
     """
 
     PROJECT_NAME = PROJECT_NAME
+    AUTHOR = AUTHOR
+
     PROJECT_PATH = project_path()
 
     PATH_CONFIGS = PROJECT_PATH.joinpath('configs')

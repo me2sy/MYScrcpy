@@ -19,55 +19,35 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 - [x] 实现了音频流解析（FLAC）, 使用 [pyflac](https://github.com/sonos/pyFLAC) 解码，[pyaudio](https://people.csail.mit.edu/hubert/pyaudio/) 播放
 - [x] 实现了控制按键映射，鼠标映射
 - [x] 实现了UHID-Keyboard UHID-Mouse与鼠标点击混用，可以实现Android界面中鼠标与PC混用模式
-- [x] 实现了SharedMemory，不同进程间共享视频画面
+- [x] 实现了SharedMemory，不同进程间通过内存低延迟共享视频画面
 - [x] 实现了ZMQ通讯，使用ZMQ pull/push 对手机进行控制
-- [x] 实现了GUI下，鼠标滚轮缩放、滑动等功能
+- [x] 实现了DPG GUI下，鼠标滚轮缩放、滑动等功能
 - [x] 实现了设备锁屏下，通过InputPad输入密码解锁功能
-
+- [x] DPG GUI下设备翻转图像自动调整，无限制拉伸缩放等功能
+- [x] 实现了Ctrl调节鼠标移动速度功能
+- [x] 采用TwinWindow思路，解决DPG控件无法重叠问题，实现DPG控制映射编辑器（TPEditor）
+- [x] 纯Pygame控制模式下，最低延迟在6ms
 
 ## 基本使用
 
-1. 使用pip install dist/myscrcpy-1.1.0.tar.gz 或者 克隆本项目至本地
+1. 使用pip install dist/myscrcpy-X.X.X.tar.gz 或者 克隆本项目至本地
+
 2. 结构如下：
-   1. utils.py
+   1. **utils.py**
    定义基本工具类及各类参数
-   2. socket_adapter.py
-   Video Socket 及 Control Socket
-   3. device_controller.py
-   Android Device控制类
-   4. gui.dpg
+   2. **gui/dpg**
    DearPyGui 界面实现，包括视频绘制，鼠标事件，UHID鼠标、键盘输入，映射编辑等。
-   5. gui.pg
+   3. **gui/pg**
    pygame 界面实现，包括视频绘制、鼠标事件、键盘事件控制等。
-   6. controller/*
+   4. **gui/ng**
+   Nicegui Web UI, 使用 SharedMemory 读取视频Frame
+   4. **controller/***
    2024-07-30 1.1.0 版本，实现了Audio解析，同时改进结构。后期以该版本升级GUI
+   5. **homepath/.myscrcpy/tps/*.json**
+   保存TouchProxy配置文件，.json格式。
+
 3. 程序引用使用，便于自行开发
 ```python
-# 1.0.1 Version
-
-from myscrcpy.device_controller import DeviceFactory
-    
-# 通过 DeviceFactory 连接 Android Device
-dev = DeviceFactory.device()
-
-# 连接 Scrcpy-Server 获取 Video Socket 及 Control Socket
-video_conn, ctrl_conn = dev.connect_to_scrcpy(1920, screen_on=True)
-
-# 获取视频帧 np.ndarray 颜色格式为 RGB
-# (height, width, 3) = frame.shape
-frame = video_conn.get_frame()
-
-# 发送控制指令
-ctrl_conn.send_packet(
-  ctrl_conn.touch_packet(
-      *args, **kwargs
-  )
-)
-```
-
-```python
-# 1.1.0 NEW Version
-
 from myscrcpy.controller import *
 
 device = DeviceFactory.device()
@@ -78,7 +58,7 @@ device = DeviceFactory.device()
 # Create a SocketController and pass to connect method
 # None means NOT connect
 device.connect(
-   vsc=VideoSocketController(max_size=1920),
+   vsc=VideoSocketController(max_size=1366),
    asc=AudioSocketController(),
    csc=ControlSocketController()
 )
@@ -88,10 +68,10 @@ device.create_zmq_server()
 sender = ZMQController.create_sender()
 sender.send(ControlSocketController.packet__screen(True))
 
-device.vsc.get_frame()
+# Get Frame np.ndarray RGB
+frame = device.vsc.get_frame()
 device.csc.f_set_screen(False)
 ...
-
 ```
 
 4.使用GUI
@@ -106,7 +86,8 @@ pip install myscrcpy-X.X.0.tar.gz
 python -m myscrcpy.run
 ```
 
-运行pygame GUI （直接进入控制模式）
+运行pygame GUI （直接进入控制模式, 需要提前在DGP Gui下配置好相应按键映射）
+为追求性能，剔除旋转等功能，设备发生选择或应用切换横竖屏，会导致错误。
 ```bash
 python -m myscrcpy.run -g
 ```
