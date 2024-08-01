@@ -60,9 +60,9 @@ device = DeviceFactory.device()
 # Create a SocketController and pass to connect method
 # None means NOT connect
 device.connect(
-   vsc=VideoSocketController(max_size=1366),
-   asc=AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
-   csc=ControlSocketController()
+   VideoSocketController(max_size=1366),
+   AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
+   ControlSocketController()
 )
 
 # create zmq
