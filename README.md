@@ -6,7 +6,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 同时在某些控制代理场景，使用[pygame](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。pygame提供了鼠标隐藏、按键事件监听等功能，
 适用于第一人称相关应用的按键映射。
 
-在5900x + gtx1080 + 三星Galaxy Tab S9 8gen2/小米11pro 888 1920x1080分辨率下， Pygame控制模式可以达到6~30ms的延迟。
+在5900x + gtx1080 + 三星Galaxy Tab S9 8gen2/小米11pro 888 1920x1080分辨率下， Pygame控制模式可以达到13~30ms的延迟。
 
 使用SharedMemory，将视频帧通过内存共享，可以实现 [Nicegui](https://github.com/zauberzeug/nicegui) 的网页绘制展现、
 [OpenCV](https://opencv.org/) 图像处理等。
@@ -27,6 +27,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 - [x] 实现了Ctrl调节鼠标移动速度功能
 - [x] 采用TwinWindow思路，解决DPG控件无法重叠问题，实现DPG控制映射编辑器（TPEditor）
 - [x] 纯Pygame控制模式下，最低延迟在6ms
+- [x] 实现Audio ZMQ Server, 以ZMQ发布模式，通过网络Socket传输音频流，可以实现远程声音传输、MIC监听等更多可能
 
 ## 基本使用
 
@@ -47,6 +48,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
    保存TouchProxy配置文件，.json格式。
 
 3. 程序引用使用，便于自行开发
+
 ```python
 from myscrcpy.controller import *
 
@@ -59,13 +61,13 @@ device = DeviceFactory.device()
 # None means NOT connect
 device.connect(
    vsc=VideoSocketController(max_size=1366),
-   asc=AudioSocketController(),
+   asc=AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
    csc=ControlSocketController()
 )
 
 # create zmq
 device.create_zmq_server()
-sender = ZMQController.create_sender()
+sender = ZMQControlServer.create_sender()
 sender.send(ControlSocketController.packet__screen(True))
 
 # Get Frame np.ndarray RGB
@@ -81,13 +83,21 @@ device.csc.f_set_screen(False)
 pip install myscrcpy-X.X.0.tar.gz
 ```
 
+:exclamation: Ubuntu等Linux下 使用pyaudio 需要先安装portaudio
+```bash
+sudo apt install libportaudio-dev
+```
+
 运行DearPyGui GUI
 ```bash
 python -m myscrcpy.run
 ```
 
-运行pygame GUI （直接进入控制模式, 需要提前在DGP Gui下配置好相应按键映射）
-为追求性能，剔除旋转等功能，设备发生选择或应用切换横竖屏，会导致错误。
+运行pygame GUI （高速控制模式）
+
+:exclamation: 使用该模式, 需要提前在DGP Gui下配置好相应按键映射
+
+为追求性能，该模式剔除旋转等功能，设备发生旋转或应用切换横竖屏，会导致运行终止。
 ```bash
 python -m myscrcpy.run -g
 ```
@@ -103,6 +113,9 @@ Nicegui Web 界面 （DEMO）
 
 按键映射编辑器
 ![Touch Proxy Editor](myscrcpy/files/images/edit_touch_proxy.jpg)
+
+7ms延迟
+![7ms](myscrcpy/files/images/7ms.jpg)
 
 ## 所思所想
 作为从 Scrcpy 1.X时代就开始使用的老玩家，感叹于Scrcpy的发展及神奇的功能的同时，也一直想做点什么。不过碍于有其他项目（~~懒~~）一直迟迟没有动手。 

@@ -18,11 +18,12 @@ __author__ = 'Me2sY'
 __version__ = '1.1.1'
 
 __all__ = [
-    'main'
+    'start_devices_window'
 ]
 
 import time
 
+from loguru import logger
 import dearpygui.dearpygui as dpg
 
 from myscrcpy.gui.dpg.window_video import WindowVideo
@@ -49,17 +50,23 @@ class WindowDevice:
     def connect(self):
         dpg.configure_item(self.tag_btn_connect, enabled=False)
         self.device.connect(
-            vsc=VideoSocketController(
+            VideoSocketController(
                 max_size=dpg.get_value(self.tag_ipt_max_size),
                 fps=dpg.get_value(self.tag_ipt_fps)
             ),
-            asc=AudioSocketController(),
-            csc=ControlSocketController()
+            AudioSocketController(),
+            ControlSocketController()
         )
 
-        time.sleep(1)
+        while self.device.vsc.get_frame() is None:
+            time.sleep(0.01)
+
+        logger.info(f"VSC Ready")
+
         dpg.configure_item(self.tag_btn_connect, label='Connected!')
         dpg.set_value(self.tag_txt_device, self.device_info())
+
+        self.device.csc.f_set_screen(False)
 
         self.window_video = WindowVideo(self.device)
         self.window_video.init()
@@ -141,7 +148,7 @@ class WindowDevices:
         _load_devices()
 
 
-def main():
+def start_devices_window():
     from myscrcpy.gui.dpg.loop_register import LoopRegister
     from myscrcpy.utils import Param
 
@@ -171,4 +178,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    start_devices_window()

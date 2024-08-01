@@ -17,7 +17,7 @@ __all__ = []
 
 import click
 
-from myscrcpy.gui.dpg.window_devices import main
+from myscrcpy.gui.dpg.window_devices import start_devices_window
 from myscrcpy.gui.pg.window_control import run
 
 
@@ -27,7 +27,7 @@ def cmd(gamemode):
     if gamemode:
         run()
     else:
-        main()
+        start_devices_window()
 
 
 if __name__ == '__main__':

@@ -5,17 +5,19 @@
     控制器
 
     Log:
+        2024-08-01 1.1.2 Me2sY  更新类名称
+
         2024-07-30 1.1.0 Me2sY
             1.抽离形成单独部分
             2.修改部分功能结构
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.0'
+__version__ = '1.1.2'
 
 __all__ = [
     'KeyboardWatcher', 'ControlSocketController',
-    'ZMQController'
+    'ZMQControlServer'
 ]
 
 import struct
@@ -422,7 +424,7 @@ class ControlSocketController(ScrcpySocket):
         ))
 
 
-class ZMQController:
+class ZMQControlServer:
     """
         ZMQ Controller
         create a ZMQ pull/push socket

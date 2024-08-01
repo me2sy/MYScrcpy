@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-01 1.1.2 Me2sY
+            1.优化connect方法，采用args传参方式
+            2.去除 create zmq方法，形成ZMQController
+
         2024-07-31 1.1.1 Me2sY
             1.send_frame_meta=false 降低数据包解析延迟
             2.修复 ControlSocketController 未启动线程缺陷
@@ -38,7 +42,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 __all__ = [
     'DeviceController', 'DeviceFactory'
@@ -54,8 +58,8 @@ from loguru import logger
 
 from myscrcpy.utils import Param, Coordinate
 from myscrcpy.controller.video_socket_controller import VideoSocketController
-from myscrcpy.controller.audio_socket_controller import AudioSocketController
-from myscrcpy.controller.control_socket_controller import ControlSocketController, ZMQController
+from myscrcpy.controller.audio_socket_controller import AudioSocketController, AudioSocketServer
+from myscrcpy.controller.control_socket_controller import ControlSocketController
 
 
 JAR_PATH = Param.PATH_LIBS.joinpath('scrcpy-server-v2.5')
@@ -105,7 +109,7 @@ class DeviceController:
         self.stream: AdbConnection
 
         self.vsc: VideoSocketController
-        self.asc: AudioSocketController
+        self.asc: AudioSocketController | AudioSocketServer
         self.csc: ControlSocketController
 
         msg = f"{self.adb_dev} Ready! Device Rotation:{self.rotation}"
@@ -199,24 +203,48 @@ class DeviceController:
             self.coordinate = Coordinate(self.coordinate.height, self.coordinate.width)
             self.get_app_name()
 
-    def connect(
-            self,
-            vsc: VideoSocketController | None = None,
-            asc: AudioSocketController | None = None,
-            csc: ControlSocketController | None = None,
-    ):
+    def connect(self, *args):
+        """
+            Create VSC/ASC/ASS/CSC
+        """
 
-        is_init_video_socket = vsc is not None
-        is_init_audio_socket = asc is not None
-        is_init_control_socket = csc is not None
+        vsc, asc, csc = None, None, None
 
-        socket_num = sum(
-            [
-                1 if is_init_video_socket else 0,
-                1 if is_init_audio_socket else 0,
-                1 if is_init_control_socket else 0,
-            ]
-        )
+        is_init_video_socket = False
+        is_init_audio_socket = False
+        is_init_control_socket = False
+
+        if len(args) == 0:
+            raise RuntimeError('Create at least one Controller!')
+        elif len(args) > 3:
+            raise RuntimeError('ONE Socket ONE Controller!')
+
+        socket_num = 0
+
+        for arg in args:
+            if isinstance(arg, VideoSocketController):
+                if is_init_video_socket:
+                    raise ValueError('VideoSocket Already Occupied')
+                vsc = arg
+                is_init_video_socket = True
+                socket_num += 1
+                continue
+
+            if isinstance(arg, AudioSocketController) or isinstance(arg, AudioSocketServer):
+                if is_init_audio_socket:
+                    raise ValueError('AudioSocket Already Occupied')
+                asc = arg
+                is_init_audio_socket = True
+                socket_num += 1
+                continue
+
+            if isinstance(arg, ControlSocketController):
+                if is_init_control_socket:
+                    raise ValueError('ControlSocket Already Occupied')
+                csc = arg
+                is_init_control_socket = True
+                socket_num += 1
+                continue
 
         if socket_num == 0:
             raise RuntimeError('Create at least one socket!')
@@ -232,29 +260,21 @@ class DeviceController:
                 f"video_source={vsc.video_source}",
             ]
         else:
-            cmd += [
-                'video=false'
-            ]
+            cmd += ['video=false']
 
         if is_init_audio_socket:
             cmd += [
                 'audio=true',
-                f"audio_codec={asc.audio_codec}",
+                f"audio_codec={asc.AUDIO_CODEC}",
                 f"audio_source={asc.audio_source}"
             ]
         else:
-            cmd += [
-                'audio=false'
-            ]
+            cmd += ['audio=false']
 
         if is_init_control_socket:
-            cmd += [
-                'control=true'
-            ]
+            cmd += ['control=true']
         else:
-            cmd += [
-                'control=false'
-            ]
+            cmd += ['control=false']
 
         # Push Jar And Start Scrcpy Server
         self.adb_dev.sync.push(JAR_PATH, TEMP_JAR_PATH)
@@ -318,13 +338,6 @@ class DeviceController:
                 break
 
         self.is_scrcpy_running = True
-
-    def create_zmq_server(self, zmq_url: str = 'tcp://127.0.0.1:55556'):
-        if self.is_scrcpy_running and self.csc.is_running:
-            self.zmq_url = zmq_url
-            self.zmq = ZMQController(self.csc, zmq_url)
-        else:
-            logger.warning('Scrcpy is not running')
 
 
 class DeviceFactory:
@@ -403,16 +416,26 @@ class DeviceFactory:
 
 
 if __name__ == '__main__':
+    from myscrcpy.controller.audio_socket_controller import AudioSocketServer
+
     # Create DeviceController
     # dc = DeviceFactory.device()
     dc = DeviceController(DeviceFactory())
 
     # Connect to Scrcpy
-    # Create a SocketController and pass to connect method
-    # None means NOT connect
+    # Instantiate SocketController and pass to connect method
     dc.connect(
-        vsc=VideoSocketController(1366),
-        asc=AudioSocketController(),
-        csc=ControlSocketController()
+        VideoSocketController(1366),
+        # AudioSocketController(),
+        AudioSocketServer(True),
+        ControlSocketController()
     )
 
+    # ZMQ Audio Server
+    # from myscrcpy.controller.audio_socket_controller import ZMQAudioServer, ZMQAudioSubscriber
+    # zas = ZMQAudioServer(dc.asc)
+    # zas.start()
+
+    # ZMQ Audio Subscriber
+    # sub = ZMQAudioSubscriber()
+    # sub.start()

@@ -28,7 +28,7 @@ from nicegui import app, run, ui
 
 from myscrcpy.utils import Action
 from myscrcpy.controller import ControlSocketController as CSC
-from myscrcpy.controller import ZMQController, VideoStream
+from myscrcpy.controller import ZMQControlServer, VideoStream
 
 
 class NGController:
@@ -104,7 +104,7 @@ def mobile_page():
 
     def connect():
         global ngc
-        ngc.zmq_sender = ZMQController.create_sender(zmq_url.value)
+        ngc.zmq_sender = ZMQControlServer.create_sender(zmq_url.value)
         ngc.vs = VideoStream.create_by_name(shm_name.value)
         ngc.is_ready = True
 

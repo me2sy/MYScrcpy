@@ -145,9 +145,9 @@ def run():
 
     if file_path is not None and size > 0:
         dev.connect(
-            vsc=VideoSocketController(max_size=size),
-            asc=AudioSocketController(),
-            csc=ControlSocketController()
+            VideoSocketController(max_size=size),
+            AudioSocketController(),
+            ControlSocketController()
         )
         PGControlWindow().run(
             dev, None, pathlib.Path(file_path)

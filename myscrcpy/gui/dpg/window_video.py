@@ -5,6 +5,8 @@
     设备操作窗口
 
     Log:
+        2024-08-01 1.1.2 Me2sY  修改 ZMQ 逻辑
+
         2024-07-31 1.1.1 Me2sY  适配新Controller
 
         2024-07-28 1.0.1 Me2sY  新增 ZMQ Server
@@ -41,7 +43,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 __all__ = [
     'WindowVideo', 'WindowInputPad'
@@ -55,6 +57,7 @@ from loguru import logger
 import dearpygui.dearpygui as dpg
 
 from myscrcpy.controller import DeviceController, KeyboardWatcher
+from myscrcpy.controller import ZMQControlServer, ZMQAudioServer
 
 from myscrcpy.gui.dpg.loop_register import LoopRegister
 from myscrcpy.gui.dpg.video_controller import DpgVideoController
@@ -435,7 +438,8 @@ class WindowVideo:
         dpg.add_separator()
 
         def open_zmq():
-            self.device.create_zmq_server(dpg.get_value(zmq_url))
+
+            ZMQControlServer(self.device.csc, dpg.get_value(zmq_url))
             dpg.disable_item(zmq_btn)
 
         zmq_url = dpg.add_input_text(label='url', default_value='tcp://127.0.0.1:55556')
@@ -496,9 +500,9 @@ def run():
 
     dev = DeviceFactory.device()
     dev.connect(
-        vsc=VideoSocketController(max_size=1366),
-        asc=AudioSocketController(),
-        csc=ControlSocketController()
+        VideoSocketController(max_size=1366),
+        AudioSocketController(),
+        ControlSocketController()
     )
 
     vw = WindowVideo(dev)

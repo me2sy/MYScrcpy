@@ -4,17 +4,23 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
-        2024-07-30 1.1.0 Me2sY 创建
+        2024-08-01 1.1.2 Me2sY  新增Audio相关类
 
+        2024-07-30 1.1.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.0'
+__version__ = '1.1.2'
 
 __all__ = [
     'VideoStream', 'VideoSocketController',
-    'AudioSocketController',
-    'KeyboardWatcher', 'ControlSocketController', 'ZMQController',
+
+    'AudioSocketController', 'AudioSocketServer',
+    'RawAudioPlayer', 'FlacAudioPlayer',
+    'ZMQAudioServer', 'ZMQAudioSubscriber',
+
+    'KeyboardWatcher', 'ControlSocketController', 'ZMQControlServer',
+
     'DeviceController', 'DeviceFactory'
 ]
 
