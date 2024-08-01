@@ -58,7 +58,6 @@ device = DeviceFactory.device()
 
 # Connect to Scrcpy
 # Create a SocketController and pass to connect method
-# None means NOT connect
 device.connect(
    VideoSocketController(max_size=1366),
    AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
