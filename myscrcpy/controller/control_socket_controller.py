@@ -8,6 +8,7 @@
         2024-08-02 1.1.3 Me2sY
             1.新增 to_args 方法
             2.修改 ZMQControlServer 部分方法
+            3.修改 KeyWatcher功能，支持低版本关闭UHID功能
 
         2024-08-01 1.1.2 Me2sY  更新类名称
 
@@ -119,10 +120,11 @@ class KeyboardWatcher:
         UnifiedKey.R_WIN: 0b10000000,
     }
 
-    def __init__(self, uhid_keyboard_send_method):
+    def __init__(self, uhid_keyboard_send_method, active: bool = True):
         self.pressed = list()
         self.modifiers = 0
         self.uhid_keyboard_send_method = uhid_keyboard_send_method
+        self.active = active
 
     def key_pressed(self, unified_key: UnifiedKey):
         """
@@ -174,6 +176,9 @@ class KeyboardWatcher:
             更新键盘状态
         :return:
         """
+
+        if not self.active:
+            return
 
         # 补全 6 位 按键码
         keys = [*self.pressed]

@@ -5,7 +5,10 @@
     设备操作窗口
 
     Log:
-        2024-08-02 1.1.3 Me2sY  新增音量调节、媒体控制等按键
+        2024-08-02 1.1.3 Me2sY
+            1.新增音量调节、媒体控制等按键
+            2.判断 android 版本，禁用低版本 UHID 功能
+            3.修复部分缺陷
 
         2024-08-01 1.1.2 Me2sY  修改 ZMQ 逻辑
 
@@ -82,14 +85,19 @@ class WindowInputPad:
         self.tag_ipt_psw = dpg.generate_uuid()
         self.tag_ipt_txt = dpg.generate_uuid()
 
-        self.device.csc.f_uhid_keyboard_create()
+        self.use_hid = self.device.device_sys_version >= 12
+
+        if self.use_hid:
+            self.device.csc.f_uhid_keyboard_create()
+        else:
+            logger.warning(f"Android Version {self.device.device_sys_version} Maybe not supported. Close UHID")
 
         def _send(modifiers, key_scan_codes):
             self.device.csc.f_uhid_keyboard_input(
                 modifiers=modifiers, key_scan_codes=key_scan_codes
             )
 
-        self.key_watcher = KeyboardWatcher(uhid_keyboard_send_method=_send)
+        self.key_watcher = KeyboardWatcher(uhid_keyboard_send_method=_send, active=self.use_hid)
 
     def draw(self):
 
@@ -191,7 +199,8 @@ class WindowInputPad:
 
             dpg.add_separator()
 
-            uhid = dpg.add_checkbox(label='UHID_KEYBOARD', default_value=True)
+            if self.use_hid:
+                uhid = dpg.add_checkbox(label='UHID_KEYBOARD', default_value=True)
 
             def callback_input():
                 txt = dpg.get_value(self.tag_ipt_txt)
@@ -216,7 +225,7 @@ class WindowInputPad:
                     except:
                         pass
 
-            with dpg.handler_registry():
+            with dpg.handler_registry(show=self.use_hid):
                 dpg.add_key_press_handler(callback=press)
                 dpg.add_key_release_handler(callback=release)
 
@@ -239,6 +248,7 @@ class WindowVideo:
         self.tag_win_main = dpg.generate_uuid()
         self.tag_drawlist_main = dpg.generate_uuid()
         self.tag_mouse_ctrl = dpg.generate_uuid()
+        self.tag_cb_pause = dpg.generate_uuid()
 
         self.touch_id = 0x0413  # My Wife sY's Birthday :)
 
@@ -444,10 +454,11 @@ class WindowVideo:
 
         # Pause
         # When Pause is True, Also Stop Mouse Control.
-        tag_btn_pause = dpg.add_checkbox(
+        dpg.add_checkbox(
             label='Pause', callback=lambda s, a: self.dvc.set_pause(a) or dpg.set_value(
                 tag_mc, not a
-            ) or dpg.configure_item(self.tag_mouse_ctrl, show=not a)
+            ) or dpg.configure_item(self.tag_mouse_ctrl, show=not a),
+            tag=self.tag_cb_pause
         )
 
         # Screen Switch
@@ -497,6 +508,7 @@ class WindowVideo:
             pgcw = PGControlWindow()
             self._open_pg(pgcw, Param.PATH_TPS.joinpath(dpg.get_value(tag_cfg) + '.json'))
             self.dvc.set_pause(True)
+            dpg.set_value(self.tag_cb_pause, True)
 
         with dpg.window():
             cfgs = []

@@ -8,6 +8,7 @@
             1.优化 connect 方法
             2.解决 VideoSource = camera时 与 ControlSocket冲突问题
             3.新增 获取设备信息方法 获取厂商及Android Version，判断是否支持某些功能（Audio、Camera）
+            4.新增 Server回传信息显示功能，控制台显示从Stream中获得的Server回传信息
 
         2024-08-01 1.1.2 Me2sY
             1.优化connect方法，采用args传参方式
@@ -19,7 +20,7 @@
 
         2024-07-30 1.1.0 Me2sY
             1.抽离ZMQController
-            2.新增AudioSocketController
+            2.新增 AudioSocketController
             3.修改连接Scrcpy方式，支持V/A/C自选连接
 
         2024-07-28 1.0.1 Me2sY 新增 ZMQController
@@ -150,6 +151,9 @@ class DeviceController:
         self.adb_dev.keyevent('HOME')
 
     def close(self):
+
+        self.is_scrcpy_running = False
+
         try:
             self.vsc.close()
         except:
@@ -291,16 +295,17 @@ class DeviceController:
             dev_info = stream_msg.split('INFO: ')[1]
 
             self.device_prod = re.findall('\[(.*?)\]', dev_info)[0]
-            self.device_sys_version = int(re.findall('\((.*?)\)', dev_info)[0].split(' ')[1])
+            ver = re.findall('\((.*?)\)', dev_info)[0].split(' ')[1]
+            if '.' in ver:
+                self.device_sys_version = int(ver.split('.')[0])
+            else:
+                self.device_sys_version = int(ver)
 
         except:
-            logger.warning(f"Get Device Info Failed {stream_msg}")
-
-        if self.device_sys_version < 12 and self.asc:
-            raise RuntimeError('Android Version is less than 12. AudioSocket Not Support!')
+            logger.warning(f"Analysis Device Info Failed => {stream_msg}")
 
         if self.device_sys_version < 12 and self.vsc and self.vsc.camera:
-            raise RuntimeError('Android Version is less than 12. VideoSocket Not Support!')
+            raise RuntimeError('Android Version is less than 12. VideoSocket Camera Not Support!')
 
         _conn_list = []
         _conn = None
@@ -333,6 +338,11 @@ class DeviceController:
                 continue
 
             if self.asc and not self.asc.is_running:
+                if self.device_sys_version < 12:
+                    logger.warning('Android Version is less than 12. AudioSocket Not Support! Auto Disabled.')
+                    self.asc = None
+                    continue
+
                 logger.info('Init Audio Socket')
                 self.asc.setup_socket_connection(conn)
                 continue
@@ -347,11 +357,23 @@ class DeviceController:
                 _.start()
 
         self.is_scrcpy_running = True
+        threading.Thread(target=self._thread_load_stream).start()
 
-        success_msg = f"Device {self.device_prod} {self.device_name} | Android Version: {self.device_sys_version}"
-        success_msg += ' | Connected to Scrcpy Server\n'
-        success_msg += '-' * 200
-        logger.success(success_msg)
+        dev_info = f"Device Info: {self.serial} | {self.device_prod} | {self.device_name} | "
+        dev_info += f"Android Version: {self.device_sys_version}"
+        dev_info += ' | Connected to Scrcpy Server\n'
+        dev_info += '-' * 200
+        logger.success(dev_info)
+
+    def _thread_load_stream(self):
+        msg = ''
+        while self.is_scrcpy_running:
+            w = self.stream.read_string(1)
+            if w == '\n':
+                logger.info(f"Server => {msg}")
+                break
+            else:
+                msg += w
 
 
 class DeviceFactory:

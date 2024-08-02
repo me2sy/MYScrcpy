@@ -29,6 +29,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 - [x] 采用TwinWindow思路，解决DPG控件无法重叠问题，实现DPG控制映射编辑器（TPEditor）
 - [x] 纯Pygame控制模式下，最低延迟在6ms
 - [x] 实现Audio ZMQ Server, 以ZMQ发布模式，通过网络Socket传输音频流，可以实现远程声音传输、MIC监听等更多可能
+- [x] 低Android版本设备友好，自动判断版本并禁用Audio、Camera、UHID等功能。为实现更好效果，建议使用Android 12版本以上设备
 
 ## 基本使用
 
@@ -96,7 +97,7 @@ device.csc.f_set_screen(False)
 
 安装
 ```bash
-pip install myscrcpy-X.X.0.tar.gz
+pip install myscrcpy-X.X.X.tar.gz
 ```
 
 :exclamation: Ubuntu等Linux下 使用pyaudio 需要先安装portaudio
