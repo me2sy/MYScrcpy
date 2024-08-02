@@ -5,11 +5,13 @@
     基础类
 
     Log:
-        2024-07-30 1.1.0 Me2sY 从原有结构中抽离,形成发布初版
+        2024-08-02 1.1.3 Me2sY  新增 to_args 方法
+
+        2024-07-30 1.1.0 Me2sY  从原有结构中抽离,形成发布初版
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.0'
+__version__ = '1.1.3'
 
 __all__ = [
     'ScrcpySocket'
@@ -56,3 +58,6 @@ class ScrcpySocket(metaclass=ABCMeta):
         (size, ) = struct.unpack('>I', self._conn.recv(4))
         data = self._conn.recv(int(size))
         return data
+
+    def to_args(self) -> list:
+        ...

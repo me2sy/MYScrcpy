@@ -5,6 +5,8 @@
     设备操作窗口
 
     Log:
+        2024-08-02 1.1.3 Me2sY  新增音量调节、媒体控制等按键
+
         2024-08-01 1.1.2 Me2sY  修改 ZMQ 逻辑
 
         2024-07-31 1.1.1 Me2sY  适配新Controller
@@ -43,7 +45,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 __all__ = [
     'WindowVideo', 'WindowInputPad'
@@ -100,7 +102,7 @@ class WindowInputPad:
                 return
 
             if key in [
-                'BACK', 'ENTER', 'HOME', 'MENU', 'POWER', 'ESCAPE'
+                'BACK', 'ENTER', 'HOME', 'MENU', 'POWER', 'ESC', 'CLEAR'
             ]:
                 self.device.adb_dev.keyevent(ADBKeyCode[key].value)
                 dpg.set_value(self.tag_ipt_psw, '')
@@ -109,23 +111,36 @@ class WindowInputPad:
                 self.device.adb_dev.keyevent(ADBKeyCode['BACKSPACE'].value)
                 dpg.set_value(self.tag_ipt_psw, dpg.get_value(self.tag_ipt_psw)[:-1])
                 return
+
+            elif key in [
+                'V_UP', 'V_DOWN', 'V_MUTE',
+                'M_PLAY', 'M_NEXT', 'M_PREV',
+                'CAMERA', 'ZOOM_IN', 'ZOOM_OUT',
+                'SEARCH', 'MSG'
+            ]:
+                self.device.adb_dev.keyevent(ADBKeyCode[key].value)
+                return
+
             else:
                 psw = ADBKeyCode[f"N{key}"]
                 self.device.adb_dev.keyevent(psw.value)
                 dpg.set_value(self.tag_ipt_psw, dpg.get_value(self.tag_ipt_psw) + '*')
 
-        btn_cfg = dict(width=50, height=30, callback=callback)
+        btn_cfg = dict(width=49, height=25, callback=callback)
+        big_btn_cfg = dict(width=70, height=35, callback=callback)
+        mid_btn_cfg = dict(width=70, height=25, callback=callback)
 
         with dpg.window(
                 tag=self.tag_win,
                 label=f"InputPad - {self.device.serial}", no_resize=True, no_collapse=True, pos=[10, 10],
                 no_scrollbar=True, no_scroll_with_mouse=True
         ):
-            dpg.add_input_text(label='PSW', width=130, height=50, tag=self.tag_ipt_psw, enabled=False)
+            dpg.add_input_text(label='PSW', width=190, height=50, tag=self.tag_ipt_psw, enabled=False)
             with dpg.group(horizontal=True):
                 dpg.add_button(label='1', **btn_cfg)
                 dpg.add_button(label='2', **btn_cfg)
                 dpg.add_button(label='3', **btn_cfg)
+                dpg.add_button(label='POWER', **btn_cfg)
 
             with dpg.group(horizontal=True):
                 dpg.add_button(label='4', **btn_cfg)
@@ -136,23 +151,43 @@ class WindowInputPad:
                 dpg.add_button(label='7', **btn_cfg)
                 dpg.add_button(label='8', **btn_cfg)
                 dpg.add_button(label='9', **btn_cfg)
+                dpg.add_button(label='ESC', **btn_cfg)
 
             with dpg.group(horizontal=True):
                 dpg.add_button(label='|<-', **btn_cfg)
                 dpg.add_button(label='0', **btn_cfg)
                 dpg.add_button(label='Enter', **btn_cfg)
+                dpg.add_button(label='Close', **btn_cfg)
 
             dpg.add_separator()
 
             with dpg.group(horizontal=True):
-                dpg.add_button(label='BACK', **btn_cfg)
-                dpg.add_button(label='HOME', **btn_cfg)
-                dpg.add_button(label='MENU', **btn_cfg)
+                dpg.add_button(label='BACK', **big_btn_cfg)
+                dpg.add_button(label='HOME', **big_btn_cfg)
+                dpg.add_button(label='MENU', **big_btn_cfg)
 
             with dpg.group(horizontal=True):
-                dpg.add_button(label='ESCAPE', **btn_cfg)
-                dpg.add_button(label='POWER', **btn_cfg)
-                dpg.add_button(label='Close', **btn_cfg)
+                dpg.add_button(label='M_PREV', **big_btn_cfg)
+                dpg.add_button(label='M_PLAY', **big_btn_cfg)
+                dpg.add_button(label='M_NEXT', **big_btn_cfg)
+
+            dpg.add_separator()
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(label='V_UP', **mid_btn_cfg)
+                dpg.add_button(label='V_DOWN', **mid_btn_cfg)
+                dpg.add_button(label='V_MUTE', **mid_btn_cfg)
+
+            dpg.add_separator()
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(label='ZOOM_IN', **mid_btn_cfg)
+                dpg.add_button(label='CAMERA', **mid_btn_cfg)
+                dpg.add_button(label='ZOOM_OUT', **mid_btn_cfg)
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(label='SEARCH', **mid_btn_cfg)
+                dpg.add_button(label='MSG', **mid_btn_cfg)
 
             dpg.add_separator()
 
@@ -164,8 +199,8 @@ class WindowInputPad:
                     self.device.csc.f_text_paste(txt)
                     dpg.set_value(self.tag_ipt_txt, '')
 
-            dpg.add_input_text(tag=self.tag_ipt_txt, width=165, on_enter=True, callback=callback_input)
-            dpg.add_button(label='Paste', width=165, height=30, callback=callback_input)
+            dpg.add_input_text(tag=self.tag_ipt_txt, width=225, on_enter=True, callback=callback_input)
+            dpg.add_button(label='Paste', width=225, height=30, callback=callback_input)
 
             def press(sender, app_data):
                 if dpg.is_item_focused(self.tag_win) or dpg.get_value(uhid):
@@ -501,7 +536,7 @@ def run():
     dev = DeviceFactory.device()
     dev.connect(
         VideoSocketController(max_size=1366),
-        AudioSocketController(),
+        AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
         ControlSocketController()
     )
 

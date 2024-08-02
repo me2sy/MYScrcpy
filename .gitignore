@@ -5,3 +5,6 @@ dist/myscrcpy-1.0.0-py3-none-any.whl
 /.idea
 /dist
 /myscrcpy.egg-info
+/myscrcpy/build
+/myscrcpy/dist
+*.spec

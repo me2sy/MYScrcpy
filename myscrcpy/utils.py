@@ -5,6 +5,8 @@
 
 
     Log:
+        2024-08-02 1.1.3 Me2sY  新增媒体控制键代码
+
         2024-07-28 1.0.0 Me2sY  发布
 
         2024-07-25 0.2.1 Me2sY
@@ -31,7 +33,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.1.3'
 
 __all__ = [
     'Param',
@@ -125,10 +127,25 @@ class ADBKeyCode(IntEnum):
     BACK = 4
     POWER = 26
     MENU = 82
+    SEARCH = 84
+    MSG = 83
 
     ENTER = 66
     BACKSPACE = 67
-    ESCAPE = 111
+    ESC = 111
+
+    # Media
+    V_UP = 24
+    V_DOWN = 25
+    V_MUTE = 164
+
+    M_PLAY = 85
+    M_NEXT = 87
+    M_PREV = 88
+
+    CAMERA = 27
+    ZOOM_IN = 168
+    ZOOM_OUT = 169
 
     N0 = 7
     N1 = 8

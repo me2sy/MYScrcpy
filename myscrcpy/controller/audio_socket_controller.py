@@ -6,6 +6,8 @@
     支持ZMQ分享
 
     Log:
+        2024-08-02 1.1.3 Me2sY  新增 to_args 方法
+
         2024-08-01 1.1.2 Me2sY
             1.新增 FRAMES_PER_BUFFER 解决pyaudio Linux下声音播放异常问题
             2.新增 AudioPlayer 支持 Flac 及 通过ZMQ publish的 Raw 音乐流
@@ -17,7 +19,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 __all__ = [
     'AudioSocketController', 'AudioSocketServer',
@@ -41,9 +43,9 @@ from myscrcpy.controller.scrcpy_socket import ScrcpySocket
 class AudioPlayer:
     """
         解析Audio Frame
+        Scrcpy Server 2.5
     """
 
-    # Scrcpy Server 2.5
     RATE = 48000
     CHANNELS = 2
     FORMAT = pyaudio.paInt16
@@ -109,8 +111,6 @@ class FlacAudioPlayer(AudioPlayer):
         # Then Process Pure Flac Frame
         self.stream_decoder.process(self.FLAC_METADATA)
 
-        logger.success(f"Audio Stream Ready.")
-
     def process(self, audio_bytes: bytes):
         self.stream_decoder.process(audio_bytes)
 
@@ -122,6 +122,9 @@ class FlacAudioPlayer(AudioPlayer):
 
 
 class RawAudioPlayer(AudioPlayer):
+    """
+        Raw Audio Frame Player
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.player = pyaudio.PyAudio().open(
@@ -158,7 +161,7 @@ class AudioSocketController(ScrcpySocket):
     RECEIVE_FRAMES_PER_BUFFER = 8192
 
     def __init__(
-            self, audio_source: str = 'output',
+            self, audio_source: str = SOURCE_OUTPUT,
             **kwargs
     ):
         super().__init__(**kwargs)
@@ -189,6 +192,13 @@ class AudioSocketController(ScrcpySocket):
 
     def start(self):
         threading.Thread(target=self._main_thread).start()
+
+    def to_args(self) -> list:
+        return [
+            'audio=true',
+            f"audio_codec={self.AUDIO_CODEC}",
+            f"audio_source={self.audio_source}",
+        ]
 
 
 class AudioSocketServer(AudioSocketController):

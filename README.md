@@ -2,7 +2,7 @@
 
 python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客户端。
 
-采用 [DearPyGui](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。
+采用 [DearPyGui](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。支持中文输入，锁屏密码解锁等功能。
 同时在某些控制代理场景，使用[pygame](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。pygame提供了鼠标隐藏、按键事件监听等功能，
 适用于第一人称相关应用的按键映射。
 
@@ -18,7 +18,8 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 - [x] 实现了视频流解析（H264），生成numpy.ndarray，可自行使用opencv、image等进行图形处理
 - [x] 实现了音频流解析（FLAC）, 使用 [pyflac](https://github.com/sonos/pyFLAC) 解码，[pyaudio](https://people.csail.mit.edu/hubert/pyaudio/) 播放
 - [x] 实现了控制按键映射，鼠标映射
-- [x] 实现了UHID-Keyboard UHID-Mouse与鼠标点击混用，可以实现Android界面中鼠标与PC混用模式
+- [x] 实现了UHID-Mouse与鼠标点击混用，可以实现Android界面中鼠标与PC混用模式
+- [x] 实现了UHID-Keyboard，支持模拟外接键盘，直接输入中文（搜狗输入法测试通过）
 - [x] 实现了SharedMemory，不同进程间通过内存低延迟共享视频画面
 - [x] 实现了ZMQ通讯，使用ZMQ pull/push 对手机进行控制
 - [x] 实现了DPG GUI下，鼠标滚轮缩放、滑动等功能
@@ -60,18 +61,34 @@ device = DeviceFactory.device()
 # Create a SocketController and pass to connect method
 device.connect(
    VideoSocketController(max_size=1366),
+   # Use Camera:
+   # VideoSocketController(max_size=1366, camera=VideoCamera(camera_size='1280x720', camera_fps=120)),
+   
    AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
+   # AudioSocketServer
+   # AudioSocketServer(output=False),
+    
+   # ControlSocket CAN NOT Create When VideoSocket Source is Camera
    ControlSocketController()
 )
 
-# create zmq
-device.create_zmq_server()
+# create ZMQ Control Server
+ZMQControlServer(device.csc).start()
 sender = ZMQControlServer.create_sender()
 sender.send(ControlSocketController.packet__screen(True))
 
-# Get Frame np.ndarray RGB
+# Get RGB Frame np.ndarray
 frame = device.vsc.get_frame()
 device.csc.f_set_screen(False)
+
+# ZMQ Audio Server
+# from myscrcpy.controller.audio_socket_controller import ZMQAudioServer, ZMQAudioSubscriber
+# zas = ZMQAudioServer(device.asc)
+# zas.start()
+
+# ZMQ Audio Subscriber
+# sub = ZMQAudioSubscriber()
+# sub.start()
 ...
 ```
 

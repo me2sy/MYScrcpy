@@ -4,6 +4,11 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-02 1.1.3 Me2sY
+            1.优化 connect 方法
+            2.解决 VideoSource = camera时 与 ControlSocket冲突问题
+            3.新增 获取设备信息方法 获取厂商及Android Version，判断是否支持某些功能（Audio、Camera）
+
         2024-08-01 1.1.2 Me2sY
             1.优化connect方法，采用args传参方式
             2.去除 create zmq方法，形成ZMQController
@@ -42,16 +47,16 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 __all__ = [
     'DeviceController', 'DeviceFactory'
 ]
 
-import warnings
 import threading
 import time
 from typing import Dict
+import re
 
 from adbutils import adb, Network, AdbError, AdbConnection
 from loguru import logger
@@ -95,6 +100,8 @@ class DeviceController:
         self.adb_dev = adb.device(serial=device_serial) if device_serial else adb.device_list()[0]
         self.serial = device_serial if device_serial else self.adb_dev.serial
         self.device_name = 'Android Device'
+        self.device_prod = ''
+        self.device_sys_version = 14
 
         # Coordinate
         _size = self.adb_dev.window_size()
@@ -131,7 +138,7 @@ class DeviceController:
 
     def set_screen(self, status: bool = True):
         if not hasattr(self, 'csc') or self.csc is None:
-            warnings.warn('ControlConnect Required!')
+            logger.warning('Set Screen Method Need ControlSocket Connect!')
             return False
 
         self.csc.f_set_screen(status)
@@ -172,7 +179,7 @@ class DeviceController:
         :return:
         """
         if self.is_getting_name:
-            warnings.warn(f"App Name is Updating. Please Wait")
+            logger.warning(f"App Name is Updating. Please Wait")
             while self.is_getting_name:
                 time.sleep(0.1)
         return self._current_app_name
@@ -208,11 +215,7 @@ class DeviceController:
             Create VSC/ASC/ASS/CSC
         """
 
-        vsc, asc, csc = None, None, None
-
-        is_init_video_socket = False
-        is_init_audio_socket = False
-        is_init_control_socket = False
+        self.vsc, self.asc, self.csc = None, None, None
 
         if len(args) == 0:
             raise RuntimeError('Create at least one Controller!')
@@ -223,56 +226,50 @@ class DeviceController:
 
         for arg in args:
             if isinstance(arg, VideoSocketController):
-                if is_init_video_socket:
+                if self.vsc:
                     raise ValueError('VideoSocket Already Occupied')
-                vsc = arg
-                is_init_video_socket = True
+                self.vsc = arg
                 socket_num += 1
                 continue
 
             if isinstance(arg, AudioSocketController) or isinstance(arg, AudioSocketServer):
-                if is_init_audio_socket:
+                if self.asc:
                     raise ValueError('AudioSocket Already Occupied')
-                asc = arg
-                is_init_audio_socket = True
+                self.asc = arg
                 socket_num += 1
                 continue
 
             if isinstance(arg, ControlSocketController):
-                if is_init_control_socket:
+                if self.csc:
                     raise ValueError('ControlSocket Already Occupied')
-                csc = arg
-                is_init_control_socket = True
+                self.csc = arg
                 socket_num += 1
                 continue
 
-        if socket_num == 0:
+        if self.csc and self.vsc and self.vsc.video_source == self.vsc.SOURCE_CAMERA:
+            logger.warning(f"VideoSocket Set To Camera, Auto Disabled ControlSocket!")
+            self.csc = None
+            socket_num -= 1
+
+        if socket_num <= 0:
             raise RuntimeError('Create at least one socket!')
+
+        logger.info(f"Prepare to Create {socket_num} ({' VS' if self.vsc else ''}{' AS' if self.asc else ''}{' CS' if self.csc else ''} ) sockets.")
 
         cmd = CMD
 
-        if is_init_video_socket:
-            cmd += [
-                'video=true',
-                f"max_size={vsc.max_size}",
-                f"max_fps={vsc.fps}",
-                f"video_codec={vsc.video_codec}",
-                f"video_source={vsc.video_source}",
-            ]
+        if self.vsc:
+            cmd += self.vsc.to_args()
         else:
             cmd += ['video=false']
 
-        if is_init_audio_socket:
-            cmd += [
-                'audio=true',
-                f"audio_codec={asc.AUDIO_CODEC}",
-                f"audio_source={asc.audio_source}"
-            ]
+        if self.asc:
+            cmd += self.asc.to_args()
         else:
             cmd += ['audio=false']
 
-        if is_init_control_socket:
-            cmd += ['control=true']
+        if self.csc:
+            cmd += self.csc.to_args()
         else:
             cmd += ['control=false']
 
@@ -289,7 +286,21 @@ class DeviceController:
                 break
             else:
                 stream_msg += c
-        logger.success(f"Scrcpy Server Started! Stream Msg => {stream_msg}")
+
+        try:
+            dev_info = stream_msg.split('INFO: ')[1]
+
+            self.device_prod = re.findall('\[(.*?)\]', dev_info)[0]
+            self.device_sys_version = int(re.findall('\((.*?)\)', dev_info)[0].split(' ')[1])
+
+        except:
+            logger.warning(f"Get Device Info Failed {stream_msg}")
+
+        if self.device_sys_version < 12 and self.asc:
+            raise RuntimeError('Android Version is less than 12. AudioSocket Not Support!')
+
+        if self.device_sys_version < 12 and self.vsc and self.vsc.camera:
+            raise RuntimeError('Android Version is less than 12. VideoSocket Not Support!')
 
         _conn_list = []
         _conn = None
@@ -302,10 +313,9 @@ class DeviceController:
                 time.sleep(0.001)
 
         if _conn is None:
-            raise RuntimeError('Connect Scrcpy Server Error!')
+            raise RuntimeError('Failed to Create Socket')
         else:
             if _conn.recv(1) != b'\x00':
-                logger.error('Dummy Data Error!')
                 raise RuntimeError('Dummy Data Error!')
 
         if socket_num > 1:
@@ -313,31 +323,35 @@ class DeviceController:
                 _conn_list.append(self.adb_dev.create_connection(Network.LOCAL_ABSTRACT, "scrcpy"))
 
         device_name = _conn.recv(64).decode('utf-8').rstrip('\x00')
-        logger.debug(f"Device Name    => {device_name}")
         self.device_name = device_name
 
         for conn in _conn_list:
-            if is_init_video_socket:
+
+            if self.vsc and not self.vsc.is_running:
                 logger.info('Init Video Socket')
-                self.vsc: VideoSocketController = vsc.setup_socket_connection(conn)
-                self.vsc.start()
-                is_init_video_socket = False
+                self.vsc.setup_socket_connection(conn)
                 continue
 
-            if is_init_audio_socket:
+            if self.asc and not self.asc.is_running:
                 logger.info('Init Audio Socket')
-                self.asc: AudioSocketController = asc.setup_socket_connection(conn)
-                is_init_audio_socket = False
-                self.asc.start()
+                self.asc.setup_socket_connection(conn)
                 continue
 
-            if is_init_control_socket:
+            if self.csc and not self.csc.is_running:
                 logger.info('Init Control Socket')
-                self.csc: ControlSocketController = csc.setup_socket_connection(conn)
-                self.csc.start()
-                break
+                self.csc.setup_socket_connection(conn)
+                continue
+
+        for _ in [self.asc, self.vsc, self.csc]:
+            if _:
+                _.start()
 
         self.is_scrcpy_running = True
+
+        success_msg = f"Device {self.device_prod} {self.device_name} | Android Version: {self.device_sys_version}"
+        success_msg += ' | Connected to Scrcpy Server\n'
+        success_msg += '-' * 200
+        logger.success(success_msg)
 
 
 class DeviceFactory:
@@ -425,9 +439,9 @@ if __name__ == '__main__':
     # Connect to Scrcpy
     # Instantiate SocketController and pass to connect method
     dc.connect(
-        VideoSocketController(1366),
-        # AudioSocketController(),
-        AudioSocketServer(True),
+        VideoSocketController(max_size=1366),
+        AudioSocketController(),
+        # AudioSocketServer(True),
         ControlSocketController()
     )
 

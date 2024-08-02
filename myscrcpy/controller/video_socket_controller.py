@@ -5,6 +5,10 @@
     视频控制器，使用h264
 
     Log:
+        2024-08-02 1.1.3 Me2sY
+            1.新增 VideoCamera 用于控制相机视频流
+            2.新增 to_args 方法
+
         2024-07-31 1.1.1 Me2sY
             1.send_frame_meta=false 降低数据包解析延迟
             2.修复 MacOS下 share_memory文件名限制31长度下的缺陷，缩短shm文件名长度
@@ -13,10 +17,10 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.1'
+__version__ = '1.1.3'
 
 __all__ = [
-    'VideoSocketController', 'VideoStream'
+    'VideoSocketController', 'VideoStream', 'VideoCamera'
 ]
 
 import datetime
@@ -73,6 +77,36 @@ class VideoStream:
         return cls(shared_memory.SharedMemory(shm_name))
 
 
+class VideoCamera:
+    """
+        定义Camera对象，读取Camera视频流
+    """
+    def __init__(
+            self,
+            camera_id: int = 0,
+            camera_ar: str = None,
+            camera_size: str = None,
+            camera_fps: int = 0
+    ):
+        self.camera_id = camera_id
+        self.camera_ar = camera_ar
+        self.camera_size = camera_size
+        self.camera_fps = camera_fps
+
+    def to_args(self) -> list:
+        args = [f"camera_id={self.camera_id}"]
+
+        if self.camera_size:
+            args.append(f"camera_size={self.camera_size}")
+        elif self.camera_ar:
+            args.append(f"camera_ar={self.camera_ar}")
+
+        if self.camera_fps > 0:
+            args.append(f"camera_fps={self.camera_fps}")
+
+        return args
+
+
 class VideoSocketController(ScrcpySocket):
     """
         Scrcpy Server 2.5
@@ -88,7 +122,7 @@ class VideoSocketController(ScrcpySocket):
             max_size: int | None,
             fps: int = 90,
             buffer_size: int = 131072,
-            video_source: str = 'display',
+            camera: VideoCamera | None = None,
             **kwargs
     ):
         super().__init__(**kwargs)
@@ -99,11 +133,12 @@ class VideoSocketController(ScrcpySocket):
         self.buffer_size = buffer_size
         self.video_codec = 'h264'
 
-        # camera Requires Android 12+
-        if video_source not in [self.SOURCE_DISPLAY, self.SOURCE_CAMERA]:
-            raise ValueError(f"VideoSocket {video_source} not supported")
-
-        self.video_source: str = video_source
+        if isinstance(camera, VideoCamera):
+            self.video_source = self.SOURCE_CAMERA
+            self.camera = camera
+        else:
+            self.video_source = self.SOURCE_DISPLAY
+            self.camera = None
 
         # 创建解码器
         self.code_context = CodecContext.create(self.video_codec, 'r')
@@ -122,8 +157,18 @@ class VideoSocketController(ScrcpySocket):
 
     def _main_thread(self):
         _video_codec = self._conn.recv(4).decode()
+
+        if (_video_codec is None or _video_codec == '') and self.video_source == self.SOURCE_CAMERA:
+            msg = '\n1.Check VideoSocket max_size\n'
+            msg += '2.Check camera_ar\n'
+            msg += '3.In Camera Mode, No ControlSocket SETUP Please\n'
+            msg += '4.Use scrcpy --list-camera or --list-camera-sizes then choose a RIGHT ar or size or camera_id\n'
+            msg += '5.Make Sure Your Android Device >= 12\n'
+            msg += '6.Some Android Device NOT SUPPORTED Camera. Use Scrcpy to see the WRONG MSG.'
+            raise RuntimeError(msg)
+
         if _video_codec != self.video_codec:
-            raise RuntimeError(f"Video Codec {_video_codec} not supported!")
+            raise RuntimeError(f"Video Codec >{_video_codec}< not supported!")
 
         (width, height,) = struct.unpack('>II', self._conn.recv(8))
         logger.success(f"Video Socket Connected! {_video_codec} Width: {width}, Height: {height}")
@@ -196,3 +241,16 @@ class VideoSocketController(ScrcpySocket):
     def close(self):
         self.is_running = False
         logger.warning(f"{self.__class__.__name__} Socket Closed.")
+
+    def to_args(self) -> list:
+        args = [
+            'video=true',
+            f"max_size={self.max_size}",
+            f"max_fps={self.fps}",
+            f"video_codec={self.video_codec}",
+            f"video_source={self.video_source}",
+        ]
+        if self.camera:
+            args += self.camera.to_args()
+
+        return args
