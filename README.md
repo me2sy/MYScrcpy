@@ -1,6 +1,8 @@
 # MYScrcpy
 
-python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客户端。
+### [README in English](README_EN.md)
+
+python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客户端。包含完整的视频、音频、控制解析及展现，**开发友好，引入即用！**
 
 采用 [DearPyGui](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。支持中文输入，锁屏密码解锁等功能。
 同时在某些控制代理场景，使用[pygame](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。pygame提供了鼠标隐藏、按键事件监听等功能，
@@ -33,9 +35,12 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 ## 基本使用
 
-1. 使用pip install dist/myscrcpy-X.X.X.tar.gz 或者 克隆本项目至本地
+### 1.  克隆本项目至本地 或安装
+```bash
+pip install myscrcpy-X.X.X.tar.gz
+```
 
-2. 结构如下：
+### 2. 结构如下：
    1. **utils.py**
    定义基本工具类及各类参数
    2. **gui/dpg**
@@ -49,7 +54,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
    5. **homepath/.myscrcpy/tps/*.json**
    保存TouchProxy配置文件，.json格式。
 
-3. 程序引用使用，便于自行开发
+### 3. 程序引用使用，便于自行开发
 
 ```python
 from myscrcpy.controller import *
@@ -93,28 +98,23 @@ device.csc.f_set_screen(False)
 ...
 ```
 
-4.使用GUI
+### 4.使用GUI
 
-安装
-```bash
-pip install myscrcpy-X.X.X.tar.gz
-```
-
-:exclamation: Ubuntu等Linux下 使用pyaudio 需要先安装portaudio
+:exclamation: _Ubuntu等Linux下 使用pyaudio 需要先安装portaudio_
 ```bash
 sudo apt install libportaudio-dev
 ```
 
-运行DearPyGui GUI
+#### 运行DearPyGui GUI
 ```bash
 python -m myscrcpy.run
 ```
 
-运行pygame GUI （高速控制模式）
+#### 运行pygame GUI （高速控制模式）
 
-:exclamation: 使用该模式, 需要提前在DGP Gui下配置好相应按键映射
+:exclamation: _使用该模式, 需要提前在DGP Gui下配置好相应按键映射_
 
-为追求性能，该模式剔除旋转等功能，设备发生旋转或应用切换横竖屏，会导致运行终止。
+:exclamation: _为追求性能，该模式剔除旋转等功能，设备发生旋转或应用切换横竖屏，会导致运行终止。_
 ```bash
 python -m myscrcpy.run -g
 ```
@@ -122,16 +122,16 @@ python -m myscrcpy.run -g
 
 ## 程序截图
 
-主界面
+### 主界面
 ![dpg Screenshot](myscrcpy/files/images/dpg_gui.jpg)
 
-Nicegui Web 界面 （DEMO）
+### Nicegui Web 界面 （DEMO）
 ![Nicegui Demo](myscrcpy/files/images/web_gui_demo_nicegui.jpg)
 
-按键映射编辑器
+### 按键映射编辑器
 ![Touch Proxy Editor](myscrcpy/files/images/edit_touch_proxy.jpg)
 
-7ms延迟
+### 7ms延迟
 ![7ms](myscrcpy/files/images/7ms.jpg)
 
 ## 所思所想
