@@ -5,6 +5,8 @@
     设备操作窗口
 
     Log:
+        2024-08-04 1.2.0 Me2sY  适配 1.2.0 DeviceFactory 及 DeviceController
+
         2024-08-02 1.1.3 Me2sY
             1.新增音量调节、媒体控制等按键
             2.判断 android 版本，禁用低版本 UHID 功能
@@ -48,7 +50,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.3'
+__version__ = '1.2.0'
 
 __all__ = [
     'WindowVideo', 'WindowInputPad'
@@ -62,7 +64,7 @@ from loguru import logger
 import dearpygui.dearpygui as dpg
 
 from myscrcpy.controller import DeviceController, KeyboardWatcher
-from myscrcpy.controller import ZMQControlServer, ZMQAudioServer
+from myscrcpy.extensions.zmq_server import ZMQControlServer
 
 from myscrcpy.gui.dpg.loop_register import LoopRegister
 from myscrcpy.gui.dpg.video_controller import DpgVideoController
@@ -85,19 +87,17 @@ class WindowInputPad:
         self.tag_ipt_psw = dpg.generate_uuid()
         self.tag_ipt_txt = dpg.generate_uuid()
 
-        self.use_hid = self.device.device_sys_version >= 12
-
-        if self.use_hid:
+        if self.device.info.is_uhid_supported:
             self.device.csc.f_uhid_keyboard_create()
         else:
-            logger.warning(f"Android Version {self.device.device_sys_version} Maybe not supported. Close UHID")
+            logger.warning(f"{self.device.info} UHID Not Supported!")
 
         def _send(modifiers, key_scan_codes):
             self.device.csc.f_uhid_keyboard_input(
                 modifiers=modifiers, key_scan_codes=key_scan_codes
             )
 
-        self.key_watcher = KeyboardWatcher(uhid_keyboard_send_method=_send, active=self.use_hid)
+        self.key_watcher = KeyboardWatcher(uhid_keyboard_send_method=_send, active=self.device.info.is_uhid_supported)
 
     def draw(self):
 
@@ -199,7 +199,7 @@ class WindowInputPad:
 
             dpg.add_separator()
 
-            if self.use_hid:
+            if self.device.info.is_uhid_supported:
                 uhid = dpg.add_checkbox(label='UHID_KEYBOARD', default_value=True)
 
             def callback_input():
@@ -225,7 +225,7 @@ class WindowInputPad:
                     except:
                         pass
 
-            with dpg.handler_registry(show=self.use_hid):
+            with dpg.handler_registry(show=self.device.info.is_uhid_supported):
                 dpg.add_key_press_handler(callback=press)
                 dpg.add_key_release_handler(callback=release)
 
@@ -234,6 +234,10 @@ class WindowInputPad:
 
 
 class WindowVideo:
+    """
+        DearPyGui Main Device Video Gui
+    """
+
     ROTATION_UP_HEIGHT = 1080
     WIN_BORDER = 8
     WIN_TITLE_HEIGHT = 20
@@ -547,7 +551,7 @@ def run():
 
     dev = DeviceFactory.device()
     dev.connect(
-        VideoSocketController(max_size=1366),
+        VideoSocketController(max_size=1366, video_codec=VideoSocketController.CODEC_H264),
         AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
         ControlSocketController()
     )

@@ -260,7 +260,6 @@ class TouchProxyIndicatorFactory:
     def draw_tps(self):
         """
             绘制 TP 指示器
-        :param new_coord:
         :return:
         """
         dpg.delete_item(self.win_twin.tag_layer_tps, children_only=True)

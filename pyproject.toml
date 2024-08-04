@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "myscrcpy"
-version = "1.1.3"
+version = "1.2.0"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
-description = "MYScrcpy, A Client for Scrcpy Written in Python."
+description = "A Scrcpy client implemented using the Python language, dearpygui/pygame, etc., with video, audio, and controls. Supports UHID Keyboard and Chinese input, key proxy, and more."
 readme = "README.md"
 requires-python = ">=3.11"
-keywords = ["scrcpy", "android", "pyav"]
+keywords = ["scrcpy", "android", "pyav", "numpy", ""]
 license = {text = "MIT"}
 classifiers = [
     "Topic :: Scrcpy",
@@ -23,12 +23,7 @@ dependencies = [
     'loguru',
     'adbutils',
     # Video
-    'pyav', 'numpy',
+    'av', 'numpy',
     # Audio
-    'pyaudio', 'pyflac',
-    # Control
-    'pyzmq',
-    # GUI
-    'dearpygui', 'pygame', 'easygui', 'nicegui', 'opencv-python',
-    'click'
+    'pyaudio', 'pyflac'
 ]

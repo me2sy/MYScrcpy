@@ -5,6 +5,8 @@
     控制器
 
     Log:
+        2024-08-04 1.1.4 Me2sY  抽离 ZMQ， 形成Core结构
+
         2024-08-02 1.1.3 Me2sY
             1.新增 to_args 方法
             2.修改 ZMQControlServer 部分方法
@@ -18,11 +20,10 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 __all__ = [
-    'KeyboardWatcher', 'ControlSocketController',
-    'ZMQControlServer'
+    'KeyboardWatcher', 'ControlSocketController'
 ]
 
 import struct
@@ -32,7 +33,6 @@ import time
 import threading
 
 from loguru import logger
-import zmq
 
 from myscrcpy.utils import UnifiedKey, UnifiedKeyMapper, Action
 from myscrcpy.controller.scrcpy_socket import ScrcpySocket
@@ -193,7 +193,7 @@ class KeyboardWatcher:
 
 class ControlSocketController(ScrcpySocket):
     """
-        Scrcpy Server 2.5
+        Scrcpy Server 2.6.1
         Control Socket
     """
 
@@ -216,7 +216,6 @@ class ControlSocketController(ScrcpySocket):
         self.is_running = False
         time.sleep(0.5)
         self.__packet_queue.put(self.CLOSE_PACKET)
-        logger.warning(f"{self.__class__.__name__} Socket Closed.")
 
     def to_args(self) -> list:
         return ['control=true']
@@ -435,51 +434,3 @@ class ControlSocketController(ScrcpySocket):
             keyboard_id, modifiers, key_scan_codes
         ))
 
-
-class ZMQControlServer:
-    """
-        ZMQ Controller
-        create a ZMQ pull/push socket
-        send socket packet to ControlSocketController
-    """
-
-    STOP = b'Me2sYSayBye'
-
-    def __init__(self, csc: ControlSocketController, url: str = 'tcp://127.0.0.1:55556'):
-        self.csc = csc
-        self.url = url
-        self.is_running = False
-
-    def _control_thread(self):
-        logger.info(f"ZMQ Control Pull Running At {self.url}")
-
-        context = zmq.Context()
-        socket = context.socket(zmq.PULL)
-        socket.bind(self.url)
-
-        self.is_running = True
-
-        while self.is_running and self.csc.is_running:
-            _ = socket.recv()
-            if _ == self.STOP:
-                self.is_running = False
-                break
-            self.csc.send_packet(_)
-
-        socket.close()
-        context.term()
-        logger.warning(f"ZMQ Control Pull Shutting Down")
-
-    def start(self):
-        threading.Thread(target=self._control_thread).start()
-
-    @classmethod
-    def stop(cls, url: str = 'tcp://127.0.0.1:55556'):
-        cls.create_sender(url).send(cls.STOP)
-
-    @classmethod
-    def create_sender(cls, url: str = 'tcp://127.0.0.1:55556'):
-        context = zmq.Context()
-        sender = context.socket(zmq.PUSH)
-        sender.connect(url)
-        return sender

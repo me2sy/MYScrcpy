@@ -5,6 +5,8 @@
     用于演示SharedMemory WebGUI 等相关功能
 
     Log:
+        2024-08-05 0.2.0 Me2sY  适配新架构
+
         2024-07-31 0.1.1 Me2sY  适配新Controller
 
         2024-07-28 0.1.0 Me2sY
@@ -14,21 +16,29 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 
 __all__ = []
 
 import base64
 
+from loguru import logger
+
 import numpy as np
-import cv2
+
+try:
+    import cv2
+    from nicegui import app, run, ui
+except ImportError:
+    logger.warning('You need to install opencv-python, nicegui before using.')
+    raise ImportError
 
 from fastapi import Response
-from nicegui import app, run, ui
 
-from myscrcpy.utils import Action
-from myscrcpy.controller import ControlSocketController as CSC
-from myscrcpy.controller import ZMQControlServer, VideoStream
+
+from myscrcpy.utils import Action, Param
+from myscrcpy.controller import VideoStream, ControlSocketController as CSC
+from myscrcpy.extensions.zmq_server import ZMQControlServer
 
 
 class NGController:
@@ -126,4 +136,4 @@ def mobile_page():
         ui.button('Connect', on_click=connect)
 
 
-ui.run(port=51000, title='MYScrcpy Nicegui Demo - Me2sY')
+ui.run(port=51000, title=f"{Param.PROJECT_NAME} Nicegui Demo - {Param.AUTHOR}")

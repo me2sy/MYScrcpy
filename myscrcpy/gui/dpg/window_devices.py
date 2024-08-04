@@ -5,9 +5,11 @@
     主窗口，显示所有设备，进行下一步操作
 
     Log:
-        2024-07-31 1.1.1 Me2sY  适配新Controller
+        2024-08-04 1.2.0 Me2sY  适配 1.2.0 DeviceFactory
 
-        2024-07-28 1.0.0 Me2sY  发布初版
+        2024-07-31 1.1.1 Me2sY  适配 新Controller
+
+        2024-07-28 1.0.0 Me2sY  发布 初版
 
         2024-06-18 0.1.1 Me2sY  重构
 
@@ -131,7 +133,7 @@ class WindowDevices:
 
             def _load_devices():
                 dpg.delete_item(self.tag_group_device, children_only=True)
-                DeviceFactory.init_all_devices()
+                DeviceFactory.load_devices()
                 for serial in DeviceFactory.devices().keys():
                     dpg.add_button(
                         label=serial, width=200, callback=_init_device_win,

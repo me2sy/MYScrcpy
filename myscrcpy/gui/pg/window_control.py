@@ -116,7 +116,8 @@ def run():
     from myscrcpy.controller import DeviceFactory, VideoSocketController, ControlSocketController, AudioSocketController
     from myscrcpy.utils import Param
 
-    devices = DeviceFactory.init_all_devices()
+    DeviceFactory.load_devices()
+    devices = DeviceFactory.devices()
 
     if len(devices) > 1:
 

@@ -2,9 +2,13 @@
 """
     Video Socket Controller
     ~~~~~~~~~~~~~~~~~~
-    视频控制器，使用h264
+    视频控制器，支持h264 h265(hevc)
 
     Log:
+        2024-08-04 1.1.4 Me2sY
+            1.支持 h265
+            2.更换 pyav 至 av
+
         2024-08-02 1.1.3 Me2sY
             1.新增 VideoCamera 用于控制相机视频流
             2.新增 to_args 方法
@@ -17,7 +21,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 __all__ = [
     'VideoSocketController', 'VideoStream', 'VideoCamera'
@@ -35,7 +39,7 @@ import random
 from loguru import logger
 
 import numpy as np
-from av.codec import CodecContext
+import av
 
 from myscrcpy.utils import Coordinate, Param
 from myscrcpy.controller.scrcpy_socket import ScrcpySocket
@@ -111,17 +115,26 @@ class VideoSocketController(ScrcpySocket):
     """
         Scrcpy Server 2.5
         Video Socket
-        Use h264
+        支持 h264/h265(hevc)
     """
 
     SOURCE_DISPLAY = 'display'
     SOURCE_CAMERA = 'camera'
+
+    CODEC_H264 = 'h264'
+    CODEC_H265 = 'h265'
+
+    CODEC_AV_MAP = {
+        CODEC_H264: 'h264',
+        CODEC_H265: 'hevc',     # FFmpeg h265 codec name is hevc
+    }
 
     def __init__(
             self,
             max_size: int | None,
             fps: int = 90,
             buffer_size: int = 131072,
+            video_codec: str = CODEC_H264,
             camera: VideoCamera | None = None,
             **kwargs
     ):
@@ -131,7 +144,7 @@ class VideoSocketController(ScrcpySocket):
         self.max_size = max_size
         self.fps = fps
         self.buffer_size = buffer_size
-        self.video_codec = 'h264'
+        self.video_codec = video_codec
 
         if isinstance(camera, VideoCamera):
             self.video_source = self.SOURCE_CAMERA
@@ -141,7 +154,7 @@ class VideoSocketController(ScrcpySocket):
             self.camera = None
 
         # 创建解码器
-        self.code_context = CodecContext.create(self.video_codec, 'r')
+        self.code_context = av.CodecContext.create(self.CODEC_AV_MAP.get(self.video_codec), 'r')
 
         # 视频相关
         self.video_shm = None
@@ -158,7 +171,7 @@ class VideoSocketController(ScrcpySocket):
     def _main_thread(self):
         _video_codec = self._conn.recv(4).decode()
 
-        if (_video_codec is None or _video_codec == '') and self.video_source == self.SOURCE_CAMERA:
+        if _video_codec is None or _video_codec == '':
             msg = '\n1.Check VideoSocket max_size\n'
             msg += '2.Check camera_ar\n'
             msg += '3.In Camera Mode, No ControlSocket SETUP Please\n'
@@ -171,7 +184,7 @@ class VideoSocketController(ScrcpySocket):
             raise RuntimeError(f"Video Codec >{_video_codec}< not supported!")
 
         (width, height,) = struct.unpack('>II', self._conn.recv(8))
-        logger.success(f"Video Socket Connected! {_video_codec} Width: {width}, Height: {height}")
+        logger.success(f"Video Socket Connected! {_video_codec} | Width: {width}, Height: {height}")
 
         while self.is_running:
             try:

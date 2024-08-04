@@ -16,7 +16,9 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 ## 特性
 
-- [x] 有线连接安卓设备
+- [x] **1.2.0 NEW** 支持有线、无线连接安卓设备
+- [x] **1.2.0 NEW** 支持断线重连，连接历史记录并自动尝试连接功能
+- [x] **1.2.0 NEW** 支持 H265连接
 - [x] 实现了视频流解析（H264），生成numpy.ndarray，可自行使用opencv、image等进行图形处理
 - [x] 实现了音频流解析（FLAC）, 使用 [pyflac](https://github.com/sonos/pyFLAC) 解码，[pyaudio](https://people.csail.mit.edu/hubert/pyaudio/) 播放
 - [x] 实现了控制按键映射，鼠标映射

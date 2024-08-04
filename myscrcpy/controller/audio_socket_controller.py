@@ -3,9 +3,10 @@
     Audio Socket Controller
     ~~~~~~~~~~~~~~~~~~
     音频控制器，使用flac
-    支持ZMQ分享
 
     Log:
+        2024-08-04 1.1.4 Me2sY  抽离ZMQ相关, 形成Core结构
+
         2024-08-02 1.1.3 Me2sY  新增 to_args 方法
 
         2024-08-01 1.1.2 Me2sY
@@ -19,19 +20,16 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 __all__ = [
     'AudioSocketController', 'AudioSocketServer',
-    'FlacAudioPlayer', 'RawAudioPlayer',
-    'ZMQAudioServer', 'ZMQAudioSubscriber'
+    'FlacAudioPlayer', 'RawAudioPlayer'
 ]
 
 import queue
 import threading
-import zlib
 
-import zmq
 from loguru import logger
 
 import pyaudio
@@ -264,60 +262,3 @@ class AudioSocketServer(AudioSocketController):
 
     def get_raw_frame(self) -> bytes:
         return self.audio_raw_queue.get()
-
-
-class ZMQAudioServer:
-    """
-        Publish Server
-    """
-
-    def __init__(self, ass: AudioSocketServer, url: str = 'tcp://127.0.0.1:20520'):
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.PUB)
-        self.socket.bind(url)
-
-        self.ass = ass
-
-        logger.success(f"Audio ZMQ Publish Running At {url}")
-
-    def _server_thread(self):
-        while self.ass.is_running:
-            self.socket.send(zlib.compress(self.ass.get_raw_frame()))
-        self.socket.close()
-        self.context.term()
-
-    def start(self):
-        threading.Thread(target=self._server_thread).start()
-
-
-class ZMQAudioSubscriber:
-    """
-        Audio Subscriber
-    """
-    def __init__(
-            self, url: str = 'tcp://127.0.0.1:20520',
-            **kwargs
-    ):
-        self.url = url
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.SUB)
-        self.socket.connect(url)
-        self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
-
-        self.player = RawAudioPlayer(**kwargs)
-
-        self.is_playing = True
-
-    def _play_thread(self):
-        logger.success(f"ZMQAudioSubscriber Listening To {self.url}")
-        while self.is_playing:
-            self.player.process(zlib.decompress(self.socket.recv()))
-
-        self.player.close()
-        self.socket.close()
-        self.context.term()
-
-        logger.warning(f"{self.__class__.__name__} Closed.")
-
-    def start(self):
-        threading.Thread(target=self._play_thread).start()

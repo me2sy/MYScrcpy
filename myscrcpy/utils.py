@@ -2,9 +2,11 @@
 """
     utils
     ~~~~~~~~~~~~~~~~~~
-
+    工具类
 
     Log:
+        2024-08-05 1.2.0 Me2sY  升级 Scrcpy Server 2.6.1
+
         2024-08-02 1.1.3 Me2sY  新增媒体控制键代码
 
         2024-07-28 1.0.0 Me2sY  发布
@@ -33,7 +35,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.3'
+__version__ = '1.2.0'
 
 __all__ = [
     'Param',
@@ -49,7 +51,6 @@ import json
 from enum import IntEnum, unique
 from typing import NamedTuple
 from functools import cache
-
 
 PROJECT_NAME = 'myscrcpy'
 AUTHOR = 'Me2sY'
@@ -94,6 +95,22 @@ class Param:
     INT_LEN_WIN_TITLE_HEIGHT = 19
     INT_LEN_WIN_BORDER = 8
 
+    # Scrcpy
+    SCRCPY_SERVER_VER = '2.6.1'
+    PATH_SCRCPY_TEMP = '/data/local/tmp/scrcpy-server'
+    PATH_SCRCPY_SERVER_JAR = PATH_LIBS.joinpath(f"scrcpy-server-v{SCRCPY_SERVER_VER}")
+    SCRCPY_SERVER_START_CMD = [
+        f'CLASSPATH={PATH_SCRCPY_TEMP}',
+        'app_process',
+        '/',
+        'com.genymobile.scrcpy.Server',
+        SCRCPY_SERVER_VER,
+        'log_level=info',
+        'tunnel_forward=true',
+        'send_frame_meta=false',
+        'stay_awake=true',
+    ]
+
 
 class CfgHandler:
     """
@@ -122,7 +139,6 @@ class Action(IntEnum):
 
 @unique
 class ADBKeyCode(IntEnum):
-
     HOME = 3
     BACK = 4
     POWER = 26
@@ -161,6 +177,10 @@ class ADBKeyCode(IntEnum):
 
 @unique
 class UnifiedKey(IntEnum):
+    """
+        统一按键编码
+        实现 Pygame DearPyGui 等按键统一
+    """
 
     SETKEY = -1
 
@@ -170,12 +190,12 @@ class UnifiedKey(IntEnum):
     M_WHEEL_UP = 3
     M_WHEEL_DOWN = 4
 
-    NP_DIVIDE = 20      # /
-    NP_MULTIPLY = 21    # *
-    NP_MINUS = 22       # -
-    NP_PLUS = 23        # +
-    NP_ENTER = 24       # Enter
-    NP_PERIOD = 25      # .
+    NP_DIVIDE = 20  # /
+    NP_MULTIPLY = 21  # *
+    NP_MINUS = 22  # -
+    NP_PLUS = 23  # +
+    NP_ENTER = 24  # Enter
+    NP_PERIOD = 25  # .
 
     NP_0 = 30
     NP_1 = 31
@@ -252,16 +272,16 @@ class UnifiedKey(IntEnum):
     R_CTRL = 140
     R_SHIFT = 141
     RETURN = 142
-    COMMA = 143         # ,
-    PERIOD = 144        # .
-    SLASH = 145         # /
-    COLON = 146         # ;
-    QUOTE = 147         # '
-    L_BRACKET = 148     # [
-    R_BRACKET = 149     # ]
-    BACKSLASH = 150     # \
-    MINUS = 151         # -
-    EQUALS = 152        # =
+    COMMA = 143  # ,
+    PERIOD = 144  # .
+    SLASH = 145  # /
+    COLON = 146  # ;
+    QUOTE = 147  # '
+    L_BRACKET = 148  # [
+    R_BRACKET = 149  # ]
+    BACKSLASH = 150  # \
+    MINUS = 151  # -
+    EQUALS = 152  # =
     BACKSPACE = 153
     INSERT = 154
     DELETE = 155
@@ -332,7 +352,6 @@ class UnifiedKeyMapper:
         :return:
         """
         return cls.cfg['uhidkey'][unified_key.name]
-
 
 
 class Point(NamedTuple):

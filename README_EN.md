@@ -18,7 +18,9 @@ Using **SharedMemory**, video frames are shared through memory, enabling web ren
 
 ## Features
 
-- [x] Wired connection to Android devices
+- [x] **1.2.0 NEW** Support for wired and wireless connections to Android devices
+- [x] **1.2.0 NEW** Support for reconnecting after disconnection, connection history, and automatic reconnection attempts
+- [x] **1.2.0 NEW** Support for H265 Video Stream
 - [x] Video stream parsing (H264) to generate numpy.ndarray for graphic processing with OpenCV, image, etc.
 - [x] Audio stream parsing (FLAC) with [pyflac](https://github.com/sonos/pyFLAC) for decoding and [pyaudio](https://people.csail.mit.edu/hubert/pyaudio/) for playback
 - [x] Control key mapping and mouse mapping

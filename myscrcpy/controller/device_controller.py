@@ -4,6 +4,11 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-04 1.2.0 Me2sY
+            1.升级 Scrcpy Server 2.6.1
+            2.重构 DeviceFactory 支持TCPIP无线连接，支持历史连接记录，历史重连等
+            3.新增 DeviceInfo，并通过 ADB getprop 获取设备信息，在建立Scrcpy连接前，阻止低版本设备连接造成的异常
+
         2024-08-02 1.1.3 Me2sY
             1.优化 connect 方法
             2.解决 VideoSource = camera时 与 ControlSocket冲突问题
@@ -48,41 +53,52 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.3'
+__version__ = '1.2.0'
 
 __all__ = [
+    'DeviceInfo',
     'DeviceController', 'DeviceFactory'
 ]
 
+import datetime
 import threading
 import time
-from typing import Dict
-import re
+from typing import NamedTuple, Dict, Tuple
 
-from adbutils import adb, Network, AdbError, AdbConnection
 from loguru import logger
 
-from myscrcpy.utils import Param, Coordinate
-from myscrcpy.controller.video_socket_controller import VideoSocketController
-from myscrcpy.controller.audio_socket_controller import AudioSocketController, AudioSocketServer
-from myscrcpy.controller.control_socket_controller import ControlSocketController
+from adbutils import adb, AdbError, AdbDevice, AdbConnection, Network
+
+from myscrcpy.utils import Coordinate, Param, CfgHandler
+from myscrcpy.controller import VideoSocketController, AudioSocketController, AudioSocketServer, ControlSocketController
 
 
-JAR_PATH = Param.PATH_LIBS.joinpath('scrcpy-server-v2.5')
+class DeviceInfo(NamedTuple):
+    """
+        Device Info
+    """
 
-TEMP_JAR_PATH = '/data/local/tmp/scrcpy-server'
+    serial_no: str
+    brand: str = ''
+    model: str = ''
+    sdk: int = 34                       # Use High When not get
+    release: int = 14                   # Use High When not get
 
-CMD = [
-    f'CLASSPATH={TEMP_JAR_PATH}',
-    'app_process',
-    '/',
-    'com.genymobile.scrcpy.Server',
-    '2.5',
-    'log_level=info',
-    'tunnel_forward=true',
-    'send_frame_meta=false',
-    'stay_awake=true',
-]
+    @property
+    def is_scrcpy_supported(self) -> bool:
+        return self.sdk > 21 and self.release > 5
+
+    @property
+    def is_audio_supported(self) -> bool:
+        return self.release >= 12
+
+    @property
+    def is_camera_supported(self) -> bool:
+        return self.release >= 12
+
+    @property
+    def is_uhid_supported(self) -> bool:
+        return self.release >= 11
 
 
 class DeviceController:
@@ -91,21 +107,22 @@ class DeviceController:
     """
 
     def __init__(
-            self, device_factory: "DeviceFactory.__class__", device_serial: str = None,
+            self,
+            adb_device: AdbDevice,
+            auto_drop_disconnected: bool = False,
             *args, **kwargs
     ):
+        """
+            Create Device Controller But NOT CONNECT TO Scrcpy NOW
+        """
+        self.info: DeviceInfo = self.analysis_device_info(adb_device)
+        self.serial = self.info.serial_no
 
-        # 获取 Device 显示参数
-        logger.info('Init Device Controller')
-        self.device_factory = device_factory
-        self.adb_dev = adb.device(serial=device_serial) if device_serial else adb.device_list()[0]
-        self.serial = device_serial if device_serial else self.adb_dev.serial
-        self.device_name = 'Android Device'
-        self.device_prod = ''
-        self.device_sys_version = 14
+        self.usb_dev = adb_device if adb_device.serial == self.info.serial_no else None
+        self.net_dev = None if self.usb_dev else adb_device
 
         # Coordinate
-        _size = self.adb_dev.window_size()
+        _size = adb_device.window_size()
         self.coordinate = Coordinate(width=_size.width, height=_size.height)
 
         # Get App Name
@@ -120,12 +137,96 @@ class DeviceController:
         self.asc: AudioSocketController | AudioSocketServer
         self.csc: ControlSocketController
 
-        msg = f"{self.adb_dev} Ready! Device Rotation:{self.rotation}"
+        self.auto_drop_disconnected = auto_drop_disconnected
+
+        msg = f"{adb_device} Found! Device Rotation:{self.rotation}"
         msg += f" Width:{self.coordinate.width} Height:{self.coordinate.height}"
         logger.success(msg)
 
+    @property
+    def adb_dev(self) -> AdbDevice:
+        try:
+            if self.usb_dev and self.usb_dev.window_size():
+                return self.usb_dev
+
+        except AdbError as e:
+            logger.warning(f"{self.info} USB Connection Maybe LOST! Error => {e}")
+            if self.auto_drop_disconnected:
+                self.usb_dev = None
+        try:
+            if self.net_dev and self.net_dev.window_size():
+                return self.net_dev
+
+        except AdbError as e:
+            logger.warning(f"{self.info} Net Connection Maybe LOST! Error => {e}")
+
+        raise RuntimeError('Device not connected')
+
+    @staticmethod
+    def reconnected():
+        """
+            重连至ADB Device
+        """
+        DeviceFactory.load_devices(load_history=False, save_history=False)
+
+    def set_tcpip(self, port: int, auto_reconnect: bool = True, timeout: int = 5):
+        """
+            设置TCPIP模式及端口号
+        """
+        wlan_ip = self.wlan_ip
+        self.adb_dev.tcpip(port)
+        if auto_reconnect:
+            if wlan_ip is None:
+                logger.error(f"WLAN IP is None, Maybe Device {self.info} Not Connect to WIFI.")
+
+            else:
+                logger.info(f"Auto-Reconnect: {adb.connect(f'{wlan_ip}:{port}', timeout=timeout)}")
+        DeviceFactory.load_devices()
+
+    @property
+    def wlan_ip(self) -> str | None:
+        try:
+            return self.adb_dev.wlan_ip()
+        except AdbError:
+            return None
+
+    @property
+    def tcpip_port(self) -> int | None:
+        p = self.adb_dev.getprop('service.adb.tcp.port')
+        if p is None or p == '':
+            return None
+        else:
+            return int(p)
+
+    @staticmethod
+    def analysis_device_info(dev: AdbDevice) -> DeviceInfo:
+        """
+            Get Device Info By getprop
+        """
+
+        try:
+            serial_no = dev.getprop('ro.serialno')
+        except KeyError:
+            raise ValueError(f'Serial No Found In prop!')
+
+        release = dev.getprop('ro.build.version.release')
+        if release is None or release == '':
+            release = 14
+        elif '.' in release:
+            release = int(release.split('.')[0])
+        else:
+            release = int(release)
+
+        return DeviceInfo(
+            serial_no=serial_no,
+            brand=dev.getprop('ro.product.brand'),
+            model=dev.getprop('ro.product.model'),
+            sdk=int(dev.getprop('ro.build.version.sdk')),
+            release=release,
+        )
+
     def __repr__(self):
-        return f"DeviceController > {self.device_name} | {self.serial} | W:{self.coordinate.width:>4} H:{self.coordinate.height:>4} | vc: {self.is_scrcpy_running}"
+        return f"DeviceController > {self.info} | W:{self.coordinate.width:>4} H:{self.coordinate.height:>4} | vc: {self.is_scrcpy_running}"
 
     def lock(self):
         self.set_power(False)
@@ -155,26 +256,27 @@ class DeviceController:
         self.is_scrcpy_running = False
 
         try:
-            self.vsc.close()
+            if self.vsc:
+                self.vsc.close()
         except:
-            pass
+            ...
 
         try:
-            self.asc.close()
+            if self.asc:
+                self.asc.close()
         except:
-            pass
+            ...
 
         try:
-            self.csc.close()
+            if self.csc:
+                self.csc.close()
         except:
-            pass
+            ...
 
         try:
-            del self.device_factory.DEVICES[self.serial]
+            DeviceFactory.DEVICE_CONTROLLERS.pop(self.serial)
         except KeyError:
             pass
-
-        self.set_power(False)
 
     @property
     def current_app_name(self) -> str | None:
@@ -214,10 +316,19 @@ class DeviceController:
             self.coordinate = Coordinate(self.coordinate.height, self.coordinate.width)
             self.get_app_name()
 
-    def connect(self, *args):
+    def connect(self, *args) -> Tuple[
+        VideoSocketController | None,
+        AudioSocketController | AudioSocketServer | None,
+        ControlSocketController | None
+    ]:
         """
             Create VSC/ASC/ASS/CSC
         """
+
+        if not self.info.is_scrcpy_supported:
+            logger.error(f"Sorry. This Device {self.info} is Too OLD To Use Scrcpy."
+                         f'At Lease API 21 (Android 5.0) Required!')
+            return None, None, None
 
         self.vsc, self.asc, self.csc = None, None, None
 
@@ -230,22 +341,35 @@ class DeviceController:
 
         for arg in args:
             if isinstance(arg, VideoSocketController):
+                if not self.info.is_camera_supported and arg.camera:
+                    logger.warning(f"Sorry. This Device {self.info} is Too OLD To Use Camera.")
+                    logger.warning('At Lease Android 12 Required! CameraSocket Auto Disabled.')
+                    continue
+
                 if self.vsc:
-                    raise ValueError('VideoSocket Already Occupied')
+                    raise ValueError('ONE VideoSocket ONLY!')
+
                 self.vsc = arg
                 socket_num += 1
                 continue
 
             if isinstance(arg, AudioSocketController) or isinstance(arg, AudioSocketServer):
+                if not self.info.is_audio_supported:
+                    logger.warning(f"Sorry. This Device {self.info} is Too OLD To Use AudioSocket.")
+                    logger.warning('At Lease Android 12 Required! AudioSocket Auto Disabled.')
+                    continue
+
                 if self.asc:
-                    raise ValueError('AudioSocket Already Occupied')
+                    raise ValueError('ONE AudioSocket ONLY!')
+
                 self.asc = arg
                 socket_num += 1
                 continue
 
             if isinstance(arg, ControlSocketController):
                 if self.csc:
-                    raise ValueError('ControlSocket Already Occupied')
+                    raise ValueError('ONE ControlSocket ONLY!')
+
                 self.csc = arg
                 socket_num += 1
                 continue
@@ -258,9 +382,10 @@ class DeviceController:
         if socket_num <= 0:
             raise RuntimeError('Create at least one socket!')
 
-        logger.info(f"Prepare to Create {socket_num} ({' VS' if self.vsc else ''}{' AS' if self.asc else ''}{' CS' if self.csc else ''} ) sockets.")
+        logger.info(f"Prepare to Create {socket_num} "
+                    f"({' VS' if self.vsc else ''}{' AS' if self.asc else ''}{' CS' if self.csc else ''} ) sockets.")
 
-        cmd = CMD
+        cmd = Param.SCRCPY_SERVER_START_CMD
 
         if self.vsc:
             cmd += self.vsc.to_args()
@@ -278,34 +403,11 @@ class DeviceController:
             cmd += ['control=false']
 
         # Push Jar And Start Scrcpy Server
-        self.adb_dev.sync.push(JAR_PATH, TEMP_JAR_PATH)
+        self.adb_dev.sync.push(Param.PATH_SCRCPY_SERVER_JAR, Param.PATH_SCRCPY_TEMP)
 
         logger.debug(f"Adb Run => {cmd}")
 
         self.stream = self.adb_dev.shell(cmd, stream=True)
-        stream_msg = ''
-        while True:
-            c = self.stream.read_string(1)
-            if c == '\n':
-                break
-            else:
-                stream_msg += c
-
-        try:
-            dev_info = stream_msg.split('INFO: ')[1]
-
-            self.device_prod = re.findall('\[(.*?)\]', dev_info)[0]
-            ver = re.findall('\((.*?)\)', dev_info)[0].split(' ')[1]
-            if '.' in ver:
-                self.device_sys_version = int(ver.split('.')[0])
-            else:
-                self.device_sys_version = int(ver)
-
-        except:
-            logger.warning(f"Analysis Device Info Failed => {stream_msg}")
-
-        if self.device_sys_version < 12 and self.vsc and self.vsc.camera:
-            raise RuntimeError('Android Version is less than 12. VideoSocket Camera Not Support!')
 
         _conn_list = []
         _conn = None
@@ -328,7 +430,6 @@ class DeviceController:
                 _conn_list.append(self.adb_dev.create_connection(Network.LOCAL_ABSTRACT, "scrcpy"))
 
         device_name = _conn.recv(64).decode('utf-8').rstrip('\x00')
-        self.device_name = device_name
 
         for conn in _conn_list:
 
@@ -338,11 +439,6 @@ class DeviceController:
                 continue
 
             if self.asc and not self.asc.is_running:
-                if self.device_sys_version < 12:
-                    logger.warning('Android Version is less than 12. AudioSocket Not Support! Auto Disabled.')
-                    self.asc = None
-                    continue
-
                 logger.info('Init Audio Socket')
                 self.asc.setup_socket_connection(conn)
                 continue
@@ -359,57 +455,154 @@ class DeviceController:
         self.is_scrcpy_running = True
         threading.Thread(target=self._thread_load_stream).start()
 
-        dev_info = f"Device Info: {self.serial} | {self.device_prod} | {self.device_name} | "
-        dev_info += f"Android Version: {self.device_sys_version}"
-        dev_info += ' | Connected to Scrcpy Server\n'
+        dev_info = f"Device {self.info}"
+        dev_info += ' | Connected to Scrcpy Server！\n'
         dev_info += '-' * 200
         logger.success(dev_info)
+        return self.vsc, self.asc, self.csc
 
     def _thread_load_stream(self):
         msg = ''
         while self.is_scrcpy_running:
             w = self.stream.read_string(1)
             if w == '\n':
-                logger.info(f"Server => {msg}")
+                logger.info(f"Scrcpy Server Return => {msg}")
                 break
             else:
                 msg += w
 
 
 class DeviceFactory:
+    """
+        设备管理工厂
+        通过使用 .device() 方法 获取 DeviceController 对象实例
+    """
 
-    DEVICES = {}
+    DEVICE_CONTROLLERS = {}
 
-    @classmethod
-    def device(cls, device_serial: str = None, *args, **kwargs) -> DeviceController:
-        """
-            获取 Device
-        :param device_serial:
-        :param args:
-        :param kwargs:
-        :return:
-        """
-        if device_serial in cls.DEVICES:
-            return cls.DEVICES[device_serial]
-        else:
-            dev = DeviceController(cls, device_serial, *args, **kwargs)
-            cls.DEVICES[device_serial] = dev
-            return dev
+    HISTORY_FILE_PATH = Param.PATH_TEMP / 'connected_history.json'
+
+    def __init__(self):
+        pass
 
     @classmethod
-    def init_all_devices(cls, *args, **kwargs) -> Dict[str, DeviceController]:
+    def load_history(cls) -> dict:
+        if not cls.HISTORY_FILE_PATH.exists():
+            return {}
+        return CfgHandler.load(cls.HISTORY_FILE_PATH)
+
+    @classmethod
+    def load_devices(cls, load_history: bool = True, save_history: bool = True, auto_remove: bool = False):
         """
-            初始化所有 ADB 设备
-        :param args:
-        :param kwargs:
-        :return:
+            加载 ADB Device
         """
-        for dev in adb.device_list():
+
+        logger.info('Load Devices')
+
+        history = {} if not load_history else cls.load_history()
+
+        if load_history:
+            logger.info(f"History {len(history)} Records")
+
+        loaded_net_dev = {
+            serial_no: {
+                **dc.info._asdict(),
+                'addr': dc.net_dev.serial
+            } for serial_no, dc in cls.DEVICE_CONTROLLERS.items() if dc.net_dev
+        }
+
+        history.update(loaded_net_dev)
+
+        remove_serial_no = []
+
+        for serial_no, dc_info in history.items():
+            if dc_info['addr']:
+                try:
+                    logger.info(f"Connecting to {dc_info['addr']} => {adb.connect(addr=dc_info['addr'], timeout=1)}")
+                except AdbError:
+                    logger.warning(f"Connecting to {dc_info['addr']} failed")
+                    if auto_remove:
+                        remove_serial_no.append(serial_no)
+
+        for serial_no in remove_serial_no:
+            history.pop(serial_no)
+
+        for adb_dev in adb.device_list():
             try:
-                cls.device(dev.serial, *args, **kwargs)
-            except Exception as e:
-                logger.error(f"Init {dev.serial} Error => {e}")
-        return cls.DEVICES
+                # 解析设备信息
+                info = DeviceController.analysis_device_info(adb_dev)
+
+                if info.serial_no in cls.DEVICE_CONTROLLERS:
+                    _dc = cls.DEVICE_CONTROLLERS[info.serial_no]
+
+                    if info.serial_no == adb_dev.serial:    # USB Device
+                        _dc.usb_dev = adb_dev
+                    else:                                   # WLAN ADB
+                        _dc.net_dev = adb_dev
+                else:
+                    cls.DEVICE_CONTROLLERS[info.serial_no] = DeviceController(adb_dev)
+
+            except AdbError as e:
+                logger.error(e)
+
+        if save_history:
+            _loaded = {
+                serial_no: {
+                    **dc.info._asdict(),
+                    'addr': dc.net_dev.serial if dc.net_dev else history.get(
+                        serial_no, {'addr': ''}
+                    ).get('addr', ''),
+                    'last_connected_time': datetime.datetime.now().timestamp(),
+                } for serial_no, dc in cls.DEVICE_CONTROLLERS.items()
+            }
+            history.update(_loaded)
+            CfgHandler.save(cls.HISTORY_FILE_PATH, history)
+            logger.success(f"{len(history)} Records Saved => {cls.HISTORY_FILE_PATH}")
+
+        msg = f"Load Devices Finished! {len(cls.DEVICE_CONTROLLERS)} Devices Connected!\n"
+        msg += '-' * 200
+
+        logger.success(msg)
+
+    @classmethod
+    def connect(cls, addr: str, timeout: int = 1) -> DeviceController | None:
+        try:
+            logger.info(f"Connecting to {addr} {adb.connect(addr, timeout=timeout)}")
+        except AdbError:
+            logger.error(f'Failed to connect to {addr}')
+            return None
+
+        cls.load_devices()
+
+        for _ in cls.DEVICE_CONTROLLERS.values():
+            if _.net_dev and _.net_dev.serial == addr:
+                return _
+
+        return None
+
+    @classmethod
+    def device(cls, serial_no: str = None, addr: str = None) -> DeviceController | None:
+
+        # Update Device Controllers
+        cls.load_devices()
+
+        if serial_no:
+            if serial_no in cls.DEVICE_CONTROLLERS:
+                return cls.DEVICE_CONTROLLERS[serial_no]
+            else:
+                logger.error(f'Serial >{serial_no}< Device Not Found!')
+                return None
+
+        if addr:
+            return cls.connect(addr=addr)
+
+        if len(cls.DEVICE_CONTROLLERS) == 0:
+            logger.error('No Device Controllers Found!')
+            return None
+        else:
+            return cls.DEVICE_CONTROLLERS[
+                list(cls.DEVICE_CONTROLLERS.keys())[0]
+            ]
 
     @classmethod
     def devices(cls) -> Dict[str, DeviceController]:
@@ -417,7 +610,7 @@ class DeviceFactory:
             获取所有设备
         :return:
         """
-        return cls.DEVICES
+        return cls.DEVICE_CONTROLLERS
 
     @classmethod
     def device_num(cls) -> int:
@@ -425,7 +618,7 @@ class DeviceFactory:
             设备数量
         :return:
         """
-        return len(cls.DEVICES)
+        return len(cls.DEVICE_CONTROLLERS)
 
     @classmethod
     def close_device(cls, device_serial: str):
@@ -435,7 +628,7 @@ class DeviceFactory:
         :return:
         """
         try:
-            cls.DEVICES[device_serial].close()
+            cls.DEVICE_CONTROLLERS[device_serial].close()
         except KeyError:
             raise RuntimeError(f"Device > {device_serial} not Created!")
 
@@ -445,33 +638,35 @@ class DeviceFactory:
             关闭全部设备
         :return:
         """
-        for dev in [*cls.DEVICES.values()]:
+        for dev in [*cls.DEVICE_CONTROLLERS.values()]:
             dev.close()
         time.sleep(1)
         logger.success('All Devices Closed!')
 
+    @classmethod
+    def disconnect(cls, device_serial: str) -> bool:
+        """
+            断开连接
+        """
+        if device_serial in cls.DEVICE_CONTROLLERS:
+            dc = cls.DEVICE_CONTROLLERS[device_serial]
+            if dc.net_dev:
+                try:
+                    logger.info(f"Disconnecting {device_serial} => {adb.disconnect(dc.net_dev.serial)}")
+                except AdbError as e:
+                    logger.error(e)
+                    return False
+                return True
+        logger.warning(f"Disconnected {device_serial} Failed!")
+        return False
+
 
 if __name__ == '__main__':
-    from myscrcpy.controller.audio_socket_controller import AudioSocketServer
-
-    # Create DeviceController
-    # dc = DeviceFactory.device()
-    dc = DeviceController(DeviceFactory())
-
-    # Connect to Scrcpy
-    # Instantiate SocketController and pass to connect method
-    dc.connect(
+    d = DeviceFactory.device()
+    vsc, asc, csc = d.connect(
         VideoSocketController(max_size=1366),
         AudioSocketController(),
-        # AudioSocketServer(True),
         ControlSocketController()
     )
-
-    # ZMQ Audio Server
-    # from myscrcpy.controller.audio_socket_controller import ZMQAudioServer, ZMQAudioSubscriber
-    # zas = ZMQAudioServer(dc.asc)
-    # zas.start()
-
-    # ZMQ Audio Subscriber
-    # sub = ZMQAudioSubscriber()
-    # sub.start()
+    time.sleep(2)
+    d.close()

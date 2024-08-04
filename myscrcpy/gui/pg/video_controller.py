@@ -2,7 +2,7 @@
 """
     Pygame Video Controller
     ~~~~~~~~~~~~~~~~~~
-    Pygame surfarray 适配器
+    Pygame 适配器
 
     Log:
         2024-07-31 1.1.1 Me2sY   适配新Controller
