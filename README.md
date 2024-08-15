@@ -1,4 +1,4 @@
-# MYScrcpy
+# MYScrcpy V1.3.0
 
 ### [README in English](README_EN.md)
 
@@ -13,12 +13,20 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 使用SharedMemory，将视频帧通过内存共享，可以实现 [Nicegui](https://github.com/zauberzeug/nicegui) 的网页绘制展现、
 [OpenCV](https://opencv.org/) 图像处理等。
 
+使用[TinyDB](https://github.com/msiemens/tinydb)进行配置管理。
+
 
 ## 特性
 
-- [x] **1.2.0 NEW** 支持有线、无线连接安卓设备
-- [x] **1.2.0 NEW** 支持断线重连，连接历史记录并自动尝试连接功能
-- [x] **1.2.0 NEW** 支持 H265连接
+- [x] **1.3.0 NEW** 新一代界面，使用DearPyGui实现！
+- [x] **1.3.0 NEW** 支持连接配置保存，窗口大小保存
+- [x] **1.3.0 NEW** 支持无线连接，历史连接记录及快速连接功能，告别繁琐命令行
+- [x] **1.3.0 NEW** 支持按比例调整窗口大小、任意拉伸等功能
+- [x] **1.3.0 NEW** 使用TinyDB，动态保存配置
+- [x] **1.3.0 NEW** 更多功能，欢迎试用体验
+- [x] 支持有线、无线连接安卓设备
+- [x] 支持断线重连，连接历史记录并自动尝试连接功能
+- [x] 支持 H265连接
 - [x] 实现了视频流解析（H264），生成numpy.ndarray，可自行使用opencv、image等进行图形处理
 - [x] 实现了音频流解析（FLAC）, 使用 [pyflac](https://github.com/sonos/pyFLAC) 解码，[pyaudio](https://people.csail.mit.edu/hubert/pyaudio/) 播放
 - [x] 实现了控制按键映射，鼠标映射
@@ -46,7 +54,7 @@ pip install myscrcpy-X.X.X.tar.gz
    1. **utils.py**
    定义基本工具类及各类参数
    2. **gui/dpg**
-   DearPyGui 界面实现，包括视频绘制，鼠标事件，UHID鼠标、键盘输入，映射编辑等。
+   ~~DearPyGui 界面实现，包括视频绘制，鼠标事件，UHID鼠标、键盘输入，映射编辑等。~~
    3. **gui/pg**
    pygame 界面实现，包括视频绘制、鼠标事件、键盘事件控制等。
    4. **gui/ng**
@@ -55,6 +63,8 @@ pip install myscrcpy-X.X.X.tar.gz
    视频流、音频流、控制流、设备控制器等
    5. **homepath/.myscrcpy/tps/*.json**
    保存TouchProxy配置文件，.json格式。
+   6. **gui/dpg_adv/**
+   新一代GUI
 
 ### 3. 程序引用使用，便于自行开发
 
@@ -62,7 +72,6 @@ pip install myscrcpy-X.X.X.tar.gz
 from myscrcpy.controller import *
 
 device = DeviceFactory.device()
-# device = DeviceController(DeviceFactory())
 
 
 # Connect to Scrcpy
@@ -80,6 +89,9 @@ device.connect(
    ControlSocketController()
 )
 
+# 从 extensions 引入功能插件
+
+from myscrcpy.extensions.zmq_server import *
 # create ZMQ Control Server
 ZMQControlServer(device.csc).start()
 sender = ZMQControlServer.create_sender()
@@ -102,9 +114,9 @@ device.csc.f_set_screen(False)
 
 ### 4.使用GUI
 
-:exclamation: _Ubuntu等Linux下 使用pyaudio 需要先安装portaudio_
+:exclamation: _Ubuntu等Linux下 使用pyaudio 需要先安装portaudio
 ```bash
-sudo apt install libportaudio-dev
+sudo apt install portaudio19-dev
 ```
 
 #### 运行DearPyGui GUI
@@ -116,7 +128,7 @@ python -m myscrcpy.run
 
 :exclamation: _使用该模式, 需要提前在DGP Gui下配置好相应按键映射_
 
-:exclamation: _为追求性能，该模式剔除旋转等功能，设备发生旋转或应用切换横竖屏，会导致运行终止。_
+:exclamation: _为追求性能，该模式剔除旋转等功能，设备发生旋转时，会导致运行终止。_
 ```bash
 python -m myscrcpy.run -g
 ```
@@ -125,7 +137,8 @@ python -m myscrcpy.run -g
 ## 程序截图
 
 ### 主界面
-![dpg Screenshot](myscrcpy/files/images/dpg_gui.jpg)
+:boom: **NEW 1.3.0** :boom:
+![dpg Screenshot](myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
 
 ### Nicegui Web 界面 （DEMO）
 ![Nicegui Demo](myscrcpy/files/images/web_gui_demo_nicegui.jpg)

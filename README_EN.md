@@ -1,4 +1,4 @@
-# MYScrcpy
+# MYScrcpy V1.3.0
 
 ### [中文简介](README.md)
 
@@ -16,11 +16,18 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 
 Using **SharedMemory**, video frames are shared through memory, enabling web rendering with Nicegui and image processing with OpenCV.
 
+Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
+
 ## Features
 
-- [x] **1.2.0 NEW** Support for wired and wireless connections to Android devices
-- [x] **1.2.0 NEW** Support for reconnecting after disconnection, connection history, and automatic reconnection attempts
-- [x] **1.2.0 NEW** Support for H265 Video Stream
+- [x] **1.3.0 NEW** Next-generation interface implemented with DearPyGui!
+- [x] **1.3.0 NEW** Supports saving connection configurations and window size.
+- [x] **1.3.0 NEW** Supports wireless connection, connection history, and quick connect features, eliminating the need for complicated command-line input.
+- [x] **1.3.0 NEW** Supports proportional window resizing and freeform stretching.
+- [x] **1.3.0 NEW** Uses TinyDB for dynamic configuration saving.
+- [x] **1.3.0 NEW** More features, welcome to try and experience!
+- [x] Support for reconnecting after disconnection, connection history, and automatic reconnection attempts
+- [x] Support for H265 Video Stream
 - [x] Video stream parsing (H264) to generate numpy.ndarray for graphic processing with OpenCV, image, etc.
 - [x] Audio stream parsing (FLAC) with [pyflac](https://github.com/sonos/pyFLAC) for decoding and [pyaudio](https://people.csail.mit.edu/hubert/pyaudio/) for playback
 - [x] Control key mapping and mouse mapping
@@ -47,18 +54,18 @@ Using **SharedMemory**, video frames are shared through memory, enabling web ren
 
 ### 2.Structure:
    1. **utils.py** Defines basic tool classes and various parameters
-   2. **gui/dpg** DearPyGui interface implementation including video rendering, mouse events, UHID mouse and keyboard input, mapping editor, etc.
+   2. **gui/dpg** ~~DearPyGui interface implementation including video rendering, mouse events, UHID mouse and keyboard input, mapping editor, etc.~~
    3. **gui/pg** Pygame interface implementation including video rendering, mouse events, keyboard control, etc.
    4. **gui/ng** _(DEMO) Nicegui Web UI, uses SharedMemory to read video frames_
    5. **controller/** Video stream, audio stream, control stream, device controller, etc.
    6. **homepath/.myscrcpy/tps/*.json** Save TouchProxy configuration files in .json format
+   7. **gui/dpg_adv** Next-generation GUI
 
 ### 3.For developer
 ```python
 from myscrcpy.controller import *
 
 device = DeviceFactory.device()
-# device = DeviceController(DeviceFactory())
 
 
 # Connect to Scrcpy
@@ -76,6 +83,10 @@ device.connect(
    ControlSocketController()
 )
 
+
+# From extensions Import
+
+from myscrcpy.extensions.zmq_server import *
 # create ZMQ Control Server
 ZMQControlServer(device.csc).start()
 sender = ZMQControlServer.create_sender()
@@ -99,7 +110,7 @@ device.csc.f_set_screen(False)
 ### 4.Using the GUI
 :exclamation: _On Ubuntu and other Linux systems, installing portaudio first_
 ```bash
-sudo apt install libportaudio-dev
+sudo apt install portaudio19-dev
 ```
 
 #### Run DearPyGui GUI
@@ -119,7 +130,7 @@ python -m myscrcpy.run -g
 ## Screenshots
 
 ### Main interface
-![dpg Screenshot](myscrcpy/files/images/dpg_gui.jpg)
+![dpg Screenshot](myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
 
 ### Nicegui Web interface (DEMO)
 ![Nicegui Demo](myscrcpy/files/images/web_gui_demo_nicegui.jpg)

@@ -5,6 +5,8 @@
     定义控制映射
 
     Log:
+        2024-08-15 1.1.2 Me2sY  修复部分缺陷
+
         2024-07-31 1.1.1 Me2sY  适配新Controller
 
         2024-07-28 1.0.0 Me2sY  发布初版
@@ -17,7 +19,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 __all__ = [
     'WindowTwin', 'TouchProxyIndicatorFactory'
@@ -354,15 +356,6 @@ class TouchProxyIndicatorFactory:
 
             # Update Cfg Name
             dpg.set_value(self.tag_txt_cfg, path.stem)
-
-        if self.device.is_getting_name:
-            with dpg.window(**MODEL_WIN_CFG) as _tag_win_wait:
-                dpg.add_text('Loading Device Name. Please Wait...')
-
-            while self.device.is_getting_name:
-                time.sleep(0.1)
-
-            dpg.delete_item(_tag_win_wait)
 
         with dpg.file_dialog(
                 label='Load Touch Proxy Cfg Files', width=800, height=500, callback=_load_file,

@@ -8,3 +8,4 @@ dist/myscrcpy-1.0.0-py3-none-any.whl
 /myscrcpy/build
 /myscrcpy/dist
 *.spec
+/myscrcpy/test_zone

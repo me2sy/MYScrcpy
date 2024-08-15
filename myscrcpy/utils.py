@@ -5,6 +5,10 @@
     工具类
 
     Log:
+        2024-08-15 1.2.1 Me2sY
+            1.新增 ValueRecord、ValueManager，使用TinyDB进行全局配置、属性配置及值管理
+            2.新增 部分Code及方法
+
         2024-08-05 1.2.0 Me2sY  升级 Scrcpy Server 2.6.1
 
         2024-08-02 1.1.3 Me2sY  新增媒体控制键代码
@@ -35,7 +39,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 __all__ = [
     'Param',
@@ -43,14 +47,21 @@ __all__ = [
     'Point', 'ScalePoint', 'Coordinate',
     'Action',
     'UnifiedKey', 'UnifiedKeyMapper',
-    'ADBKeyCode'
+    'ADBKeyCode',
+    'ValueRecord', 'ValueManager'
 ]
 
+import base64
+import pickle
 import pathlib
 import json
 from enum import IntEnum, unique
-from typing import NamedTuple
+from typing import NamedTuple, Any
 from functools import cache
+from dataclasses import dataclass
+
+from tinydb import TinyDB, Query
+
 
 PROJECT_NAME = 'myscrcpy'
 AUTHOR = 'Me2sY'
@@ -69,6 +80,9 @@ class Param:
 
     PROJECT_NAME = PROJECT_NAME
     AUTHOR = AUTHOR
+    VERSION = '1.3.0'
+    EMAIL = 'me2sy@outlook.com'
+    GITHUB = 'https://github.com/Me2sY/myscrcpy'
 
     PROJECT_PATH = project_path()
 
@@ -78,6 +92,7 @@ class Param:
     PATH_STATICS = PROJECT_PATH.joinpath('static')
     PATH_STATICS.mkdir(parents=True, exist_ok=True)
     PATH_STATICS_ICON = PATH_STATICS.joinpath('myscrcpy.ico')
+    PATH_STATICS_ICONS = PATH_STATICS / 'icons'
 
     PATH_LIBS = PROJECT_PATH.joinpath('libs')
     PATH_LIBS.mkdir(parents=True, exist_ok=True)
@@ -87,6 +102,9 @@ class Param:
 
     PATH_TEMP = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath('temp')
     PATH_TEMP.mkdir(parents=True, exist_ok=True)
+
+    PATH_DC_CONFIGS = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath('configs')
+    PATH_DC_CONFIGS.mkdir(parents=True, exist_ok=True)
 
     ROTATION_VERTICAL = 0
     ROTATION_HORIZONTAL = 1
@@ -98,7 +116,7 @@ class Param:
     # Scrcpy
     SCRCPY_SERVER_VER = '2.6.1'
     PATH_SCRCPY_TEMP = '/data/local/tmp/scrcpy-server'
-    PATH_SCRCPY_SERVER_JAR = PATH_LIBS.joinpath(f"scrcpy-server-v{SCRCPY_SERVER_VER}")
+    PATH_SCRCPY_SERVER_JAR = PATH_LIBS.joinpath(f"scrcpy-server")
     SCRCPY_SERVER_START_CMD = [
         f'CLASSPATH={PATH_SCRCPY_TEMP}',
         'app_process',
@@ -114,7 +132,7 @@ class Param:
 
 class CfgHandler:
     """
-        TPS Configuration Handler
+        Configuration Handler
     """
 
     @classmethod
@@ -143,12 +161,13 @@ class ADBKeyCode(IntEnum):
     BACK = 4
     POWER = 26
     MENU = 82
-    SEARCH = 84
-    MSG = 83
+    NOTIFICATION = 83
+    APP_SWITCH = 187
 
     ENTER = 66
     BACKSPACE = 67
     ESC = 111
+    SETTINGS = 176
 
     # Media
     V_UP = 24
@@ -160,6 +179,7 @@ class ADBKeyCode(IntEnum):
     M_PREV = 88
 
     CAMERA = 27
+    FOCUS = 80
     ZOOM_IN = 168
     ZOOM_OUT = 169
 
@@ -463,3 +483,164 @@ class Coordinate(NamedTuple):
             _scale = 1
 
         return self * _scale
+
+    def fix_height(self, raw_coordinate: 'Coordinate') -> 'Coordinate':
+        """
+            Width不变，以Width适配raw_coordinate下新坐标系
+        """
+        return Coordinate(
+            self.width,
+            round(self.width / raw_coordinate.width * raw_coordinate.height)
+        )
+
+    def fix_width(self, raw_coordinate: 'Coordinate') -> 'Coordinate':
+        """
+            Height不变，以Height适配raw_coordinate下新坐标系
+        """
+        return Coordinate(
+            round(self.height / raw_coordinate.height * raw_coordinate.width),
+            self.height
+        )
+
+
+VR_TYPE_RAW = 1
+VR_TYPE_OBJ = 0
+PICKLE_PROTOCOL = 4
+
+
+@dataclass
+class ValueRecord:
+    """
+        值记录
+    """
+
+    _key: str
+    _conditions: dict | None
+    _value: Any
+    _type: int
+
+    @classmethod
+    def encode(cls, key: str, value: Any, conditions: Any = None) -> 'ValueRecord':
+        _type, _value = cls.encode_value(value)
+        return cls(_key=key, _conditions=conditions, _value=value, _type=_type)
+
+    @classmethod
+    def encode_value(cls, value: Any) -> (Any, int):
+        """
+            格式化值
+        """
+        _type = VR_TYPE_RAW
+        try:
+            json.dumps(value)
+        except TypeError:
+            value = base64.urlsafe_b64encode(pickle.dumps(value, protocol=PICKLE_PROTOCOL)).decode('utf-8')
+            _type = VR_TYPE_OBJ
+
+        return _type, value
+
+    @property
+    def value(self) -> Any:
+        """
+            真实值
+        """
+        if self._type:
+            return self._value
+        else:
+            return pickle.loads(base64.urlsafe_b64decode(self._value.encode('utf-8')))
+
+    def save(self, td):
+        """
+            格式化保存
+        """
+        cond = Query()['k'] == self._key
+        if self._conditions:
+            cond = cond & (Query()['c'] == self._conditions)
+        self._type, self._value = self.encode_value(self._value)
+        td.upsert(
+            document={
+                'k': self._key,
+                'c': self._conditions,
+                'v': self._value,
+                't': self._type
+            },
+            cond=cond
+        )
+
+
+class ValueManager:
+    """
+        Value Manager
+    """
+
+    db = TinyDB(Param.PATH_DC_CONFIGS / f"{Param.PROJECT_NAME}.json", indent=4)
+    t_global = db.table('t_global')
+
+    @classmethod
+    def get_global(cls, key: str, default_value: Any = None) -> Any:
+        """
+            获取全局属性
+        """
+        r = cls.t_global.search(Query()['k'] == key)
+        if r:
+            return r[0]['v']
+        else:
+            return default_value
+
+    @classmethod
+    def set_global(cls, key: str, value: dict) -> None:
+        """
+            设置全局属性
+        """
+        cls.t_global.upsert({'k': key, 'v': value}, Query()['k'] == key)
+
+    @classmethod
+    def del_global(cls, key: str) -> None:
+        """
+            删除全局属性
+        """
+        cls.t_global.remove(Query()['k'] == key)
+
+    def __init__(self, part_name: str):
+        self.part_name = part_name
+
+        self.t_part = self.__class__.db.table(f"t_part_{self.part_name}")
+
+    def set_value(self, key: str, value: Any, conditions: Any = None) -> ValueRecord:
+        """
+            设置值
+        """
+        vr = ValueRecord.encode(key, value, conditions)
+        vr.save(self.t_part)
+        return vr
+
+    def update_value(self, value_record: ValueRecord):
+        """
+            更新值
+        """
+        value_record.save(self.t_part)
+
+    def get_records(self, key: str, conditions: Any = None) -> Any:
+        """
+            获取记录列表
+        """
+        cond = Query()['k'] == key
+        if conditions:
+            cond = cond & (Query()['c'] == conditions)
+
+        vrs = []
+        for _ in self.t_part.search(cond=cond):
+            vrs.append(
+                ValueRecord(_key=_['k'], _value=_['v'], _type=_['t'], _conditions=_.get('c', None))
+            )
+
+        return vrs
+
+    def get_value(self, key: str, conditions: Any = None, default_value: Any = None):
+        """
+            获取属性值
+        """
+        vrs = self.get_records(key, conditions)
+        if vrs:
+            return vrs[0].value
+        else:
+            return default_value

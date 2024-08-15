@@ -67,14 +67,14 @@ class VideoStream:
         self.frame_id, h, w = struct.unpack('>IHH', self._shm.buf[:8])
         return Coordinate(w, h)
 
-    def get_frame(self) -> (Coordinate, np.ndarray):
+    def get_frame(self) -> np.ndarray:
         c = self.coordinate
         if self.frame_id == 0:
             raise RuntimeError(f"VideoStream Closed!")
         if c.rotation == Param.ROTATION_VERTICAL:
-            return c, self._frame_v
+            return self._frame_v
         else:
-            return c, self._frame_h
+            return self._frame_h
 
     @classmethod
     def create_by_name(cls, shm_name: str) -> 'VideoStream':
@@ -90,12 +90,13 @@ class VideoCamera:
             camera_id: int = 0,
             camera_ar: str = None,
             camera_size: str = None,
-            camera_fps: int = 0
+            camera_fps: int = 30,
+            **kwargs
     ):
-        self.camera_id = camera_id
-        self.camera_ar = camera_ar
-        self.camera_size = camera_size
-        self.camera_fps = camera_fps
+        self.camera_id = int(camera_id)
+        self.camera_ar = str(camera_ar)
+        self.camera_size = str(camera_size)
+        self.camera_fps = int(camera_fps)
 
     def to_args(self) -> list:
         args = [f"camera_id={self.camera_id}"]
@@ -113,7 +114,7 @@ class VideoCamera:
 
 class VideoSocketController(ScrcpySocket):
     """
-        Scrcpy Server 2.5
+        Scrcpy Server 2.6.1
         Video Socket
         支持 h264/h265(hevc)
     """
@@ -186,6 +187,8 @@ class VideoSocketController(ScrcpySocket):
         (width, height,) = struct.unpack('>II', self._conn.recv(8))
         logger.success(f"Video Socket Connected! {_video_codec} | Width: {width}, Height: {height}")
 
+        self._conn.setblocking(False)
+
         while self.is_running:
             try:
                 packets = self.code_context.parse(self._conn.recv(self.buffer_size))
@@ -196,6 +199,7 @@ class VideoSocketController(ScrcpySocket):
             except Exception:
                 continue
         self._conn.close()
+        logger.warning(f"{self.__class__.__name__} Socket Closed.")
 
     def create_shared_frame(self, size: int):
         """
@@ -234,7 +238,7 @@ class VideoSocketController(ScrcpySocket):
         _name = self.video_shm.name
         self.video_shm.close()
         self.video_shm.unlink()
-        logger.warning(f"Shared Thread Closed!")
+        logger.warning(f"Video Shared Thread Closed!")
 
     def get_frame(self) -> np.ndarray:
         return self.last_frame
@@ -253,7 +257,6 @@ class VideoSocketController(ScrcpySocket):
 
     def close(self):
         self.is_running = False
-        logger.warning(f"{self.__class__.__name__} Socket Closed.")
 
     def to_args(self) -> list:
         args = [

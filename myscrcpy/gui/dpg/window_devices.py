@@ -83,7 +83,7 @@ class WindowDevice:
         return f"Device => {self.device}"
 
     def init(self):
-        with dpg.window(label=self.device.serial, tag=self.tag_win, autosize=True, pos=(100, 100)):
+        with dpg.window(label=self.device.serial_no, tag=self.tag_win, autosize=True, pos=(100, 100)):
             dpg.add_text(self.device_info(), tag=self.tag_txt_device)
 
             device_height = self.device.coordinate.height

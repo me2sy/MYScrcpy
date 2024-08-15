@@ -5,6 +5,8 @@
     音频控制器，使用flac
 
     Log:
+        2024-08-15 1.1.5 Me2sY  新增静音方法
+
         2024-08-04 1.1.4 Me2sY  抽离ZMQ相关, 形成Core结构
 
         2024-08-02 1.1.3 Me2sY  新增 to_args 方法
@@ -20,7 +22,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 
 __all__ = [
     'AudioSocketController', 'AudioSocketServer',
@@ -63,6 +65,13 @@ class AudioPlayer:
         self.audio_format = audio_format
         self.is_playing = False
         self.player = None
+        self.mute = False
+
+    def set_mute(self, mute: bool):
+        self.mute = mute
+
+    def switch_mute(self):
+        self.mute = not self.mute
 
 
 class FlacAudioPlayer(AudioPlayer):
@@ -86,11 +95,13 @@ class FlacAudioPlayer(AudioPlayer):
         """
             Decode Callback
         """
+        if self.mute:
+            return
         self.player.write(audio_stream.tobytes())
 
     def __init__(self, *args, **kwargs):
         """
-            if for Record
+            Flac Audio Player
         """
 
         super().__init__(*args, **kwargs)
@@ -135,6 +146,8 @@ class RawAudioPlayer(AudioPlayer):
         self.is_playing = True
 
     def process(self, audio_bytes: bytes):
+        if self.mute:
+            return
         self.player.write(audio_bytes)
 
     def close(self):
@@ -145,7 +158,7 @@ class RawAudioPlayer(AudioPlayer):
 
 class AudioSocketController(ScrcpySocket):
     """
-        Scrcpy Server 2.5
+        Scrcpy Server 2.6.1
         Audio Socket
         Use Flac Only
         Fast But Simple
@@ -169,9 +182,14 @@ class AudioSocketController(ScrcpySocket):
         self.audio_source = audio_source
         self.audio_player = FlacAudioPlayer()
 
+    def set_mute(self, mute: bool):
+        self.audio_player.set_mute(mute)
+
+    def switch_mute(self):
+        self.audio_player.switch_mute()
+
     def close(self):
         self.is_running = False
-        logger.warning(f"{self.__class__.__name__} Socket Closed.")
 
     def _main_thread(self):
         _audio_codec = self._conn.recv(4).decode()
@@ -187,6 +205,7 @@ class AudioSocketController(ScrcpySocket):
 
         self.audio_player.close()
         self._conn.close()
+        logger.warning(f"{self.__class__.__name__} Socket Closed.")
 
     def start(self):
         threading.Thread(target=self._main_thread).start()
@@ -201,7 +220,7 @@ class AudioSocketController(ScrcpySocket):
 
 class AudioSocketServer(AudioSocketController):
     """
-        Scrcpy Server 2.5
+        Scrcpy Server 2.6.1
         Audio Socket Server
         For ZMQ Share Raw Video Frame
     """
@@ -237,7 +256,6 @@ class AudioSocketServer(AudioSocketController):
 
     def close(self):
         self.is_running = False
-        logger.warning(f"{self.__class__.__name__} Socket Closed.")
 
     def _main_thread(self):
         _audio_codec = self._conn.recv(4).decode()
@@ -256,6 +274,7 @@ class AudioSocketServer(AudioSocketController):
             self.player.close()
         self.flac_decode.finish()
         self._conn.close()
+        logger.warning(f"{self.__class__.__name__} Socket Closed.")
 
     def start(self):
         threading.Thread(target=self._main_thread).start()

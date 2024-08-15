@@ -132,7 +132,7 @@ class KeyboardWatcher:
         :param unified_key:
         :return:
         """
-        if unified_key in self.modifier_map:
+        if unified_key in self.modifier_map:    # Mod Key Press
             b = self.modifier_map[unified_key]
             if self.modifiers & b == 0:
                 self.modifiers |= b
@@ -206,11 +206,12 @@ class ControlSocketController(ScrcpySocket):
         UHID_CREATE = 12
         UHID_INPUT = 13
 
-    def __init__(self, **kwargs):
+    def __init__(self, close_screen: bool = True, **kwargs):
         super().__init__(**kwargs)
 
         self.__packet_queue = queue.Queue()
         self.last_packet = None
+        self.close_screen = close_screen
 
     def close(self):
         self.is_running = False
@@ -225,6 +226,9 @@ class ControlSocketController(ScrcpySocket):
 
     def _main_thread(self):
         logger.success(f"Control Socket Connected!")
+        if self.close_screen:
+            self.f_set_screen(False)
+
         while self.is_running:
             self._conn.send(self.__packet_queue.get())
         self._conn.close()
@@ -257,6 +261,7 @@ class ControlSocketController(ScrcpySocket):
         :return:
         """
         self.send_packet(self.packet__screen(status))
+        self.close_screen = not status
 
     @classmethod
     def packet__touch(
@@ -285,7 +290,6 @@ class ControlSocketController(ScrcpySocket):
         :param width:   frame_width
         :param height:  frame_height
         :param touch_id:
-        :param pressure:
         :return:
         """
         return struct.pack(

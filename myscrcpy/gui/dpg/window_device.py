@@ -213,9 +213,6 @@ class WindowInputPad:
             dpg.add_button(label='Paste', width=225, height=30, callback=callback_input)
 
             def press(sender, app_data):
-
-                logger.debug(f"{self.device.info.serial_no} | {dpg.is_item_focused(self.tag_win)}")
-
                 if dpg.is_item_focused(self.target_tag) and dpg.get_value(uhid):
                     try:
                         self.key_watcher.key_pressed(UnifiedKeyMapper.dpg2uk(app_data))
@@ -552,7 +549,13 @@ def run():
     from myscrcpy.controller import VideoSocketController, AudioSocketController, ControlSocketController
 
     dpg.create_context()
-    dev = DeviceController.from_adb_direct()
+
+    # dev = DeviceFactory.device(
+    #     serial_no='R52W708WTJF'
+    # )
+    # dev = DeviceController.from_adb_direct(device_serial='e8335690')
+    dev = DeviceController.from_adb_direct(device_serial='R52W708WTJF')
+
     dev.connect(
         VideoSocketController(max_size=1366, video_codec=VideoSocketController.CODEC_H264),
         AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
@@ -563,14 +566,13 @@ def run():
     vw.init()
 
     dpg.create_viewport(
-        title=f"{Param.PROJECT_NAME} - {Param.AUTHOR}", width=1900, height=1060, clear_color=(0, 0, 0, 0),
-        vsync=False, x_pos=10, y_pos=10,
+        title=f"{Param.PROJECT_NAME} - {Param.AUTHOR}", width=1900, height=1060, clear_color=(0, 0, 0, 0), vsync=False,
+        x_pos=10, y_pos=10,
         small_icon=Param.PATH_STATICS_ICON.__str__(),
         large_icon=Param.PATH_STATICS_ICON.__str__(),
     )
     dpg.setup_dearpygui()
     dpg.show_viewport()
-    dpg.set_primary_window(vw.tag_win_main, True)
 
     dev.set_screen(False)
 
@@ -581,16 +583,11 @@ def run():
             pass
         dpg.render_dearpygui_frame()
 
-    DeviceFactory.close_all_devices()
     dpg.stop_dearpygui()
     dpg.destroy_context()
+    DeviceFactory.close_all_devices()
+
 
 
 if __name__ == '__main__':
-    """
-        建议使用 gui.dpg_adv.window
-        本窗口停止更新
-    """
-    import warnings
-    warnings.warn(f"建议使用 gui.dpg_adv.window, 本窗口停止更新")
     run()
