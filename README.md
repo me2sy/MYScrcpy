@@ -114,7 +114,7 @@ device.csc.f_set_screen(False)
 
 ### 4.使用GUI
 
-:exclamation: _Ubuntu等Linux下 使用pyaudio 需要先安装portaudio
+:exclamation: _Ubuntu等Linux下 使用pyaudio 需要先安装portaudio_
 ```bash
 sudo apt install portaudio19-dev
 ```
