@@ -126,7 +126,7 @@ python -m myscrcpy.run
 
 #### 运行pygame GUI （高速控制模式）
 
-:exclamation: _使用该模式, 需要提前在DGP Gui下配置好相应按键映射_
+:exclamation: _使用该模式, 需要提前在DPG Gui下配置好相应按键映射_
 
 :exclamation: _为追求性能，该模式剔除旋转等功能，设备发生旋转时，会导致运行终止。_
 ```bash
