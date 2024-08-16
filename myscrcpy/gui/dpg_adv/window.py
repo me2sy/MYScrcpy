@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-16 1.3.1 Me2sY
+            1.修复 切换设备后 鼠标事件未释放错误
+            2.优化 滚轮操作
+
         2024-08-15 1.3.0 Me2sY  发布初版
 
         2024-08-14 0.1.5 Me2sY
@@ -31,7 +35,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 __all__ = ['start_dpg_adv']
 
@@ -80,7 +84,21 @@ class WindowMain:
         self.tag_hr_resize = dpg.generate_uuid()
         self.tag_msg_log = dpg.generate_uuid()
         self.tag_mouse_ctrl = dpg.generate_uuid()
+
         self.tag_hr_hid = dpg.generate_uuid()
+        self.tag_hr_wheel = dpg.generate_uuid()
+
+        self.tag_hr_ml_c = dpg.generate_uuid()
+        self.tag_hr_ml_r = dpg.generate_uuid()
+        self.tag_hr_ml_m = dpg.generate_uuid()
+
+        self.tag_hr_mr_c = dpg.generate_uuid()
+        self.tag_hr_mr_r = dpg.generate_uuid()
+
+
+
+
+
 
         self.device = None
         self.vsc = None
@@ -596,6 +614,18 @@ class WindowMain:
             初始化鼠标控制器
         """
         with dpg.handler_registry(tag=self.tag_mouse_ctrl):
+
+            # 2024-08-16 Me2sY  修复回调不释放导致多次操作问题
+            for _ in [
+                self.tag_hr_ml_c, self.tag_hr_ml_r, self.tag_hr_ml_m,
+                self.tag_hr_mr_c, self.tag_hr_mr_r,
+                self.tag_hr_wheel
+            ]:
+                try:
+                    dpg.delete_item(_)
+                except:
+                    ...
+
             def _down(sender, app_data):
                 if self.csc is None or not self.cpm_vc.is_hovered:
                     return
@@ -624,9 +654,15 @@ class WindowMain:
                         Action.MOVE.value, **cf.d, **cf.to_point(self.cpm_vc.scale_point).d, touch_id=self.touch_id
                     )
 
-            dpg.add_mouse_click_handler(button=dpg.mvMouseButton_Left, callback=_down)
-            dpg.add_mouse_release_handler(button=dpg.mvMouseButton_Left, callback=_release)
-            dpg.add_mouse_move_handler(callback=_move)
+            dpg.add_mouse_click_handler(
+                tag=self.tag_hr_ml_c, button=dpg.mvMouseButton_Left, callback=_down
+            )
+            dpg.add_mouse_release_handler(
+                tag=self.tag_hr_ml_r, button=dpg.mvMouseButton_Left, callback=_release
+            )
+            dpg.add_mouse_move_handler(
+                tag=self.tag_hr_ml_m, callback=_move
+            )
 
             # 右键旋转/旋转
             # 单击右键后，在右键处生成一个固定触控点
@@ -652,8 +688,12 @@ class WindowMain:
                     **cf.d, **cf.to_point(self.cpm_vc.coord_draw.to_scale_point(*self.pos_r)).d
                 )
 
-            dpg.add_mouse_click_handler(button=dpg.mvMouseButton_Right, callback=_down_r)
-            dpg.add_mouse_release_handler(button=dpg.mvMouseButton_Right, callback=_release_r)
+            dpg.add_mouse_click_handler(
+                button=dpg.mvMouseButton_Right, callback=_down_r, tag=self.tag_hr_mr_c
+            )
+            dpg.add_mouse_release_handler(
+                button=dpg.mvMouseButton_Right, callback=_release_r, tag=self.tag_hr_mr_r
+            )
 
             # Use Mouse Wheel To zoom or swipe
             # 滚轮实现上下滚动
@@ -662,15 +702,15 @@ class WindowMain:
                 if self.csc is None or not self.cpm_vc.is_hovered:
                     return
 
-                move_dis = 100
+                cf = self.video_controller.coord_frame
+
+                move_dis = cf.width // 8
 
                 m_pos = dpg.get_drawing_mouse_pos()
 
                 sec_pos = [m_pos[0] - move_dis, m_pos[1] - move_dis]
 
-                step = 2 * (1 if app_data > 0 else -1)
-
-                cf = self.video_controller.coord_frame
+                step = 1 * (1 if app_data > 0 else -1)
 
                 if dpg.is_key_down(dpg.mvKey_Control):
                     # Ctrl Press Then Wheel to Zoom
@@ -687,19 +727,19 @@ class WindowMain:
                         **cf.to_point(self.cpm_vc.to_scale_point(*sec_pos)).d,
                         touch_id=self.touch_id_sec
                     )
-
-                    for i in range(20):
-                        n_pos = [m_pos[0] + move_dis - i * step, m_pos[1] + move_dis - i * step]
+                    dis = cf.width // 20
+                    t = 0.08 / dis
+                    for i in range(dis):
+                        next_pos = [m_pos[0] + move_dis - i * step, m_pos[1] + move_dis - i * step]
 
                         self.csc.f_touch(
                             Action.MOVE.value,
                             **cf.d,
-                            **cf.to_point(self.cpm_vc.to_scale_point(*n_pos)).d,
+                            **cf.to_point(self.cpm_vc.to_scale_point(*next_pos)).d,
                             touch_id=self.touch_id_wheel
                         )
 
-                        time.sleep(0.005)
-
+                        time.sleep(t)
                 else:
                     # Wheel to swipe
                     self.csc.f_touch(
@@ -708,21 +748,22 @@ class WindowMain:
                         **cf.to_point(self.cpm_vc.to_scale_point(*m_pos)).d,
                         touch_id=self.touch_id_wheel
                     )
-
-                    for i in range(15):
-                        n_pos = [m_pos[0], m_pos[1] + i * step]
+                    dis = cf.height // 15
+                    t = 0.05 / dis
+                    for i in range(dis):
+                        next_pos = [m_pos[0], m_pos[1] + i * step]
                         self.csc.f_touch(
                             Action.MOVE.value,
                             **cf.d,
-                            **cf.to_point(self.cpm_vc.to_scale_point(*n_pos)).d,
+                            **cf.to_point(self.cpm_vc.to_scale_point(*next_pos)).d,
                             touch_id=self.touch_id_wheel
                         )
-                        time.sleep(0.005)
+                        time.sleep(t)
 
                 self.csc.f_touch(
                     Action.RELEASE.value,
                     **cf.d,
-                    **cf.to_point(self.cpm_vc.to_scale_point(*n_pos)).d,
+                    **cf.to_point(self.cpm_vc.to_scale_point(*next_pos)).d,
                     touch_id=self.touch_id_wheel
                 )
 
@@ -733,7 +774,7 @@ class WindowMain:
                     touch_id=self.touch_id_sec
                 )
 
-            dpg.add_mouse_wheel_handler(callback=_wheel)
+            dpg.add_mouse_wheel_handler(tag=self.tag_hr_wheel, callback=_wheel)
 
     def _init_video(self, tag_texture: int | str, coord: Coordinate):
         """

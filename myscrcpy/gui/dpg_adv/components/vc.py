@@ -155,15 +155,19 @@ class CPMVC(Component):
                 ...
             with dpg.draw_layer() as self.tag_layer_1:
                 ...
+            with dpg.draw_layer(label='cross') as self.tag_layer_2:
+                ...
 
-    def draw_layer(self, layer_tag, *args, **kwargs):
+
+    def draw_layer(self, layer_tag, *args, clear: bool = True, **kwargs):
         """
             绘制图层
         """
         if layer_tag == self.tag_layer_0:
             raise ValueError(f'Video Layer is ReadOnly.')
 
-        dpg.delete_item(layer_tag, children_only=True)
+        if clear:
+            dpg.delete_item(layer_tag, children_only=True)
 
         for _ in args:
             _(parent=layer_tag)

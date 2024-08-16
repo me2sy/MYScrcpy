@@ -366,7 +366,7 @@ class DeviceController:
 
     def get_current_package_info(self) -> Tuple[PackageInfo, AppInfo] | None:
         """
-            通过ADB获取当前APP name 可能会导致延迟，采用线程等待机制获取
+            通过ADB获取当前APP name 无法获取时采用原生方法，相对速度较慢
         :return:
         """
         msg = self.adb_dev.shell("dumpsys window displays | grep -E 'mCurrentFocus'")
