@@ -27,6 +27,7 @@ from typing import Callable
 
 from adbutils import adb
 import dearpygui.dearpygui as dpg
+from loguru import logger
 
 from myscrcpy.utils import ValueManager as VM
 from myscrcpy.controller.device_controller import DeviceController, DeviceFactory
@@ -173,40 +174,48 @@ class CPMDevice(ValueComponent):
         if not hasattr(self, 'device') or self.device is None:
             return None
 
-        tag_win_loading = TempModal.draw_loading(f"Connecting to {self.device.serial_no}")
-
-        dpg.configure_item(self.tag_btn_connect, enabled=False, label='Connecting...')
-
         cfg = self.cpm_scrcpy_cfg.use()
 
         controllers = self.cfg2controllers(cfg)
 
-        if self.device.is_scrcpy_running:
+        # 创建 Scrcpy 连接
+        if controllers:
+
+            tag_win_loading = TempModal.draw_loading(f"Connecting to {self.device.serial_no}")
+
+            dpg.configure_item(self.tag_btn_connect, enabled=False, label='Connecting...')
+
+            if self.device.is_scrcpy_running:
+                try:
+                    self.device.close()
+                except Exception as e:
+                    pass
+
+            self.device = DeviceFactory.device(self.device.serial_no)
+            self.device.connect(*controllers)
+            self.device.scrcpy_cfg = self.cpm_scrcpy_cfg.config_name
+
+            # 新增 最近连接设备记录
+            records = VM.get_global('recent_connected', [])
+            record = [self.device.adb_dev.serial, self.cpm_scrcpy_cfg.config_name]
+
             try:
-                self.device.close()
-            except Exception as e:
+                records.remove(record)
+            except ValueError:
                 pass
 
-        # 创建 Scrcpy 连接
-        self.device.connect(*controllers)
-        self.device.scrcpy_cfg = self.cpm_scrcpy_cfg.config_name
+            records.insert(0, record)
 
-        # 新增 最近连接设备记录
-        records = VM.get_global('recent_connected', [])
-        record = [self.device.adb_dev.serial, self.cpm_scrcpy_cfg.config_name]
+            VM.set_global('recent_connected', records[:self.N_RECENT_RECORDS])
 
-        try:
-            records.remove(record)
-        except ValueError:
-            pass
+            dpg.delete_item(tag_win_loading)
 
-        records.insert(0, record)
-
-        VM.set_global('recent_connected', records[:self.N_RECENT_RECORDS])
-
-        dpg.delete_item(tag_win_loading)
-
-        self.connect_callback(self.device)
+            self.connect_callback(self.device)
+        else:
+            with dpg.window(no_move=True, no_resize=True, no_title_bar=True) as tag_win:
+                dpg.add_text("No V/A/C Selected!")
+                dpg.add_separator()
+                dpg.add_button(label='Close', width=-1, height=35, callback=lambda: dpg.delete_item(tag_win))
 
     @staticmethod
     def cfg2controllers(scrcpy_cfg: dict) -> list:

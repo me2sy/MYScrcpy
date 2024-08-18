@@ -1,4 +1,4 @@
-# MYScrcpy V1.3.0
+# MYScrcpy V1.3.2
 
 ### [中文简介](README.md)
 
@@ -19,7 +19,8 @@ Using **SharedMemory**, video frames are shared through memory, enabling web ren
 Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
 
 ## Features
-
+- [x] **1.3.2 NEW** Video introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
+- [x] **1.3.2 NEW** Append [pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),support OBS virtual camera.
 - [x] **1.3.0 NEW** Next-generation interface implemented with DearPyGui!
 - [x] **1.3.0 NEW** Supports saving connection configurations and window size.
 - [x] **1.3.0 NEW** Supports wireless connection, connection history, and quick connect features, eliminating the need for complicated command-line input.

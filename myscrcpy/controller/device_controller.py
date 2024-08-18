@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-18 1.2.3 Me2sY  修复 缺陷
+
         2024-08-14 1.2.2 Me2sY  优化 adb_dev 获取方法
 
         2024-08-13 1.2.1 Me2sY
@@ -235,7 +237,15 @@ class DeviceController:
 
     @property
     def tcpip_port(self) -> int:
-        p = self.adb_dev.getprop('service.adb.tcp.port')
+        """
+            获取设备 TCPIP 端口
+        :return:
+        """
+        # 2024-08-18 Me2sY 修复连接失败导致错误
+        try:
+            p = self.adb_dev.getprop('service.adb.tcp.port')
+        except Exception as e:
+            p = ''
         if p is None or p == '':
             return -1
         else:

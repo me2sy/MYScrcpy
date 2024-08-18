@@ -1,4 +1,4 @@
-# MYScrcpy V1.3.0
+# MYScrcpy V1.3.2
 
 ### [README in English](README_EN.md)
 
@@ -17,7 +17,8 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 
 ## 特性
-
+- [x] **1.3.2 NEW** 新增视频简介：[BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
+- [x] **1.3.2 NEW** 新增[pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),支持OBS串流
 - [x] **1.3.0 NEW** 新一代界面，使用DearPyGui实现！
 - [x] **1.3.0 NEW** 支持连接配置保存，窗口大小保存
 - [x] **1.3.0 NEW** 支持无线连接，历史连接记录及快速连接功能，告别繁琐命令行

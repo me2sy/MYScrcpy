@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-18 1.3.2 Me2sY  新增 虚拟摄像头功能，支持OBS串流
+
         2024-08-16 1.3.1 Me2sY
             1.修复 切换设备后 鼠标事件未释放错误
             2.优化 滚轮操作
@@ -90,15 +92,11 @@ class WindowMain:
 
         self.tag_hr_ml_c = dpg.generate_uuid()
         self.tag_hr_ml_r = dpg.generate_uuid()
+
         self.tag_hr_ml_m = dpg.generate_uuid()
 
         self.tag_hr_mr_c = dpg.generate_uuid()
         self.tag_hr_mr_r = dpg.generate_uuid()
-
-
-
-
-
 
         self.device = None
         self.vsc = None
@@ -120,6 +118,7 @@ class WindowMain:
         self.touch_id_wheel = self.touch_id + 20
         self.touch_id_sec = self.touch_id + 30
         self.pos_r = None
+        self.vcam_running = False
 
     def close(self):
         dpg.delete_item(self.tag_window)
@@ -129,6 +128,9 @@ class WindowMain:
             设备选择窗口
         """
         def choose_callback(device: DeviceController):
+            if self.device:
+                self.device.close()
+
             self.device = device
 
         def connect_callback(device: DeviceController):
@@ -250,7 +252,7 @@ class WindowMain:
         recent_connected = VM.get_global('recent_connected', [])
         for adb_serial, cfg_name in recent_connected:
 
-            msg = adb_serial[:10] + '/' + cfg_name[:10]
+            msg = adb_serial[:15] + '/' + cfg_name[:5]
 
             if adb_serial in devices:
                 dpg.add_menu_item(
@@ -323,7 +325,10 @@ class WindowMain:
             with dpg.menu(label='Tools'):
                 dpg.add_menu_item(label='TPEditor', callback=self.open_win_tpeditor)
                 dpg.add_menu_item(label='GameMode', callback=self.open_pyg)
+                dpg.add_separator()
 
+                dpg.add_menu_item(label='VCam', callback=self.open_virtual_camera)
+                dpg.add_menu_item(label='StopVCam', callback=lambda: setattr(self, 'vcam_running', False))
                 dpg.add_separator()
 
                 about_msg = (f"A Scrcpy client implemented by Python\n"
@@ -514,7 +519,7 @@ class WindowMain:
         """
         logger.debug(f"Device connected: {device}")
 
-        if self.device and self.device.is_scrcpy_running and self.device.serial_no != device.serial_no:
+        if self.device and self.device.is_scrcpy_running:
             self.disconnect()
 
         self.device = device
@@ -797,6 +802,26 @@ class WindowMain:
         """
         if self.vsc and not self.is_paused:
             self.video_controller.load_frame(self.vsc.get_frame())
+
+    def open_virtual_camera(self):
+        threading.Thread(target=self._virtual_camera).start()
+
+    def _virtual_camera(self):
+        try:
+            import pyvirtualcam
+        except ImportError:
+            logger.warning('pyvirtualcam is not installed')
+            return False
+
+        if self.device and self.vsc:
+            with pyvirtualcam.Camera(**self.video_controller.coord_frame.d, fps=self.vsc.fps) as cam:
+                logger.success(f"Virtual Camera Running")
+                self.vcam_running = True
+                while self.vsc.is_running and self.vcam_running:
+                    cam.send(self.vsc.last_frame)
+                    cam.sleep_until_next_frame()
+
+                logger.warning(f"Virtual Camera Stopped")
 
 
 def start_dpg_adv():
