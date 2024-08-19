@@ -221,8 +221,9 @@ class ControlSocketController(ScrcpySocket):
     def to_args(self) -> list:
         return ['control=true']
 
-    def start(self):
+    def start(self) -> bool:
         threading.Thread(target=self._main_thread).start()
+        return True
 
     def _main_thread(self):
         logger.success(f"Control Socket Connected!")

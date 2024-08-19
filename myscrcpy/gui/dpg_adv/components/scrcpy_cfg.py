@@ -5,6 +5,8 @@
     Scrcpy 连接属性配置组件
 
     Log:
+        2024-08-19 1.3.1 Me2sY  新增 选择Audio播放设备功能
+
         2024-08-15 1.3.0 Me2sY  发布初版
 
         2024-08-15 0.1.3 Me2sY  适配 ValueManager 进行配置存储及管理
@@ -17,7 +19,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 __all__ = [
     'CPMScrcpyCfg', 'CPMScrcpyCfgController'
@@ -136,6 +138,17 @@ class CPMScrcpyCfgAudio(CPMScrcpyCfgBase):
             items=[ASC.SOURCE_OUTPUT, ASC.SOURCE_MIC], source=self.value_controller.tag('audio_source'),
             width=-45, label='Source'
         )
+        dpg.add_combo(
+            items=[ASC.AUDIO_CODEC_FLAC, ASC.AUDIO_CODEC_RAW], source=self.value_controller.tag('audio_codec'),
+            width=-45, label='Codec'
+        )
+
+        devices = ASC.output_devices()
+
+        dpg.add_combo(
+            items=[_ for _ in devices.values()], source=self.value_controller.tag('output_device'),
+            width=-45, label='Output',
+        )
 
 
 class CPMScrcpyCfgControl(CPMScrcpyCfgBase):
@@ -170,6 +183,8 @@ class CPMScrcpyCfgController(ValueComponent):
             'camera_size': '',
             'audio': True,
             'audio_source': ASC.SOURCE_OUTPUT,
+            'audio_codec': ASC.AUDIO_CODEC_FLAC,
+            'output_device': ASC.output_devices()[ASC.default_output_device_index()],
             'control': True,
             'close_screen': True
         }

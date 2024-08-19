@@ -5,6 +5,8 @@
     视频控制器，支持h264 h265(hevc)
 
     Log:
+        2024-08-19 1.1.5 Me2sY 修复部分缺陷，新增未启动判断
+
         2024-08-04 1.1.4 Me2sY
             1.支持 h265
             2.更换 pyav 至 av
@@ -21,7 +23,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 
 __all__ = [
     'VideoSocketController', 'VideoStream', 'VideoCamera'
@@ -33,7 +35,6 @@ import struct
 from multiprocessing import shared_memory
 from copy import copy
 import threading
-import warnings
 import random
 
 from loguru import logger
@@ -133,7 +134,7 @@ class VideoSocketController(ScrcpySocket):
     def __init__(
             self,
             max_size: int | None,
-            fps: int = 90,
+            fps: int = 60,
             buffer_size: int = 131072,
             video_codec: str = CODEC_H264,
             camera: VideoCamera | None = None,
@@ -179,9 +180,11 @@ class VideoSocketController(ScrcpySocket):
             msg += '4.Use scrcpy --list-camera or --list-camera-sizes then choose a RIGHT ar or size or camera_id\n'
             msg += '5.Make Sure Your Android Device >= 12\n'
             msg += '6.Some Android Device NOT SUPPORTED Camera. Use Scrcpy to see the WRONG MSG.'
+            self.is_running = False
             raise RuntimeError(msg)
 
         if _video_codec != self.video_codec:
+            self.is_running = False
             raise RuntimeError(f"Video Codec >{_video_codec}< not supported!")
 
         (width, height,) = struct.unpack('>II', self._conn.recv(8))
@@ -247,13 +250,21 @@ class VideoSocketController(ScrcpySocket):
         threading.Thread(target=self._main_thread).start()
         threading.Thread(target=self._share_thread).start()
 
-    def start(self):
+    def start(self) -> bool:
+        wait_n = 2 * 10
         if self.is_running:
             self._start_thread()
             while self.get_frame() is None:
-                time.sleep(0.001)
+                time.sleep(0.1)
+                wait_n -= 1
+                if wait_n == 0:
+                    logger.warning(f"Video Socket Not Connected!")
+                    self.is_running = False
+                    return False
+            return True
         else:
-            warnings.warn(f"Video Socket Connection Not Ready!")
+            logger.warning(f"Video Socket Connection Not Ready!")
+            return False
 
     def close(self):
         self.is_running = False

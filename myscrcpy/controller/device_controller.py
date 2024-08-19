@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-19 1.2.4 Me2sY
+            1.新增 reboot方法
+            2.优化 connect方法，增加start方法判断
+
         2024-08-18 1.2.3 Me2sY  修复 缺陷
 
         2024-08-14 1.2.2 Me2sY  优化 adb_dev 获取方法
@@ -61,7 +65,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.2.2'
+__version__ = '1.2.4'
 
 __all__ = [
     'DeviceInfo',
@@ -252,34 +256,6 @@ class DeviceController:
             return int(p)
 
     @staticmethod
-    def analysis_device_info(dev: AdbDevice) -> DeviceInfo:
-        """
-            Get Device Info By getprop
-            废弃
-        """
-
-        try:
-            serial_no = dev.getprop('ro.serialno')
-        except KeyError:
-            raise ValueError(f'Serial No Found In prop!')
-
-        release = dev.getprop('ro.build.version.release')
-        if release is None or release == '':
-            release = 14
-        elif '.' in release:
-            release = int(release.split('.')[0])
-        else:
-            release = int(release)
-
-        return DeviceInfo(
-            serial_no=serial_no,
-            brand=dev.getprop('ro.product.brand'),
-            model=dev.getprop('ro.product.model'),
-            sdk=int(dev.getprop('ro.build.version.sdk')),
-            release=release,
-        )
-
-    @staticmethod
     def analysis_device(dev: AdbDevice) -> Tuple[DeviceInfo, dict]:
         """
             通过getprop 快速读取并解析设备信息
@@ -341,11 +317,13 @@ class DeviceController:
 
         self.csc.f_set_screen(status)
 
-    def back(self):
-        self.adb_dev.keyevent('BACK')
-
-    def home(self):
-        self.adb_dev.keyevent('HOME')
+    def reboot(self):
+        """
+            重启设备
+        :return:
+        """
+        if self.adb_dev:
+            self.adb_dev.reboot()
 
     def close(self):
 
@@ -536,9 +514,23 @@ class DeviceController:
                 self.csc.setup_socket_connection(conn)
                 continue
 
-        for _ in [self.asc, self.vsc, self.csc]:
-            if _:
-                _.start()
+        if self.asc:
+            f = self.asc.start()
+            if not f:
+                logger.warning('Failed to Start Audio Socket!')
+                self.asc = None
+
+        if self.vsc:
+            f = self.vsc.start()
+            if not f:
+                logger.warning('Failed to Start Video Socket!')
+                self.vsc = None
+
+        if self.csc:
+            f = self.csc.start()
+            if not f:
+                logger.warning('Failed to Start Control Socket!')
+                self.csc = None
 
         self.is_scrcpy_running = True
         threading.Thread(target=self._thread_load_stream).start()
@@ -550,6 +542,10 @@ class DeviceController:
         return self.vsc, self.asc, self.csc
 
     def _thread_load_stream(self):
+        """
+            读取 Scrcpy Server 返回信息
+        :return:
+        """
         msg = ''
         while self.is_scrcpy_running:
             w = self.stream.read_string(1)

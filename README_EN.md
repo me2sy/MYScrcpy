@@ -1,4 +1,4 @@
-# MYScrcpy V1.3.2
+# MYScrcpy V1.3.3
 
 ### [中文简介](README.md)
 
@@ -19,14 +19,13 @@ Using **SharedMemory**, video frames are shared through memory, enabling web ren
 Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
 
 ## Features
+- [x] **1.3.3 NEW** Support select audio output devices, With VB-Cables you can simulate microphone input
 - [x] **1.3.2 NEW** Video introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 - [x] **1.3.2 NEW** Append [pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),support OBS virtual camera.
-- [x] **1.3.0 NEW** Next-generation interface implemented with DearPyGui!
-- [x] **1.3.0 NEW** Supports saving connection configurations and window size.
-- [x] **1.3.0 NEW** Supports wireless connection, connection history, and quick connect features, eliminating the need for complicated command-line input.
-- [x] **1.3.0 NEW** Supports proportional window resizing and freeform stretching.
-- [x] **1.3.0 NEW** Uses TinyDB for dynamic configuration saving.
-- [x] **1.3.0 NEW** More features, welcome to try and experience!
+- [x] Supports saving connection configurations and window size.
+- [x] Supports wireless connection, connection history, and quick connect features, eliminating the need for complicated command-line input.
+- [x] Supports proportional window resizing and freeform stretching.
+- [x] Uses TinyDB for dynamic configuration saving.
 - [x] Support for reconnecting after disconnection, connection history, and automatic reconnection attempts
 - [x] Support for H265 Video Stream
 - [x] Video stream parsing (H264) to generate numpy.ndarray for graphic processing with OpenCV, image, etc.

@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-08-19 1.3.1 Me2sY  新增 Confirm Window
+
         2024-08-15 1.3.0 Me2sY  发布初版
 
         2024-08-14 0.1.1 Me2sY  新增 TempModal, Static
@@ -13,7 +15,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 __all__ = [
     'Component',
@@ -23,7 +25,7 @@ __all__ = [
 ]
 
 from functools import partial
-from typing import NamedTuple, Any
+from typing import NamedTuple, Any, Callable
 
 import dearpygui.dearpygui as dpg
 
@@ -191,6 +193,27 @@ class TempModal:
                 _(parent=tag_win)
             dpg.add_separator()
             dpg.add_button(label='Close', width=-1, height=35, callback=lambda: dpg.delete_item(tag_win))
+        return tag_win
+
+    @classmethod
+    def draw_confirm(cls, confirm_msg: str, confirm_callback: Callable, *args, **kwargs) -> int | str:
+        """
+            绘制确认窗口
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        with dpg.window(modal=True, no_move=True, no_resize=True, no_title_bar=True, **kwargs) as tag_win:
+            dpg.add_text(confirm_msg)
+            for _ in args:
+                _(parent=tag_win)
+            dpg.add_separator()
+            with dpg.group(horizontal=True):
+                dpg.add_button(
+                    label='Confirm', width=-66, height=35,
+                    callback=lambda s, a, u: dpg.delete_item(tag_win) or confirm_callback()
+                )
+                dpg.add_button(label='Close', width=-1, height=35, callback=lambda: dpg.delete_item(tag_win))
         return tag_win
 
 

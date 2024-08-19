@@ -4,6 +4,11 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-19 1.3.3 Me2sY
+            1.新增 选择音频播放设备功能 支持 VB-Cables 模拟麦克风输入
+            2.优化 虚拟摄像头输入选择功能 支持 选择 UnityCapture https://github.com/schellingb/UnityCapture
+            3.新增 Reboot功能，优化屏幕控制功能
+
         2024-08-18 1.3.2 Me2sY  新增 虚拟摄像头功能，支持OBS串流
 
         2024-08-16 1.3.1 Me2sY
@@ -37,7 +42,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.1'
+__version__ = '1.3.3'
 
 __all__ = ['start_dpg_adv']
 
@@ -103,6 +108,7 @@ class WindowMain:
         self.csc = None
         self.video_controller = VideoController()
         self.video_controller.register_resize_callback(self._video_resize)
+        self.video_controller.register_resize_callback(self._camera_resize)
 
         self.video_ready = False
         self.is_paused = False
@@ -251,18 +257,20 @@ class WindowMain:
 
         recent_connected = VM.get_global('recent_connected', [])
         for adb_serial, cfg_name in recent_connected:
+            try:
+                msg = adb_serial[:15] + '/' + cfg_name[:5]
 
-            msg = adb_serial[:15] + '/' + cfg_name[:5]
-
-            if adb_serial in devices:
-                dpg.add_menu_item(
-                    label=msg, user_data=(adb_serial, cfg_name), callback=_connect,
-                    parent=parent_tag
-                )
-            else:
-                dpg.add_menu_item(
-                    label=f"X {msg}", parent=parent_tag, enabled=False
-                )
+                if adb_serial in devices:
+                    dpg.add_menu_item(
+                        label=msg, user_data=(adb_serial, cfg_name), callback=_connect,
+                        parent=parent_tag
+                    )
+                else:
+                    dpg.add_menu_item(
+                        label=f"X {msg}", parent=parent_tag, enabled=False
+                    )
+            except Exception as e:
+                pass
 
         if len(recent_connected) == 0:
             dpg.add_text('No Records', parent=parent_tag)
@@ -289,6 +297,25 @@ class WindowMain:
                 with dpg.menu(label='NumPad'):
                     # Num Pad 适用某些机型锁屏下 需要输入数字密码场景
                     CPMNumPad().draw().update(self.send_key_event)
+
+                # 2024-08-19 Me2sY  新增 重启设备功能
+                def reboot():
+                    def _f():
+                        self.device.reboot()
+                        self.disconnect()
+
+                    if self.device:
+                        TempModal.draw_confirm(
+                            'Reboot Device?',
+                            _f,
+                            partial(
+                                dpg.add_text,
+                                'Device Will DISCONNECT! \nWait and then try connect.'
+                            ),
+                            width=220
+                        )
+
+                dpg.add_menu_item(label='! Reboot !', callback=reboot)
 
             # Scrcpy Video/Audio/Control 相关功能
             with dpg.menu(label=' VAC '):
@@ -318,16 +345,46 @@ class WindowMain:
                 with dpg.menu(label='Audio'):
                     dpg.add_menu_item(label='Mute(Scrcpy)', callback=self.audio_switch_mute)
 
+                    # 2024-08-19 Me2sY  选择播放设备
+                    dpg.add_menu_item(label='Output Device', callback=self.audio_choose_output_device)
+
                 with dpg.menu(label='Ctrl'):
                     self.tag_cb_uhid = dpg.add_checkbox(label='UHID', default_value=True)
-                    self.tag_menu_screen = dpg.add_menu_item(label='DeviceScreenOn/Off', callback=self.close_screen)
+
+                    # 2024-08-19 Me2sY  优化为可选项
+                    def set_screen(sender, app_data, user_data):
+                        self.device is not None and self.device.csc is not None and self.device.set_screen(user_data)
+
+                    with dpg.menu(label='Screen'):
+                        with dpg.group(horizontal=True):
+                            dpg.add_button(label='On', callback=set_screen, user_data=True, width=50, height=30)
+                            dpg.add_button(label='Off', callback=set_screen, user_data=False, width=50, height=30)
 
             with dpg.menu(label='Tools'):
                 dpg.add_menu_item(label='TPEditor', callback=self.open_win_tpeditor)
                 dpg.add_menu_item(label='GameMode', callback=self.open_pyg)
                 dpg.add_separator()
 
-                dpg.add_menu_item(label='VCam', callback=self.open_virtual_camera)
+                # 2024-08-19 Me2sY 可选来源
+                with dpg.menu(label='VirtualCam'):
+                    # Auto
+                    dpg.add_menu_item(label='Auto', user_data=None, callback=self.open_virtual_camera)
+
+                    dpg.add_separator()
+
+                    # WIN / macOS
+                    dpg.add_menu_item(label='OBS(WIN/macOS)', user_data='obs', callback=self.open_virtual_camera)
+
+                    # Win
+                    dpg.add_menu_item(
+                        label='unitycapture(WIN)', user_data='unitycapture', callback=self.open_virtual_camera
+                    )
+
+                    # Linux
+                    dpg.add_menu_item(
+                        label='v4l2loopback(Linux)', user_data='v4l2loopback', callback=self.open_virtual_camera
+                    )
+
                 dpg.add_menu_item(label='StopVCam', callback=lambda: setattr(self, 'vcam_running', False))
                 dpg.add_separator()
 
@@ -358,19 +415,47 @@ class WindowMain:
                 #     dpg.add_separator()
                 #     dpg.add_menu_item(label='Help')
 
+    def audio_choose_output_device(self):
+        """
+            选择Audio外放设备
+        :return:
+        """
+        if self.device and self.device.asc and self.device.asc.is_running:
+
+            def select():
+                """
+                    选择播放设备
+                :return:
+                """
+                name = dpg.get_value(tag_cb_dev)
+                if name != cur_dev['name']:
+
+                    index = -1
+                    for k, v in devices.items():
+                        if v == name:
+                            index = k
+                            break
+
+                    self.device.asc.select_player(index)
+
+                dpg.delete_item(tag_win)
+
+            cur_dev = self.device.asc.audio_player.output_device
+
+            with dpg.window(modal=True, width=268, no_move=True, no_resize=True, no_title_bar=True) as tag_win:
+                devices = self.device.asc.output_devices()
+                dpg.add_text(f"Choose Audio Output Device")
+                tag_cb_dev = dpg.add_combo(items=[_ for _ in devices.values()], default_value=cur_dev['name'], width=-1)
+                with dpg.group(horizontal=True):
+                    dpg.add_button(label='Select', callback=select, width=-60, height=35)
+                    dpg.add_button(label='Close', callback=lambda: dpg.delete_item(tag_win), height=35, width=-1)
+
     def audio_switch_mute(self):
         """
             Scrcpy 静音
         """
-        if self.device.asc:
+        if self.device and self.device.asc:
             self.device.asc.switch_mute()
-
-    def close_screen(self):
-        """
-            关闭屏幕
-        """
-        if self.csc:
-            self.csc.f_set_screen(self.csc.close_screen)
 
     def open_win_tpeditor(self):
         """
@@ -525,7 +610,7 @@ class WindowMain:
         self.device = device
         self.vsc = device.vsc
 
-        if self.vsc:
+        if self.vsc and self.vsc.is_running:
             frame = self.vsc.get_frame()
             self.cpm_vc.draw_layer(self.cpm_vc.tag_layer_1)
         else:
@@ -704,7 +789,7 @@ class WindowMain:
             # 滚轮实现上下滚动
             # 按下Ctrl 实现放大缩小
             def _wheel(sender, app_data):
-                if self.csc is None or not self.cpm_vc.is_hovered:
+                if self.csc is None or not self.cpm_vc.is_hovered or not isinstance(app_data, int):
                     return
 
                 cf = self.video_controller.coord_frame
@@ -803,10 +888,28 @@ class WindowMain:
         if self.vsc and not self.is_paused:
             self.video_controller.load_frame(self.vsc.get_frame())
 
-    def open_virtual_camera(self):
-        threading.Thread(target=self._virtual_camera).start()
+    def open_virtual_camera(self, sender=None, app_data=None, user_data=None):
+        threading.Thread(target=self._virtual_camera, args=(user_data,)).start()
 
-    def _virtual_camera(self):
+    def _camera_resize(self, tag_texture, old_coord, new_coord):
+        """
+            旋转时重启摄像头
+        :param tag_texture:
+        :param old_coord:
+        :param new_coord:
+        :return:
+        """
+        if self.vcam_running and self.vsc:
+            self.vcam_running = False
+            time.sleep(0.5)
+            self.open_virtual_camera()
+
+    def _virtual_camera(self, backend: str = None):
+        """
+            启动虚拟摄像头
+        :param backend: 虚拟摄像头服务
+        :return:
+        """
         try:
             import pyvirtualcam
         except ImportError:
@@ -814,14 +917,28 @@ class WindowMain:
             return False
 
         if self.device and self.vsc:
-            with pyvirtualcam.Camera(**self.video_controller.coord_frame.d, fps=self.vsc.fps) as cam:
-                logger.success(f"Virtual Camera Running")
-                self.vcam_running = True
-                while self.vsc.is_running and self.vcam_running:
-                    cam.send(self.vsc.last_frame)
-                    cam.sleep_until_next_frame()
+            try:
+                with pyvirtualcam.Camera(
+                        **self.video_controller.coord_frame.d, fps=self.vsc.fps, backend=backend
+                ) as cam:
+                    logger.success(f"Virtual Camera Running")
+                    self.vcam_running = True
+                    try:
+                        while self.vsc.is_running and self.vcam_running:
+                            cam.send(self.vsc.last_frame)
+                            cam.sleep_until_next_frame()
 
-                logger.warning(f"Virtual Camera Stopped")
+                        # 2024-08-19 Me2sY  画面置黑
+                        cam.send(VideoController.create_default_frame(self.video_controller.coord_frame, 0))
+
+                    except Exception as e:
+                        logger.warning(f"Virtual Camera Error: {e}")
+                        return
+
+                    logger.warning(f"Virtual Camera Stopped")
+            except Exception as e:
+                logger.warning(f"Virtual Camera Error: {e}")
+                return
 
 
 def start_dpg_adv():

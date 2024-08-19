@@ -5,6 +5,10 @@
     设备相关组件
 
     Log:
+        2024-08-19 1.3.1 Me2sY
+            1.新增 Reboot功能
+            2.新增 Audio 选择播放设备功能
+
         2024-08-15 1.3.0 Me2sY  发布初版
 
         2024-08-14 0.1.3 Me2sY  去除WindowSize信息展示（加载慢），加速设备加载
@@ -15,7 +19,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 __all__ = [
     'WinDevices', 'CPMDevice'
@@ -102,10 +106,28 @@ class CPMDeviceInfo(ValueComponent):
             dpg.add_drag_int(
                 label='android', source=self.value_controller.tag('release'), width=30, no_input=True, enabled=False)
 
+        def reboot():
+            def _f():
+                self.device.reboot()
+
+            if self.device:
+                TempModal.draw_confirm(
+                    'Reboot Device?',
+                    _f,
+                    partial(
+                        dpg.add_text,
+                        'Device Will DISCONNECT! \nWait and then try connect.'
+                    ),
+                    width=220
+                )
+
         with dpg.group(horizontal=True):
             dpg.add_input_text(label='model', source=self.value_controller.tag('model'), enabled=False, width=80)
             dpg.add_drag_int(
                 label='sdk', source=self.value_controller.tag('sdk'), width=30, no_input=True, enabled=False)
+            dpg.add_button(label='R', width=-1, callback=reboot)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Reboot Device')
 
     def update(self, device: DeviceController):
         """
@@ -222,6 +244,7 @@ class CPMDevice(ValueComponent):
         """
             解析字典型配置文件，创建 V/A/C 实例
         """
+
         controllers = []
         if scrcpy_cfg.get('video', False):
 
@@ -235,6 +258,15 @@ class CPMDevice(ValueComponent):
             )
 
         if scrcpy_cfg.get('audio', False):
+            device_index = -1
+            for k, v in ASC.output_devices().items():
+                if v == scrcpy_cfg['output_device']:
+                    device_index = k
+                    break
+
+            scrcpy_cfg['output_device_index'] = device_index
+            del scrcpy_cfg['output_device']
+
             controllers.append(ASC(**scrcpy_cfg))
 
         if scrcpy_cfg.get('control', False):

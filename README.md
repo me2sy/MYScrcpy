@@ -1,4 +1,4 @@
-# MYScrcpy V1.3.2
+# MYScrcpy V1.3.3
 
 ### [README in English](README_EN.md)
 
@@ -17,14 +17,13 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 
 ## 特性
+- [x] **1.3.3 NEW** 新增选择音频输出设备功能，可配合VB-Cables模拟麦克风输入
 - [x] **1.3.2 NEW** 新增视频简介：[BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
-- [x] **1.3.2 NEW** 新增[pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),支持OBS串流
-- [x] **1.3.0 NEW** 新一代界面，使用DearPyGui实现！
-- [x] **1.3.0 NEW** 支持连接配置保存，窗口大小保存
-- [x] **1.3.0 NEW** 支持无线连接，历史连接记录及快速连接功能，告别繁琐命令行
-- [x] **1.3.0 NEW** 支持按比例调整窗口大小、任意拉伸等功能
-- [x] **1.3.0 NEW** 使用TinyDB，动态保存配置
-- [x] **1.3.0 NEW** 更多功能，欢迎试用体验
+- [x] **1.3.2 NEW** 新增[pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),支持OBS虚拟摄像头
+- [x] 支持连接配置保存，窗口大小保存
+- [x] 支持无线连接，历史连接记录及快速连接功能，告别繁琐命令行
+- [x] 支持按比例调整窗口大小、任意拉伸等功能
+- [x] 使用TinyDB，动态保存配置
 - [x] 支持有线、无线连接安卓设备
 - [x] 支持断线重连，连接历史记录并自动尝试连接功能
 - [x] 支持 H265连接
