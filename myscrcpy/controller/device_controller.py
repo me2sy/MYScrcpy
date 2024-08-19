@@ -7,6 +7,7 @@
         2024-08-19 1.2.4 Me2sY
             1.新增 reboot方法
             2.优化 connect方法，增加start方法判断
+            3.去除 无用逻辑
 
         2024-08-18 1.2.3 Me2sY  修复 缺陷
 
@@ -577,8 +578,15 @@ class DeviceFactory:
             return {}
         return CfgHandler.load(cls.HISTORY_FILE_PATH)
 
+    @staticmethod
+    def _connect_device(addr: str, timeout: int):
+        try:
+            adb.connect(addr, timeout=timeout)
+        except AdbError as e:
+            logger.warning(f"Connecting to {addr} failed! => {e}")
+
     @classmethod
-    def load_devices(cls, load_history: bool = True, save_history: bool = True, auto_remove: bool = False):
+    def load_devices(cls, load_history: bool = True, save_history: bool = True):
         """
             加载 ADB Device
         """
@@ -599,20 +607,11 @@ class DeviceFactory:
 
         history.update(loaded_net_dev)
 
-        remove_serial_no = []
-
         # 遍历历史记录，尝试连接无线设备
+        # 2024-08-19 Me2sY  去除无用逻辑，添加ADB重连失败告警
         for serial_no, dc_info in history.items():
             if dc_info['addr']:
-                try:
-                    threading.Thread(target=adb.connect, args=(dc_info['addr'], 1)).start()
-                except AdbError:
-                    logger.warning(f"Connecting to {dc_info['addr']} failed")
-                    if auto_remove:
-                        remove_serial_no.append(serial_no)
-
-        for serial_no in remove_serial_no:
-            history.pop(serial_no)
+                threading.Thread(target=cls._connect_device, args=(dc_info['addr'], 1)).start()
 
         for adb_dev in adb.device_list():
             try:
@@ -657,8 +656,8 @@ class DeviceFactory:
         """
         try:
             logger.info(f"Connecting to {addr} {adb.connect(addr, timeout=timeout)}")
-        except AdbError:
-            logger.error(f'Failed to connect to {addr}')
+        except AdbError as e:
+            logger.error(f'Failed to connect to {addr} => {e}')
             return None
 
         cls.load_devices()

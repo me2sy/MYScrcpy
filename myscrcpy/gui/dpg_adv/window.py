@@ -475,14 +475,23 @@ class WindowMain:
             self._open_pg(pgcw, Param.PATH_TPS.joinpath(dpg.get_value(tag_cfg) + '.json'))
             self.is_paused = True
             dpg.set_value(self.tag_menu_pause, True)
+            dpg.delete_item(tag_win)
 
-        with dpg.window(width=200, label='Choose TP Config', no_resize=True, no_collapse=True):
-            cfgs = []
-            for _ in Param.PATH_TPS.glob('*.json'):
-                cfgs.append(_.stem)
+        if self.device and self.device.vsc and self.device.csc:
+            with dpg.window(width=200, label='Choose TP Config', no_resize=True, no_collapse=True) as tag_win:
+                cfgs = []
+                for _ in Param.PATH_TPS.glob('*.json'):
+                    cfgs.append(_.stem)
 
-            tag_cfg = dpg.add_combo(cfgs, label='Configs', default_value=cfgs[0], width=-50)
-            dpg.add_button(label='Start GameMode', callback=run, width=-1, height=35)
+                # 2024-08-19 Me2sY  修复新PC无配置文件问题
+                if len(cfgs) == 0:
+                    dpg.add_text(f"Create TP Config First!\nTry TPEditor")
+                    dpg.add_button(label='Close', callback=lambda: dpg.delete_item(tag_win), width=-1, height=35)
+                else:
+                    tag_cfg = dpg.add_combo(cfgs, label='Configs', default_value=cfgs[0], width=-50)
+                    dpg.add_button(label='Start GameMode', callback=run, width=-1, height=35)
+        else:
+            logger.warning(f"Connect A Device With VideoSocket And ControlSocket First!")
 
     def _open_pg(self, pgcw: PGControlWindow, cfg_path: pathlib.Path):
         threading.Thread(target=pgcw.run, args=(
@@ -949,6 +958,7 @@ def start_dpg_adv():
     dpg.create_context()
 
     Static.load()
+    logger.success('Static Files Loaded!')
 
     with dpg.font_registry():
         with dpg.font(
@@ -957,6 +967,7 @@ def start_dpg_adv():
         ) as def_font:
             dpg.add_font_range_hint(dpg.mvFontRangeHint_Chinese_Full)
     dpg.bind_font(def_font)
+    logger.success('Font Loaded!')
 
     dpg.create_viewport(
         title=f"{Param.PROJECT_NAME} - {Param.AUTHOR}",
@@ -966,7 +977,8 @@ def start_dpg_adv():
         large_icon=Param.PATH_STATICS_ICON.__str__(),
         small_icon=Param.PATH_STATICS_ICON.__str__()
     )
-    dpg.show_viewport()
+
+    logger.info('Start ADB Server. Please Wait...')
 
     wd = WindowMain()
     wd.draw()
@@ -990,6 +1002,11 @@ def start_dpg_adv():
             return
 
     dpg.set_viewport_resize_callback(fix_vp_size)
+
+    dpg.show_viewport()
+
+    logger.success('ADB Server Ready. Viewport And Windows Ready.')
+    logger.success(f"MYScrcpy {Param.VERSION} Ready To Move!\n {'-' * 100}")
 
     while dpg.is_dearpygui_running():
         wd.update()
