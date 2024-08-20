@@ -15,6 +15,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 使用[TinyDB](https://github.com/msiemens/tinydb)进行配置管理。
 
+![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
 
 ## 特性
 - [x] **1.3.3 NEW** 新增选择音频输出设备功能，可配合VB-Cables模拟麦克风输入

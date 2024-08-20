@@ -18,6 +18,8 @@ Using **SharedMemory**, video frames are shared through memory, enabling web ren
 
 Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
 
+![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
+
 ## Features
 - [x] **1.3.3 NEW** Support select audio output devices, With VB-Cables you can simulate microphone input
 - [x] **1.3.2 NEW** Video introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)

@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-20 1.3.4 Me2sY
+            1.优化显示效果
+            2.修复部分缺陷
+
         2024-08-19 1.3.3 Me2sY
             1.新增 选择音频播放设备功能 支持 VB-Cables 模拟麦克风输入
             2.优化 虚拟摄像头输入选择功能 支持 选择 UnityCapture https://github.com/schellingb/UnityCapture
