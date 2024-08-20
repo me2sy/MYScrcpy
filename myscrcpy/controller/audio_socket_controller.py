@@ -26,14 +26,13 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.5'
+__version__ = '1.1.6'
 
 __all__ = [
     'AudioSocketController', 'AudioSocketServer',
     'FlacAudioPlayer', 'RawAudioPlayer'
 ]
 
-import queue
 import threading
 from typing import List, Set, Any, Dict, Mapping
 
@@ -188,7 +187,10 @@ class FlacAudioPlayer(AudioPlayer):
         self.stream_decoder.process(audio_bytes)
 
     def close(self):
-        self.stream_decoder.finish()
+        try:
+            self.stream_decoder.finish()
+        except pyflac.decoder.DecoderProcessException as e:
+            pass
         self.player.close()
         self.is_playing = False
         logger.warning(f"Audio Stream Closed.")

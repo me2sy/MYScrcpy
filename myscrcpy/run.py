@@ -35,6 +35,7 @@ except ImportError:
 from myscrcpy.gui.pg.window_control import run
 from myscrcpy.gui.dpg_adv.window import start_dpg_adv
 
+
 @click.command()
 @click.option('-g', '--gamemode', is_flag=True, default=False, help='直接进入控制模式')
 def cmd(gamemode):

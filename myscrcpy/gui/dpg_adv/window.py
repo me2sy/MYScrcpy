@@ -79,8 +79,8 @@ class WindowMain:
     WIDTH_SWITCH = 38
     WIDTH_BOARD = 8
 
-    HEIGHT_TITLE = 39
-    HEIGHT_MENU = 17
+    # HEIGHT_TITLE = 39
+    HEIGHT_MENU = 19
     HEIGHT_BOARD = 8
 
     def __init__(self):
@@ -110,7 +110,6 @@ class WindowMain:
         self.video_controller.register_resize_callback(self._video_resize)
         self.video_controller.register_resize_callback(self._camera_resize)
 
-        self.video_ready = False
         self.is_paused = False
         self.dev_cfg = None
 
@@ -175,13 +174,11 @@ class WindowMain:
             self.vsc = None
             self.csc = None
 
-            for _ in range(3):
-                self.video_controller.load_frame(
-                    VideoController.create_default_frame(
-                        Coordinate(400, 500), rgb_color=0
-                    )
+            self.video_controller.load_frame(
+                VideoController.create_default_frame(
+                    Coordinate(400, 500), rgb_color=0
                 )
-                time.sleep(0.1)
+            )
 
             dpg.configure_item(self.tag_mi_disconnect, enabled=False, show=False)
             dpg.delete_item(tag_win_loading)
@@ -194,7 +191,7 @@ class WindowMain:
             coord_new = self.cpm_vc.coord_draw.fix_width(self.video_controller.coord_frame)
         else:
             coord_new = self.cpm_vc.coord_draw.fix_height(self.video_controller.coord_frame)
-        self.set_viewport_coord_by_draw_coord(coord_new)
+        self.set_d2v(coord_new)
 
     def video_scale(self, sender, app_data, user_data):
         """
@@ -203,26 +200,31 @@ class WindowMain:
         nc = self.video_controller.coord_frame * dpg.get_value(self.tag_drag_video_s)
         dpg.set_value(self.tag_drag_video_w, nc.width)
         dpg.set_value(self.tag_drag_video_h, nc.height)
-        self.set_viewport_coord_by_draw_coord(nc)
+        self.set_d2v(nc)
 
     def video_set_scale(self, sender, app_data, user_data):
         """
             通过Width Height 调整Video比例
         """
-        self.set_viewport_coord_by_draw_coord(Coordinate(
+        self.set_d2v(Coordinate(
             dpg.get_value(self.tag_drag_video_w),
             dpg.get_value(self.tag_drag_video_h)
         ))
 
-    def set_viewport_coord_by_draw_coord(self, coord: Coordinate):
+    def set_d2v(self, coord: Coordinate):
         """
             根据 Video大小 调整view_port窗口大小
+            2024-08-20 Me2sY 更新计算逻辑 解决Linux系统下 边框宽度计算问题
         """
         cw_c = 1 if dpg.is_item_shown(self.tag_cw_ctrl) else 0
-        dpg.set_viewport_width(
-            coord.width + self.WIDTH_SWITCH + self.WIDTH_CTRL * cw_c + self.WIDTH_BOARD * (3 + cw_c + 2)
-        )
-        dpg.set_viewport_height(coord.height + self.HEIGHT_BOARD * 3 + self.HEIGHT_MENU + self.HEIGHT_TITLE)
+
+        fix_w = dpg.get_viewport_width() - dpg.get_viewport_client_width()
+        vp_w = coord.width + self.WIDTH_SWITCH + self.WIDTH_CTRL * cw_c + self.WIDTH_BOARD * (3 + cw_c) + fix_w
+        dpg.set_viewport_width(vp_w)
+
+        fix_h = dpg.get_viewport_height() - dpg.get_viewport_client_height()
+        vp_h = coord.height + self.HEIGHT_BOARD * 3 + self.HEIGHT_MENU + fix_h
+        dpg.set_viewport_height(vp_h)
 
     def load_recent_device(self, parent_tag):
         """
@@ -559,17 +561,19 @@ class WindowMain:
     def _window_resize(self):
         """
             窗口调整回调函数
+            2024-08-20 Me2sY 更新计算逻辑 解决Linux系统下 边框宽度计算问题
         """
 
-        vpw = dpg.get_viewport_width()
-        vph = dpg.get_viewport_height()
+        vpw = dpg.get_viewport_client_width()
+        vph = dpg.get_viewport_client_height()
 
         # 更新 CPM_VC 画面大小
         cw_c = 1 if dpg.is_item_shown(self.tag_cw_ctrl) else 0
         new_vc_coord = Coordinate(
-            vpw - self.WIDTH_CTRL * cw_c - self.WIDTH_SWITCH - self.WIDTH_BOARD * (3 + cw_c + 2),
-            vph - self.HEIGHT_MENU - self.HEIGHT_BOARD * 3 - self.HEIGHT_TITLE
+            vpw - self.WIDTH_CTRL * cw_c - self.WIDTH_SWITCH - self.WIDTH_BOARD * (3 + cw_c),
+            vph - self.HEIGHT_MENU - self.HEIGHT_BOARD * 3
         )
+
         self.cpm_vc.update_frame(new_vc_coord)
 
         title = f"{Param.PROJECT_NAME} - {Param.AUTHOR}"
@@ -621,7 +625,7 @@ class WindowMain:
 
         if self.vsc and self.vsc.is_running:
             frame = self.vsc.get_frame()
-            self.cpm_vc.draw_layer(self.cpm_vc.tag_layer_1)
+            self.cpm_vc.draw_layer(self.cpm_vc.tag_layer_1, clear=True)
         else:
             frame = VideoController.create_default_frame(
                 coordinate=Coordinate(*self.device.adb_dev.window_size()),
@@ -629,18 +633,18 @@ class WindowMain:
             )
 
             msg = 'No Video.'
-            if self.device.info.is_uhid_supported:
-                msg += 'UHID Mode.'
-            else:
-                msg += 'UHID Not Support!'
+            if self.device.csc is not None:
+                if self.device.info.is_uhid_supported:
+                    msg += 'UHID Mode.'
+                else:
+                    msg += 'UHID Not Support!'
 
             self.cpm_vc.draw_layer(
                 self.cpm_vc.tag_layer_1,
-                partial(dpg.draw_text, pos=(10, 10), text=f"No Video. {msg}", size=18)
+                partial(dpg.draw_text, pos=(10, 10), text=f"{msg}", size=18)
             )
 
         self.video_controller.load_frame(frame)
-        self._init_video(self.video_controller.tag_texture, self.video_controller.coord_frame)
         self._init_resize_handler()
 
         # TODO 2024-08-08 Me2sY  断线重连功能
@@ -879,6 +883,7 @@ class WindowMain:
         """
             创建 Video 显示
         """
+
         auto_fix = True
         if self.device:
             # 加载历史窗口大小配置
@@ -888,7 +893,8 @@ class WindowMain:
                 auto_fix = False
 
         draw_coord = self.cpm_vc.init_image(tag_texture, coord, auto_fix=auto_fix)
-        self.set_viewport_coord_by_draw_coord(draw_coord)
+
+        self.set_d2v(draw_coord)
 
     def update(self):
         """
@@ -1023,6 +1029,6 @@ def start_dpg_adv():
 
 if __name__ == '__main__':
     # 注意！ DearPyGui https://github.com/hoffstadt/DearPyGui/issues/2049
-    # 窗口最小化后会导致内存大量占用，目前问题尚未修复
+    # Windows11 窗口最小化后会导致内存大量占用，目前问题尚未修复
 
     start_dpg_adv()

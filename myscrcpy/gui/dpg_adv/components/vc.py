@@ -130,8 +130,8 @@ class CPMVC(Component):
     """
 
     DEFAULT_CONTAINER_ADD_METHOD = dpg.add_group
-    init_max_height = 860
-    init_max_width = 1366
+    init_max_height = 800
+    init_max_width = 1200
 
     @property
     def coord_draw(self) -> Coordinate:
@@ -158,7 +158,6 @@ class CPMVC(Component):
             with dpg.draw_layer(label='cross') as self.tag_layer_2:
                 ...
 
-
     def draw_layer(self, layer_tag, *args, clear: bool = True, **kwargs):
         """
             绘制图层
@@ -172,7 +171,7 @@ class CPMVC(Component):
         for _ in args:
             _(parent=layer_tag)
 
-    def update(self, init_max_height: int = 860, init_max_width: int = 1366):
+    def update(self, init_max_height: int = 800, init_max_width: int = 1200):
         self.init_max_height = init_max_height
         self.init_max_width = init_max_width
 
