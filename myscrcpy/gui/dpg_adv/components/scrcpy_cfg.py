@@ -5,6 +5,8 @@
     Scrcpy 连接属性配置组件
 
     Log:
+        2024-08-21 1.3.5 Me2sY  新增 重置 Default Config 功能
+
         2024-08-19 1.3.1 Me2sY  新增 选择Audio播放设备功能
 
         2024-08-15 1.3.0 Me2sY  发布初版
@@ -19,13 +21,14 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.1'
+__version__ = '1.3.5'
 
 __all__ = [
     'CPMScrcpyCfg', 'CPMScrcpyCfgController'
 ]
 
 import time
+from functools import partial
 from typing import Callable
 
 import dearpygui.dearpygui as dpg
@@ -298,7 +301,10 @@ class CPMScrcpyCfgController(ValueComponent):
 
         cfg_name = dpg.get_value(self.tag_cb_cfgs)
         if cfg_name == 'default':
-            return
+            # 2024-08-21 Me2sY  default删除时，还原默认参数
+            self.configs['default'] = self.default_cfg()
+            self.load_config(None, 'default')
+            TempModal.draw_msg_box(partial(dpg.add_text, 'Default Scrcpy Config Reset!'))
         else:
             with dpg.window(
                     modal=True, label='Warning!', no_resize=True, width=252, no_scrollbar=True,

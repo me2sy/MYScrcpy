@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-21 1.3.5 Me2sY
+            1.重构 按键映射方法
+            2.修复部分缺陷
+
         2024-08-20 1.3.4 Me2sY
             1.优化显示效果
             2.修复部分缺陷
@@ -46,7 +50,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.3'
+__version__ = '1.3.5'
 
 __all__ = ['start_dpg_adv']
 
@@ -72,6 +76,11 @@ from myscrcpy.gui.dpg_adv.components.vc import VideoController, CPMVC
 from myscrcpy.gui.dpg_adv.components.pad import *
 from myscrcpy.gui.dpg_adv.components.scrcpy_cfg import CPMScrcpyCfgController
 
+from myscrcpy.gui.gui_utils import *
+
+inject_pg_key_mapper()
+inject_dpg_key_mapper()
+
 
 class WindowMain:
     """
@@ -83,7 +92,6 @@ class WindowMain:
     WIDTH_SWITCH = 38
     WIDTH_BOARD = 8
 
-    # HEIGHT_TITLE = 39
     HEIGHT_MENU = 19
     HEIGHT_BOARD = 8
 
@@ -219,7 +227,12 @@ class WindowMain:
         """
             根据 Video大小 调整view_port窗口大小
             2024-08-20 Me2sY 更新计算逻辑 解决Linux系统下 边框宽度计算问题
+            2024-08-21 Me2sY 新增暂停机制
         """
+
+        _pause = self.is_paused
+        self.is_paused = True
+
         cw_c = 1 if dpg.is_item_shown(self.tag_cw_ctrl) else 0
 
         fix_w = dpg.get_viewport_width() - dpg.get_viewport_client_width()
@@ -229,6 +242,8 @@ class WindowMain:
         fix_h = dpg.get_viewport_height() - dpg.get_viewport_client_height()
         vp_h = coord.height + self.HEIGHT_BOARD * 3 + self.HEIGHT_MENU + fix_h
         dpg.set_viewport_height(vp_h)
+
+        self.is_paused = _pause
 
     def load_recent_device(self, parent_tag):
         """
@@ -316,10 +331,14 @@ class WindowMain:
                             _f,
                             partial(
                                 dpg.add_text,
-                                'Device Will DISCONNECT! \nWait and then try connect.'
+                                'Device Will DISCONNECT! \nWait and then try reconnect.'
                             ),
                             width=220
                         )
+
+                # dpg.add_menu_item(label='APK Manager', callback=lambda: ...)
+
+                dpg.add_spacer(height=10)
 
                 dpg.add_menu_item(label='! Reboot !', callback=reboot)
 
@@ -327,12 +346,12 @@ class WindowMain:
             with dpg.menu(label=' VAC '):
                 with dpg.menu(label='Video'):
                     self.tag_drag_video_s = dpg.add_drag_float(
-                        label='Scale', default_value=1.0, min_value=0.1, max_value=2.0, width=90,
+                        label='Scale', default_value=1.0, min_value=0.1, max_value=2.0, width=190,
                         speed=0.001, callback=self.video_scale, clamped=True
                     )
                     with dpg.group(horizontal=True):
                         drag_cfg = dict(
-                            min_value=100, max_value=9999, width=50, clamped=True, speed=1,
+                            min_value=100, max_value=9999, width=100, clamped=True, speed=1,
                             callback=self.video_set_scale
                         )
                         self.tag_drag_video_w = dpg.add_drag_int(label='x', **drag_cfg)
@@ -601,6 +620,11 @@ class WindowMain:
         dpg.set_viewport_title(title)
 
     def _init_resize_handler(self):
+        try:
+            dpg.delete_item(self.tag_hr_resize)
+        except Exception:
+            pass
+
         with dpg.item_handler_registry(tag=self.tag_hr_resize):
             dpg.add_item_resize_handler(callback=self._window_resize)
         dpg.bind_item_handler_registry(self.tag_window, self.tag_hr_resize)
@@ -620,6 +644,9 @@ class WindowMain:
             连接设备
         """
         logger.debug(f"Device connected: {device}")
+
+        # 2024-08-21 Me2sY 避免重复加载
+        self.is_paused = True
 
         if self.device and self.device.is_scrcpy_running:
             self.disconnect()
@@ -648,6 +675,7 @@ class WindowMain:
                 partial(dpg.draw_text, pos=(10, 10), text=f"{msg}", size=18)
             )
 
+        # 更新界面，如果未连接则显示默认界面
         self.video_controller.load_frame(frame)
         self._init_resize_handler()
 
@@ -672,6 +700,8 @@ class WindowMain:
 
         dpg.configure_item(self.tag_mi_disconnect, enabled=True, show=True)
         self.load_recent_device(self.tag_menu_recent)
+
+        self.is_paused = False
 
     def _init_uhid_keyboard_control(self):
         """

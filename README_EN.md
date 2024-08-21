@@ -1,4 +1,4 @@
-# MYScrcpy V1.3.4
+# MYScrcpy V1.3.5
 
 ### [中文简介](README.md)
 

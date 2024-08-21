@@ -5,6 +5,10 @@
     工具类
 
     Log:
+        2024-08-21 1.3.5 Me2sY
+            1. 重构 UnifiedKeyMapper 去除配置文件加载，采用注入方式，解决不同平台下Code不同问题
+            2. 新增部分Code
+
         2024-08-15 1.2.1 Me2sY
             1.新增 ValueRecord、ValueManager，使用TinyDB进行全局配置、属性配置及值管理
             2.新增 部分Code及方法
@@ -39,7 +43,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.2.1'
+__version__ = '1.3.5'
 
 __all__ = [
     'Param',
@@ -62,12 +66,15 @@ from dataclasses import dataclass
 
 from tinydb import TinyDB, Query
 
-
 PROJECT_NAME = 'myscrcpy'
 AUTHOR = 'Me2sY'
 
 
 def project_path() -> pathlib.Path:
+    """
+        获取项目根目录
+    :return:
+    """
     for _ in pathlib.Path(__file__).resolve().parents:
         if _.name == PROJECT_NAME:
             return _
@@ -80,14 +87,11 @@ class Param:
 
     PROJECT_NAME = PROJECT_NAME
     AUTHOR = AUTHOR
-    VERSION = '1.3.3'
+    VERSION = '1.3.5'
     EMAIL = 'me2sy@outlook.com'
     GITHUB = 'https://github.com/Me2sY/myscrcpy'
 
     PROJECT_PATH = project_path()
-
-    PATH_CONFIGS = PROJECT_PATH.joinpath('configs')
-    PATH_CONFIGS.mkdir(parents=True, exist_ok=True)
 
     PATH_STATICS = PROJECT_PATH.joinpath('static')
     PATH_STATICS.mkdir(parents=True, exist_ok=True)
@@ -103,8 +107,8 @@ class Param:
     PATH_TEMP = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath('temp')
     PATH_TEMP.mkdir(parents=True, exist_ok=True)
 
-    PATH_DC_CONFIGS = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath('configs')
-    PATH_DC_CONFIGS.mkdir(parents=True, exist_ok=True)
+    PATH_CONFIGS = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath('configs')
+    PATH_CONFIGS.mkdir(parents=True, exist_ok=True)
 
     ROTATION_VERTICAL = 0
     ROTATION_HORIZONTAL = 1
@@ -157,6 +161,9 @@ class Action(IntEnum):
 
 @unique
 class ADBKeyCode(IntEnum):
+    """
+        ADB KeyCode
+    """
     HOME = 3
     BACK = 4
     POWER = 26
@@ -278,6 +285,19 @@ class UnifiedKey(IntEnum):
     F10 = 100
     F11 = 101
     F12 = 102
+    F13 = 103
+    F14 = 104
+    F15 = 105
+    F16 = 106
+    F17 = 107
+    F18 = 108
+    F19 = 109
+    F20 = 110
+    F21 = 111
+    F22 = 112
+    F23 = 113
+    F24 = 114
+    F25 = 115
 
     ESCAPE = 130
     BACKQUOTE = 131
@@ -314,6 +334,155 @@ class UnifiedKey(IntEnum):
     LEFT = 162
     RIGHT = 163
 
+    PAUSE = 164
+    VOLUME_MUTE = 165
+    VOLUME_DOWN = 166
+    VOLUME_UP = 167
+    MEDIA_PLAY_PAUSE = 168
+    MEDIA_STOP = 169
+    MEDIA_PREV_TRACK = 170
+    MEDIA_NEXT_TRACK = 171
+    APPS = 172
+
+    NUMLOCK = 173
+    SCROLLLOCK = 174
+    PRINT = 175
+
+
+UHIDKEYS = {
+    # Numpad
+    84: "NP_DIVIDE",
+    85: "NP_MULTIPLY",
+    86: "NP_MINUS",
+    87: "NP_PLUS",
+    88: "NP_ENTER",
+    99: "NP_PERIOD",
+    98: "NP_0",
+    89: "NP_1",
+    90: "NP_2",
+    91: "NP_3",
+    92: "NP_4",
+    93: "NP_5",
+    94: "NP_6",
+    95: "NP_7",
+    96: "NP_8",
+    97: "NP_9",
+
+    # Number
+    39: "K_0",
+    30: "K_1",
+    31: "K_2",
+    32: "K_3",
+    33: "K_4",
+    34: "K_5",
+    35: "K_6",
+    36: "K_7",
+    37: "K_8",
+    38: "K_9",
+
+    4: "A",
+    5: "B",
+    6: "C",
+    7: "D",
+    8: "E",
+    9: "F",
+    10: "G",
+    11: "H",
+    12: "I",
+    13: "J",
+    14: "K",
+    15: "L",
+    16: "M",
+    17: "N",
+    18: "O",
+    19: "P",
+    20: "Q",
+    21: "R",
+    22: "S",
+    23: "T",
+    24: "U",
+    25: "V",
+    26: "W",
+    27: "X",
+    28: "Y",
+    29: "Z",
+
+    58: "F1",
+    59: "F2",
+    60: "F3",
+    61: "F4",
+    62: "F5",
+    63: "F6",
+    64: "F7",
+    65: "F8",
+    66: "F9",
+    67: "F10",
+    68: "F11",
+    69: "F12",
+
+    40: "RETURN",
+    41: "ESCAPE",
+    42: "BACKSPACE",
+    43: "TAB",
+    44: "SPACE",
+    45: "MINUS",
+    46: "EQUALS",
+    47: "L_BRACKET",
+    48: "R_BRACKET",
+    49: "BACKSLASH",
+    51: "COLON",
+    52: "QUOTE",
+    53: "BACKQUOTE",
+    54: "COMMA",
+    55: "PERIOD",
+    56: "SLASH",
+
+    71: "SCROLLLOCK",
+    72: "PAUSE",
+    73: "INSERT",
+    74: "HOME",
+    75: "PAGE_UP",
+    76: "DELETE",
+    77: "END",
+    78: "PAGE_DOWN",
+    79: "RIGHT",
+    80: "LEFT",
+    81: "DOWN",
+    82: "UP",
+
+    101: "APPS",
+
+    104: "F14",
+    105: "F15",
+    106: "F16",
+    107: "F17",
+    108: "F18",
+    109: "F19",
+    110: "F20",
+    111: "F21",
+    112: "F22",
+    113: "F23",
+    114: "F24",
+
+    127: "VOLUME_MUTE",
+    128: "VOLUME_UP",
+    129: "VOLUME_DOWN",
+
+    224: "L_CTRL",
+    225: "L_SHIFT",
+    226: "L_ALT",
+    227: "L_WIN",
+    228: "R_CTRL",
+    229: "R_SHIFT",
+    230: "R_ALT",
+    231: "R_WIN",
+
+    258: "MEDIA_NEXT_TRACK",
+    259: "MEDIA_PREV_TRACK",
+    260: "MEDIA_STOP",
+    261: "MEDIA_PLAY_PAUSE",
+}
+
 
 class UnifiedKeyMapper:
     """
@@ -321,10 +490,17 @@ class UnifiedKeyMapper:
         转换 dpg pg 事件代码 为 统一按键代码
     """
 
-    cfg = CfgHandler.load(Param.PATH_CONFIGS.joinpath('key_mapper.json'))
+    # 2024-08-21 Me2sY  不再读取固定配置文件，由包进行注入，解决打包及不同平台Code不同问题
 
-    MAPPER_PG = {v: k for k, v in cfg['pg'].items()}
-    MAPPER_DPG = {v: k for k, v in cfg['dpg'].items()}
+    MAPPER_PG2UK = {}
+    MAPPER_UK2PG = {}
+
+    MAPPER_DPG2UK = {}
+    MAPPER_UK2DPG = {}
+
+    MAPPER_UK2UHID = {
+        UnifiedKey[name]: code for code, name in UHIDKEYS.items()
+    }
 
     @classmethod
     @cache
@@ -333,25 +509,27 @@ class UnifiedKeyMapper:
             dpg key code to union keycode Enum
         :return:
         """
-        try:
-            return UnifiedKey[cls.MAPPER_DPG[int(dpg_code)]]
-        except KeyError:
-            print(f"DPG KEYCODE {dpg_code} is not in mapper!")
-            return UnifiedKey(-1)
+        return cls.MAPPER_DPG2UK.get(int(dpg_code), UnifiedKey(-1))
+
+    @classmethod
+    @cache
+    def uk2dpg(cls, unified_key: UnifiedKey) -> int:
+        """
+            unified_key to dpg key
+        :param unified_key:
+        :return:
+        """
+        return cls.MAPPER_UK2DPG.get(unified_key, -1)
 
     @classmethod
     @cache
     def pg2uk(cls, pg_code: int) -> UnifiedKey:
         """
-            dpg key code to UnionKey Enum
+            pygame key code to UnionKey Enum
         :param pg_code:
         :return:
         """
-        try:
-            return UnifiedKey[cls.MAPPER_PG[int(pg_code)]]
-        except KeyError:
-            print(f"PG KEYCODE {pg_code} is not in mapper!")
-            return UnifiedKey(-1)
+        return cls.MAPPER_PG2UK.get(int(pg_code), UnifiedKey(-1))
 
     @classmethod
     @cache
@@ -361,7 +539,7 @@ class UnifiedKeyMapper:
         :param unified_key:
         :return:
         """
-        return cls.cfg['pg'][unified_key.name]
+        return cls.MAPPER_UK2PG.get(unified_key, -1)
 
     @classmethod
     @cache
@@ -371,7 +549,7 @@ class UnifiedKeyMapper:
         :param unified_key:
         :return:
         """
-        return cls.cfg['uhidkey'][unified_key.name]
+        return cls.MAPPER_UK2UHID.get(unified_key, 0)
 
 
 class Point(NamedTuple):
@@ -572,7 +750,7 @@ class ValueManager:
         Value Manager
     """
 
-    db = TinyDB(Param.PATH_DC_CONFIGS / f"{Param.PROJECT_NAME}.json", indent=4)
+    db = TinyDB(Param.PATH_CONFIGS / f"{Param.PROJECT_NAME}.json", indent=4)
     t_global = db.table('t_global')
 
     @classmethod
