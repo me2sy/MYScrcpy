@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "myscrcpy"
-version = "1.3.5"
+version = "1.3.6"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -33,5 +33,5 @@ dependencies = [
     'pyaudio', 'pyflac',
 
     # GUI
-    'dearpygui', 'pygame', 'pyvirtualcam', 'pyzmq'
+    'dearpygui', 'pygame', 'pyvirtualcam', 'pyzmq', 'nicegui', 'easygui'
 ]

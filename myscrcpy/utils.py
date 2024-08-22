@@ -5,6 +5,8 @@
     工具类
 
     Log:
+        2024-08-22 1.3.6 Me2sY  新增部分 ADB Key Code
+
         2024-08-21 1.3.5 Me2sY
             1. 重构 UnifiedKeyMapper 去除配置文件加载，采用注入方式，解决不同平台下Code不同问题
             2. 新增部分Code
@@ -43,7 +45,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.5'
+__version__ = '1.3.6'
 
 __all__ = [
     'Param',
@@ -171,9 +173,7 @@ class ADBKeyCode(IntEnum):
     NOTIFICATION = 83
     APP_SWITCH = 187
 
-    ENTER = 66
-    BACKSPACE = 67
-    ESC = 111
+    ESCAPE = 111
     SETTINGS = 176
 
     # Media
@@ -200,6 +200,51 @@ class ADBKeyCode(IntEnum):
     N7 = 14
     N8 = 15
     N9 = 16
+
+    UP = 19
+    DOWN = 20
+    LEFT = 21
+    RIGHT = 22
+
+    COMMA = 55
+    PERIOD = 56
+
+    L_ALT = 57
+    L_SHIFT = 59
+    R_ALT = 58
+    R_SHIFT = 60
+
+    TAB = 61
+    SPACE = 62
+    ENTER = 66
+    BACKSPACE = 67
+    GRAVE = 68
+    MINUS = 69
+    EQUALS = 70
+    L_BRACKET = 71
+    R_BRACKET = 72
+    BACKSLASH = 73
+    COLON = 74
+    QUOTE = 75
+    SLASH = 76
+    PLUS = 81
+
+    DELETE = 112
+    END = 123
+    INSERT = 124
+
+    F1 = 131
+    F2 = 132
+    F3 = 133
+    F4 = 134
+    F5 = 135
+    F6 = 136
+    F7 = 137
+    F8 = 138
+    F9 = 139
+    F10 = 140
+    F11 = 141
+    F12 = 142
 
 
 @unique

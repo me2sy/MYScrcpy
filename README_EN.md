@@ -1,4 +1,4 @@
-# MYScrcpy V1.3.5
+# MYScrcpy V1.3.6
 
 ### [中文简介](README.md)
 
@@ -21,6 +21,7 @@ Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
 ![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
 
 ## Features
+- [x] **1.3.6 NEW** New Web Interface (DEMO) by Nicegui with video and UHID keyboard/mouse
 - [x] **1.3.3 NEW** Support select audio output devices, With VB-Cables you can simulate microphone input
 - [x] **1.3.2 NEW** Video introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 - [x] **1.3.2 NEW** Append [pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),support OBS virtual camera.
@@ -129,13 +130,19 @@ python -m myscrcpy.run
 python -m myscrcpy.run -g
 ```
 
+#### Run Nicegui GUI (WEB)
+```bash
+python -m myscrcpy.gui.ng.main
+```
+
+
 ## Screenshots
 
 ### Main interface
 ![dpg Screenshot](myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
 
-### Nicegui Web interface (DEMO)
-![Nicegui Demo](myscrcpy/files/images/web_gui_demo_nicegui.jpg)
+### Nicegui Web Interface **NEW 1.3.6**（DEMO）
+![Nicegui Demo](myscrcpy/files/images/Nicegui_DEMO.jpg)
 
 ### Key mapping editor (TPEditor)
 ![Touch Proxy Editor](myscrcpy/files/images/edit_touch_proxy.jpg)

@@ -1,4 +1,4 @@
-# MYScrcpy V1.3.5
+# MYScrcpy V1.3.6
 
 ### [README in English](README_EN.md)
 
@@ -18,6 +18,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 ![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
 
 ## 特性
+- [x] **1.3.6 NEW** 新增网页端设备浏览页面DEMO(Nicegui),支持鼠标输入，UHID键盘输入、ADB输入及摇杆模拟鼠标输入
 - [x] **1.3.3 NEW** 新增选择音频输出设备功能，可配合VB-Cables模拟麦克风输入
 - [x] **1.3.2 NEW** 新增视频简介：[BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 - [x] **1.3.2 NEW** 新增[pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),支持OBS虚拟摄像头
@@ -134,6 +135,11 @@ python -m myscrcpy.run
 python -m myscrcpy.run -g
 ```
 
+#### 运行Nicegui DEMO
+```bash
+python -m myscrcpy.gui.ng.main
+```
+
 
 ## 程序截图
 
@@ -141,8 +147,8 @@ python -m myscrcpy.run -g
 :boom: **NEW 1.3.0** :boom:
 ![dpg Screenshot](myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
 
-### Nicegui Web 界面 （DEMO）
-![Nicegui Demo](myscrcpy/files/images/web_gui_demo_nicegui.jpg)
+### Nicegui Web 界面 **NEW 1.3.6**（DEMO）
+![Nicegui Demo](myscrcpy/files/images/Nicegui_DEMO.jpg)
 
 ### 按键映射编辑器
 ![Touch Proxy Editor](myscrcpy/files/images/edit_touch_proxy.jpg)

@@ -671,7 +671,10 @@ class DeviceFactory:
     @classmethod
     def device(cls, serial_no: str = None, addr: str = None) -> DeviceController | None:
         """
-            获取设备
+            获取 DeviceController
+        :param serial_no:
+        :param addr:
+        :return:
         """
 
         cls.load_devices()
