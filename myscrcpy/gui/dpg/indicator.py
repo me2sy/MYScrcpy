@@ -44,7 +44,7 @@ from loguru import logger
 
 import dearpygui.dearpygui as dpg
 
-from myscrcpy.utils import ScalePoint, Coordinate, Point, Param, UnifiedKey, UnifiedKeyMapper
+from myscrcpy.utils import ScalePoint, Coordinate, Point, UnifiedKey, UnifiedKeys, KeyMapper
 
 
 class Locator:
@@ -54,8 +54,8 @@ class Locator:
     X_BORDER_N = 1
     Y_BORDER_N = 1
 
-    FIX_WIDTH = Param.INT_LEN_WIN_BORDER * X_BORDER_N
-    FIX_HEIGHT = Param.INT_LEN_WIN_BORDER * Y_BORDER_N + Param.INT_LEN_WIN_TITLE_HEIGHT
+    FIX_WIDTH = 8 * X_BORDER_N
+    FIX_HEIGHT = 8 * Y_BORDER_N + 19
 
     def __init__(
             self,
@@ -334,11 +334,11 @@ class ButtonKeySetter(Indicator):
 
     def __init__(
             self, parent: int | str, locator: Locator,
-            unified_key: UnifiedKey | None = UnifiedKey(-1),
+            unified_key: UnifiedKey | None = UnifiedKeys.UK_UNKNOWN,
             *args, **kwargs
     ):
         super().__init__(parent, locator, *args, **kwargs)
-        self.unified_key = unified_key if unified_key is not None else UnifiedKey(-1)
+        self.unified_key = unified_key if unified_key is not None else UnifiedKeys.UK_UNKNOWN
         self.tag_btn_key = dpg.generate_uuid()
 
     def set_unified_key(self, unified_key: UnifiedKey):
@@ -357,7 +357,7 @@ class ButtonKeySetter(Indicator):
             for event in pygame.event.get(
                     [pygame.KEYUP, pygame.MOUSEBUTTONUP]
             ):
-                self.unified_key = UnifiedKeyMapper.pg2uk(event.key if event.type == pygame.KEYUP else event.button)
+                self.unified_key = KeyMapper.pg2uk(event.key if event.type == pygame.KEYUP else event.button)
                 run = False
                 break
             clock.tick(30)
@@ -380,7 +380,7 @@ class ButtonKeySetter(Indicator):
 
     def to_value(self, *args, **kwargs) -> dict:
         return dict(
-            unified_key=self.unified_key.value,
+            unified_key=self.unified_key.name,
         )
 
 
@@ -736,7 +736,8 @@ class IndicatorTouchPoint(CombinedIndicator):
         self.ind_btn_close = ButtonClose(self.parent, self.locator, fix_point=Point(-32, -6), **kwargs)
         self.ind_btn_pos = ButtonPosition(self.parent, self.locator, fix_point=Point(-10, -35))
         self.ind_btn_key = ButtonKeySetter(
-            self.parent, self.locator, fix_point=Point(-8, 16), unified_key=kwargs.get('unified_key', UnifiedKey(-1)),
+            self.parent, self.locator, fix_point=Point(-8, 16),
+            unified_key=kwargs.get('unified_key', UnifiedKeys.UK_UNKNOWN),
         )
         self.ind_cl = IndicatorFixedCrossLine(
             self.parent, self.locator,
@@ -923,10 +924,10 @@ class IndicatorCross(CombinedIndicator):
     def __init__(
             self, parent: int | str, locator: Locator,
             sc_joystick_r: float = 0.05,
-            k_up: UnifiedKey = UnifiedKey(UnifiedKey.W.value),
-            k_down: UnifiedKey = UnifiedKey(UnifiedKey.S.value),
-            k_left: UnifiedKey = UnifiedKey(UnifiedKey.A.value),
-            k_right: UnifiedKey = UnifiedKey(UnifiedKey.D.value),
+            k_up: UnifiedKey = UnifiedKeys.UK_KB_W,
+            k_down: UnifiedKey = UnifiedKeys.UK_KB_S,
+            k_left: UnifiedKey = UnifiedKeys.UK_KB_A,
+            k_right: UnifiedKey = UnifiedKeys.UK_KB_D,
             up_scale: float = 1.0,
             *args, **kwargs
     ):
@@ -1034,10 +1035,10 @@ class IndicatorCross(CombinedIndicator):
     def to_value(self, *args, **kwargs) -> dict:
         return {
             **self.locator.touch_xy,
-            'k_up': self.ind_btn_k_up.unified_key.value,
-            'k_down': self.ind_btn_k_down.unified_key.value,
-            'k_left': self.ind_btn_k_left.unified_key.value,
-            'k_right': self.ind_btn_k_right.unified_key.value,
+            'k_up': self.ind_btn_k_up.unified_key.name,
+            'k_down': self.ind_btn_k_down.unified_key.name,
+            'k_left': self.ind_btn_k_left.unified_key.name,
+            'k_right': self.ind_btn_k_right.unified_key.name,
             'up_scale': round(self.up_scale, 6),
             'sc_joystick_r': round(self.ind_btn_r.scale_x_radius, 6),
         }
@@ -1054,7 +1055,7 @@ class IndicatorAim(IndicatorTouchPoint):
             locator: Locator,
             aim_locator: Locator,
             a: float = 0.1, b: float = 0.1,
-            attack_unified_key: UnifiedKey = UnifiedKey.M_LEFT,
+            attack_unified_key: UnifiedKey = UnifiedKeys.UK_MOUSE_L,
             *args, **kwargs
     ):
         super().__init__(parent, locator, *args, **kwargs)

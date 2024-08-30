@@ -1,107 +1,44 @@
 # -*- coding: utf-8 -*-
 """
-    Control Socket Controller
+    Control Adapter
     ~~~~~~~~~~~~~~~~~~
-    控制器
+    
 
     Log:
-        2024-08-04 1.1.4 Me2sY  抽离 ZMQ， 形成Core结构
+        2024-08-29 1.4.0 Me2sY
+            1.优化结构
+            2.增加剪贴板功能
 
-        2024-08-02 1.1.3 Me2sY
-            1.新增 to_args 方法
-            2.修改 ZMQControlServer 部分方法
-            3.修改 KeyWatcher功能，支持低版本关闭UHID功能
-
-        2024-08-01 1.1.2 Me2sY  更新类名称
-
-        2024-07-30 1.1.0 Me2sY
-            1.抽离形成单独部分
-            2.修改部分功能结构
+        2024-08-25 1.3.7 Me2sY
+            新增部分方法，支持 ScalePointR 控制
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.4'
+__version__ = '1.4.0'
 
 __all__ = [
-    'KeyboardWatcher', 'ControlSocketController'
+    'KeyboardWatcher',
+    'ControlArgs', 'ControlAdapter'
 ]
 
-import struct
+from dataclasses import dataclass
 from enum import IntEnum
 import queue
-import time
+import re
+import struct
 import threading
+from typing import ClassVar
 
+from adbutils import AdbDevice, AdbError
 from loguru import logger
+import pyperclip
 
-from myscrcpy.utils import UnifiedKey, UnifiedKeyMapper, Action
-from myscrcpy.controller.scrcpy_socket import ScrcpySocket
-
-
-UHID_MOUSE_REPORT_DESC = bytearray([
-    0x05, 0x01,  # Usage Page (Generic Desktop)
-    0x09, 0x02,  # Usage (Mouse)
-    0xA1, 0x01,  # Collection (Application)
-    0x09, 0x01,  # Usage (Pointer)
-    0xA1, 0x00,  # Collection (Physical)
-    0x05, 0x09,  # Usage Page (Buttons)
-    0x19, 0x01,  # Usage Minimum (1)
-    0x29, 0x05,  # Usage Maximum (5)
-    0x15, 0x00,  # Logical Minimum (0)
-    0x25, 0x01,  # Logical Maximum (1)
-    0x95, 0x05,  # Report Count (5)
-    0x75, 0x01,  # Report Size (1)
-    0x81, 0x02,  # Input (Data, Variable, Absolute): 5 buttons bits
-    0x95, 0x01,  # Report Count (1)
-    0x75, 0x03,  # Report Size (3)
-    0x81, 0x01,  # Input (Constant): 3 bits padding
-    0x05, 0x01,  # Usage Page (Generic Desktop)
-    0x09, 0x30,  # Usage (X)
-    0x09, 0x31,  # Usage (Y)
-    0x09, 0x38,  # Usage (Wheel)
-    0x15, 0x81,  # Local Minimum (-127)
-    0x25, 0x7F,  # Local Maximum (127)
-    0x75, 0x08,  # Report Size (8)
-    0x95, 0x03,  # Report Count (3)
-    0x81, 0x06,  # Input (Data, Variable, Relative): 3 position bytes (X, Y, Wheel)
-    0xC0,  # End Collection
-    0xC0,  # End Collection
-])
-
-UHID_KEYBOARD_REPORT_DESC = bytearray([
-    0x05, 0x01,  # Usage Page (Generic Desktop)
-    0x09, 0x06,  # Usage (Keyboard)
-    0xA1, 0x01,  # Collection (Application)
-    0x05, 0x07,  # Usage Page (Key Codes)
-    0x19, 0xE0,  # Usage Minimum (224)
-    0x29, 0xE7,  # Usage Maximum (231)
-    0x15, 0x00,  # Logical Minimum (0)
-    0x25, 0x01,  # Logical Maximum (1)
-    0x75, 0x01,  # Report Size (1)
-    0x95, 0x08,  # Report Count (8)
-    0x81, 0x02,  # Input (Data, Variable, Absolute): Modifier byte
-    0x75, 0x08,  # Report Size (8)
-    0x95, 0x01,  # Report Count (1)
-    0x81, 0x01,  # Input (Constant): Reserved byte
-    0x05, 0x08,  # Usage Page (LEDs)
-    0x19, 0x01,  # Usage Minimum (1)
-    0x29, 0x05,  # Usage Maximum (5)
-    0x75, 0x01,  # Report Size (1)
-    0x95, 0x05,  # Report Count (5)
-    0x91, 0x02,  # Output (Data, Variable, Absolute): LED report
-    0x75, 0x03,  # Report Size (3)
-    0x95, 0x01,  # Report Count (1)
-    0x91, 0x01,  # Output (Constant): LED report padding
-    0x05, 0x07,  # Usage Page (Key Codes)
-    0x19, 0x00,  # Usage Minimum (0)
-    0x29, 0x65,  # Usage Maximum (101)
-    0x15, 0x00,  # Logical Minimum (0)
-    0x25, 0x65,  # Logical Maximum(101)
-    0x75, 0x08,  # Report Size (8)
-    0x95, 0x06,  # Report Count (6)
-    0x81, 0x00,  # Input (Data, Array): Keys
-    0xC0  # End Collection
-])
+from myscrcpy.core.args_cls import ScrcpyConnectArgs
+from myscrcpy.core.adapter_cls import ScrcpyAdapter
+from myscrcpy.core.connection import Connection
+from myscrcpy.utils import Action, Coordinate, ScalePointR
+from myscrcpy.utils import UnifiedKey, UnifiedKeys, KeyMapper
+from myscrcpy.utils import ROTATION_HORIZONTAL, ROTATION_VERTICAL, UHID_MOUSE_REPORT_DESC, UHID_KEYBOARD_REPORT_DESC
 
 
 class KeyboardWatcher:
@@ -110,14 +47,19 @@ class KeyboardWatcher:
         保存按键状态 转化为 hid keyboard事件
     """
     modifier_map = {
-        UnifiedKey.L_CTRL: 0b1,
-        UnifiedKey.L_SHIFT: 0b10,
-        UnifiedKey.L_ALT: 0b100,
-        UnifiedKey.L_WIN: 0b1000,
-        UnifiedKey.R_CTRL: 0b10000,
-        UnifiedKey.R_SHIFT: 0b100000,
-        UnifiedKey.R_ALT: 0b1000000,
-        UnifiedKey.R_WIN: 0b10000000,
+        UnifiedKeys.UK_KB_CONTROL: 0b1,
+        UnifiedKeys.UK_KB_SHIFT: 0b10,
+        UnifiedKeys.UK_KB_ALT: 0b100,
+
+        UnifiedKeys.UK_KB_CONTROL_L: 0b1,
+        UnifiedKeys.UK_KB_SHIFT_L: 0b10,
+        UnifiedKeys.UK_KB_ALT_L: 0b100,
+
+        UnifiedKeys.UK_KB_WIN_L: 0b1000,
+        UnifiedKeys.UK_KB_CONTROL_R: 0b10000,
+        UnifiedKeys.UK_KB_SHIFT_R: 0b100000,
+        UnifiedKeys.UK_KB_ALT_R: 0b1000000,
+        UnifiedKeys.UK_KB_WIN_R: 0b10000000,
     }
 
     def __init__(self, uhid_keyboard_send_method, active: bool = True):
@@ -132,6 +74,7 @@ class KeyboardWatcher:
         :param unified_key:
         :return:
         """
+
         if unified_key in self.modifier_map:    # Mod Key Press
             b = self.modifier_map[unified_key]
             if self.modifiers & b == 0:
@@ -140,7 +83,9 @@ class KeyboardWatcher:
                 return
 
         else:
-            scan_code = UnifiedKeyMapper.uk2uhidkey(unified_key)
+            scan_code = KeyMapper.uk2uhid(unified_key)
+            if scan_code is None:
+                return
 
             if scan_code in self.pressed:
                 return
@@ -163,7 +108,7 @@ class KeyboardWatcher:
 
         else:
             try:
-                self.pressed.remove(UnifiedKeyMapper.uk2uhidkey(unified_key))
+                self.pressed.remove(KeyMapper.uk2uhid(unified_key))
             except ValueError:
                 pass
             except KeyError:
@@ -191,10 +136,33 @@ class KeyboardWatcher:
         )
 
 
-class ControlSocketController(ScrcpySocket):
+@dataclass
+class ControlArgs(ScrcpyConnectArgs):
     """
-        Scrcpy Server 2.6.1
-        Control Socket
+        控制参数
+    """
+
+    STATUS_OFF: ClassVar[str] = 'off'
+    STATUS_ON: ClassVar[str] = 'on'
+    STATUS_KEEP: ClassVar[str] = 'keep'      # 保持当前状态
+
+    screen_status: str = STATUS_KEEP    # 默认屏幕状态
+    clipboard: bool = True              # 开启剪切板回写功能
+
+    def to_args(self) -> list:
+        return [
+            'control=true'
+        ]
+
+    @classmethod
+    def load(cls, **kwargs):
+        return cls(screen_status=kwargs.get('screen_status', cls.STATUS_KEEP))
+
+
+class ControlAdapter(ScrcpyAdapter):
+    """
+        Control 采用全尺寸输入
+        建议使用 ScalePointR 进行输入，无需判断旋转状态
     """
 
     CLOSE_PACKET = b'Me2sYSayBye'
@@ -206,36 +174,156 @@ class ControlSocketController(ScrcpySocket):
         UHID_CREATE = 12
         UHID_INPUT = 13
 
-    def __init__(self, close_screen: bool = True, **kwargs):
-        super().__init__(**kwargs)
+    @staticmethod
+    def get_window_size(adb_device: AdbDevice) -> Coordinate:
+        """
+            Rewrite adbutils.adb.shell.window_size
+            注意！旋转参数缺失
+            去除Rotation，避免延迟
+        :return:
+        """
+        output = adb_device.shell("wm size")
+        o = re.search(r"Override size: (\d+)x(\d+)", output)
+        if o:
+            w, h = o.group(1), o.group(2)
+            return Coordinate(int(w), int(h))
+        m = re.search(r"Physical size: (\d+)x(\d+)", output)
+        if m:
+            w, h = m.group(1), m.group(2)
+            return Coordinate(int(w), int(h))
+        raise AdbError("wm size output unexpected", output)
+
+    def __init__(self, connection: Connection):
+        """
+            创建 Control Socket
+        :param connection:
+        """
+        super().__init__(connection)
 
         self.__packet_queue = queue.Queue()
         self.last_packet = None
-        self.close_screen = close_screen
 
-    def close(self):
+        self.screen_status = connection.args.screen_status
+        self.clipboard = connection.args.clipboard
+
+        self.coord_hv = {}
+
+    def start(self, adb_device: AdbDevice, *args, **kwargs) -> bool:
+        """
+            启动进程
+        :param adb_device:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        if self.is_running and self.is_ready:
+            return True
+
+        _coord = self.get_window_size(adb_device)
+
+        if _coord.rotation == ROTATION_VERTICAL:
+            _coord_v = _coord
+        else:
+            _coord_v = Coordinate(_coord.height, _coord.width)
+
+        self.coord_hv[ROTATION_VERTICAL] = _coord_v
+        self.coord_hv[ROTATION_HORIZONTAL] = _coord_v.rotate()
+
+        if self.screen_status == ControlArgs.STATUS_KEEP:
+            self.screen_status = adb_device.is_screen_on()
+
+        if self.conn.connect(adb_device, ['video=false', 'audio=false']):
+            self.is_running = True
+            threading.Thread(target=self.main_thread).start()
+            threading.Thread(target=self.clipboard_thread).start()
+            return True
+        else:
+            return False
+
+    def stop(self):
+        """
+            停止进程
+        :return:
+        """
         self.is_running = False
-        time.sleep(0.5)
         self.__packet_queue.put(self.CLOSE_PACKET)
+        self.conn.disconnect()
+        self.is_ready = False
 
-    def to_args(self) -> list:
-        return ['control=true']
-
-    def start(self) -> bool:
-        threading.Thread(target=self._main_thread).start()
-        return True
-
-    def _main_thread(self):
-        logger.success(f"Control Socket Connected!")
-        if self.close_screen:
-            self.f_set_screen(False)
-
+    def main_thread(self):
+        """
+            主进程
+        :return:
+        """
+        self.is_ready = True
+        logger.success(f"Control Socket {self.conn.scid} Connected!")
+        self.f_set_screen(
+            True if self.screen_status == ControlArgs.STATUS_ON else False
+        )
         while self.is_running:
-            self._conn.send(self.__packet_queue.get())
-        self._conn.close()
-        logger.warning(f"{self.__class__.__name__} Socket Closed.")
+            try:
+                self.conn.send(self.__packet_queue.get())
+            except OSError:
+                self.is_running = False
+            except Exception as e:
+                logger.info(f"Exception while sending control {e}")
+                continue
+
+        logger.warning(f"{self.__class__.__name__} Main Thread {self.conn.scid} Closed.")
+
+    def clipboard_thread(self):
+        """
+            剪切板
+            使用 pyperclip https://pypi.org/project/pyperclip/
+            实现回写功能
+        :return:
+        """
+        while self.is_running:
+            try:
+                _bs = self.conn.recv(262144)
+                if _bs == b'':
+                    # socket 断开
+                    self.is_running = False
+                else:
+                    (_t, _size,) = struct.unpack('>Bi', _bs[:5])
+                    if self.clipboard:
+                        pyperclip.copy(_bs[5:5+_size].decode('utf-8'))
+            except:
+                pass
+
+    def set_clipboard_status(self, status: bool):
+        """
+            设置剪贴板开关
+        :param status:
+        :return:
+        """
+        self.clipboard = status
+
+    @classmethod
+    def connect(cls, adb_device: AdbDevice, control_args: ControlArgs, *args, **kwargs) -> 'ControlAdapter':
+        """
+            根据 ControlArgs 快速创建连接
+        :param adb_device:
+        :param control_args:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        _ = cls(Connection(control_args))
+        if _.start(adb_device):
+            return _
+        else:
+            logger.error('ControlAdapter Start Failed!')
+            return None
+
+    # ---------------------------- Functions ----------------------------
 
     def send_packet(self, packet: bytes):
+        """
+            发送控制数据包
+        :param packet:
+        :return:
+        """
         if packet != self.last_packet:
             self.__packet_queue.put(packet)
             self.last_packet = packet
@@ -262,7 +350,7 @@ class ControlSocketController(ScrcpySocket):
         :return:
         """
         self.send_packet(self.packet__screen(status))
-        self.close_screen = not status
+        self.screen_status = status
 
     @classmethod
     def packet__touch(
@@ -317,6 +405,29 @@ class ControlSocketController(ScrcpySocket):
             self.packet__touch(
                 action, x, y, width, height, touch_id
             )
+        )
+
+    def f_touch_spr(
+            self,
+            action: int,
+            scale_point_r: ScalePointR,
+            touch_id: int
+    ):
+        """
+            比例触摸，若方向不一致则无效
+        :param action:
+        :param scale_point_r:
+        :param touch_id:
+        :return:
+        """
+
+        _coord = self.coord_hv[scale_point_r.r]
+
+        self.f_touch(
+            action,
+            **_coord.to_point(scale_point_r).d,
+            **_coord.d,
+            touch_id=touch_id
         )
 
     @classmethod
@@ -423,8 +534,8 @@ class ControlSocketController(ScrcpySocket):
                 cls.MessageType.UHID_INPUT.value,   # 1 Type
                 keyboard_id,                            # 2 id
                 8,                                      # 3 size
-                modifiers,                              # 4 modifiers byte0
-                0,                                      # 5 reserved always0 byte1
+                modifiers,                              # 4 modifiers bytes
+                0,                                      # 5 reserved always 0  byte1
                 *key_scan_codes                         # 6 - 11 key scancode  byte2-7
             ]
         )
@@ -439,3 +550,15 @@ class ControlSocketController(ScrcpySocket):
             keyboard_id, modifiers, key_scan_codes
         ))
 
+
+if __name__ == '__main__':
+    """
+        DEMO Here
+    """
+    from adbutils import adb
+    d = adb.device_list()[0]
+
+    ca = ControlAdapter(Connection(ControlArgs()))
+    ca.start(d)
+    ca.f_set_screen(True)
+    ca.stop()

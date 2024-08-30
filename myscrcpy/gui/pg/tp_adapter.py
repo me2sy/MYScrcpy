@@ -5,6 +5,8 @@
     按键映射适配器
 
     Log:
+        2024-08-26 1.4.0 Me2sY  适配新Core,配置文件中 unified_key改用对应名称
+
         2024-07-31 1.1.1 Me2sY  适配新Controller
 
         2024-07-28 1.0.0 Me2sY  发布初版
@@ -25,7 +27,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.1'
+__version__ = '1.4.0'
 
 __all__ = [
     'TouchType',
@@ -41,8 +43,9 @@ from typing import Set
 from loguru import logger
 import pygame
 
-from myscrcpy.utils import ScalePoint, Coordinate, Action, CfgHandler, UnifiedKey, UnifiedKeyMapper
-from myscrcpy.controller import DeviceController
+from myscrcpy.utils import ScalePoint, ScalePointR, Coordinate, Action, CfgHandler, UnifiedKey, UnifiedKeys, KeyMapper
+from myscrcpy.utils import ROTATION_HORIZONTAL
+from myscrcpy.core import *
 
 
 class TouchType(Enum):
@@ -75,7 +78,7 @@ class TouchProxy:
             *args, **kwargs
     ):
         self.tpa = tpa
-        self.csc = self.tpa.device.csc
+        self.control = self.tpa.session.ca
 
         self.touch_type = touch_type
         self.touch_x = touch_x
@@ -88,8 +91,10 @@ class TouchProxy:
 
         self.sp = ScalePoint(touch_x, touch_y)
 
-        self.frame_coord = self.tpa.device.vsc.coordinate.d
-        self.tp = self.tpa.device.vsc.coordinate.to_point(self.sp).d
+        self.frame_coord = self.tpa.session.va.coordinate.d
+
+        self._r = self.tpa.session.va.coordinate.rotation == ROTATION_HORIZONTAL
+        self.spr = ScalePointR(touch_x, touch_y, self._r)
 
         self.last_down_ms = time.time()
         self.last_release_ms = time.time()
@@ -111,9 +116,9 @@ class TouchProxy:
             self.key_release()
 
     def action(self, action: Action):
-        self.csc.f_touch(
+        self.control.f_touch_spr(
             action=action, touch_id=self.touch_id,
-            **self.tp, **self.frame_coord
+            scale_point_r=self.spr
         )
 
     def touch_down(self):
@@ -127,7 +132,7 @@ class TouchProxy:
         self.is_touched = False
 
     def touch_move(self, scale_point: ScalePoint):
-        self.tp = self.tpa.device.vsc.coordinate.to_point(scale_point).d
+        self.spr = ScalePointR(*scale_point, self._r)
         self.action(Action.MOVE)
 
     def pg_loop_handler(self, *args, **kwargs):
@@ -234,7 +239,7 @@ class TouchScope(TouchProxy):
 
         super().__init__(tpa, touch_type, touch_x, touch_y, *args, **kwargs)
 
-        self._tp = self.tp
+        self._spr = self.spr
 
         self.sc_joystick_r = sc_joystick_r
 
@@ -252,7 +257,7 @@ class TouchScope(TouchProxy):
 
     def pg_event_handler(self, event: pygame.event.Event, *args, **kwargs):
         if event.type in [pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN]:
-            self.tp = self._tp
+            self.spr = self._spr
             self.key_down()
             self.need_move = True
             time.sleep(0.02)
@@ -294,19 +299,19 @@ class TouchCross(TouchProxy):
     def __init__(
             self,
             tpa: 'TouchProxyAdapter', touch_type: TouchType, touch_x: float, touch_y: float,
-            k_up: int,
-            k_down: int,
-            k_left: int,
-            k_right: int,
+            k_up: str,
+            k_down: str,
+            k_left: str,
+            k_right: str,
             up_scale: float,
             sc_joystick_r: float,
             *args, **kwargs):
         super().__init__(tpa, touch_type, touch_x, touch_y, *args, **kwargs)
 
-        self.k_up = UnifiedKeyMapper.uk2pg(UnifiedKey(k_up))
-        self.k_down = UnifiedKeyMapper.uk2pg(UnifiedKey(k_down))
-        self.k_left = UnifiedKeyMapper.uk2pg(UnifiedKey(k_left))
-        self.k_right = UnifiedKeyMapper.uk2pg(UnifiedKey(k_right))
+        self.k_up = KeyMapper.uk2pg(UnifiedKeys.filter_name(k_up))
+        self.k_down = KeyMapper.uk2pg(UnifiedKeys.filter_name(k_down))
+        self.k_left = KeyMapper.uk2pg(UnifiedKeys.filter_name(k_left))
+        self.k_right = KeyMapper.uk2pg(UnifiedKeys.filter_name(k_right))
 
         self.up_scale = up_scale
         self.sc_joystick_r = sc_joystick_r
@@ -316,8 +321,9 @@ class TouchCross(TouchProxy):
 
         self.need_loop = True
 
-        self._tp = self.tp
         self._sp = self.sp
+        self._spr = self.spr
+
         self.up_hold_ms = None
 
     def pg_event_handler(self, event: pygame.event.Event, *args, **kwargs):
@@ -335,7 +341,7 @@ class TouchCross(TouchProxy):
         if up or down or left or right:
             if not self.is_pressed:
                 self.is_pressed = True
-                self.tp = self._tp
+                self.spr = self._spr
                 self.touch_down()
                 time.sleep(0.05)
 
@@ -370,8 +376,8 @@ class TouchCross(TouchProxy):
         else:
             if self.is_pressed:
                 self.key_release()
-                self.tp = self._tp
                 self.sp = self._sp
+                self.spr = self._spr
             self.up_hold_ms = None
 
 
@@ -391,8 +397,8 @@ class TouchAim(TouchProxy):
         super().__init__(tpa, touch_type, touch_x, touch_y)
         self.a = a
         self.b = b
-        self._tp = self.tp
         self._sp = self.sp
+        self._spr = self.spr
 
         if kwargs.get('fast_attack', True):
             self.attack = self.tpa.register_tp(dict(
@@ -429,17 +435,18 @@ class TouchAim(TouchProxy):
             if self.active:
                 self.tpa.tp_aim = self
 
-                self.tpa.tps[UnifiedKey.M_LEFT] = self.attack
-
-                self.tp = self._tp
+                self.tpa.tps[UnifiedKeys.UK_MOUSE_L] = self.attack
                 self.sp = self._sp
+                self.spr = self._spr
                 self.key_down()
 
-                self.csc.f_uhid_mouse_create()
+                if self.tpa.device.info.is_uhid_supported:
+                    self.control.f_uhid_mouse_create()
+
 
             else:
                 self.tpa.tp_aim = None
-                self.tpa.tps[UnifiedKey.M_LEFT] = self.tpa.mouse_tp
+                self.tpa.tps[UnifiedKeys.UK_MOUSE_L] = self.tpa.mouse_tp
                 self.key_release()
                 pygame.mouse.set_pos(self.tpa.coord.to_point(ScalePoint(0.5, 0.5)))
 
@@ -447,9 +454,9 @@ class TouchAim(TouchProxy):
 
             # Press LSHIFT Show UHID Mouse
             uhid_mouse = pygame.key.get_mods() & pygame.KMOD_LSHIFT
-            if uhid_mouse:
+            if uhid_mouse and self.tpa.device.info.is_uhid_supported:
                 self.attack.set_on(False)
-                self.csc.f_uhid_mouse_input(
+                self.control.f_uhid_mouse_input(
                     event.rel[0], event.rel[1], left_button=pygame.mouse.get_pressed()[0]
                 )
                 return
@@ -472,7 +479,7 @@ class TouchAim(TouchProxy):
         if self.active:
             self.key_release()
             self.sp = self._sp
-            self.tp = self._tp
+            self.spr = self._spr
             self.key_down()
             self.need_move = True
             self.need_loop = True
@@ -480,7 +487,7 @@ class TouchAim(TouchProxy):
     def pg_loop_handler(self, *args, **kwargs):
 
         if pygame.key.get_mods() & pygame.KMOD_LSHIFT:
-            self.csc.f_uhid_mouse_input(
+            self.control.f_uhid_mouse_input(
                 0, 0, left_button=pygame.mouse.get_pressed()[0]
             )
             return
@@ -510,7 +517,7 @@ class TouchMouse(TouchProxy):
     def pg_event_handler(self, event: pygame.event.Event, *args, **kwargs):
         if event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = self.tpa.coord.to_scale_point(*event.pos)
-            self.tp = self.tpa.device.vsc.coordinate.to_point(mouse_pos).d
+            self.spr = ScalePointR(*mouse_pos, self._r)
             self.key_down()
             self.need_move = True
 
@@ -531,12 +538,12 @@ class TouchWatch(TouchProxy):
 
         super().__init__(tpa, touch_type, touch_x, touch_y, *args, **kwargs)
         self._sp = self.sp
-        self._tp = self.tp
+        self._spr = self.spr
 
     def pg_event_handler(self, event: pygame.event.Event, *args, **kwargs):
         if event.type == pygame.KEYDOWN:
+            self.spr = self._spr
             self.sp = self._sp
-            self.tp = self._tp
             self.key_down()
             self.need_move = True
 
@@ -584,8 +591,10 @@ class TouchProxyAdapter:
         TouchType.KEY_WATCH: TouchWatch
     }
 
-    def __init__(self, device: DeviceController, coord: Coordinate, cfg_path: pathlib.Path):
+    def __init__(self, session: Session, device: AdvDevice, coord: Coordinate, cfg_path: pathlib.Path):
+        self.session = session
         self.device = device
+
         self.tp_ids: Set[int] = set()
         self.cfg_path = cfg_path
         self.coord: Coordinate = coord
@@ -622,7 +631,7 @@ class TouchProxyAdapter:
                 logger.error(f"Register TouchProxy failed: {e}")
 
         # 配置鼠标左键点击功能
-        self.tps[UnifiedKey.M_LEFT] = self.mouse_tp
+        self.tps[UnifiedKeys.UK_MOUSE_L] = self.mouse_tp
 
     def register_tp(self, tpd: dict) -> TouchProxy:
         """
@@ -637,14 +646,14 @@ class TouchProxyAdapter:
             TouchType.KEY_SCOPE, TouchType.KEY_AIM, TouchType.KEY_WATCH
         ]:
             tp = self.CLS_REFLECTS[touch_type](self, touch_type, **tpd)
-            self.tps[UnifiedKey(tpd.get('unified_key'))] = tp
+            self.tps[UnifiedKeys.filter_name(tpd.get('unified_key'))] = tp
 
         elif touch_type == TouchType.KEY_CROSS:
             tp = TouchCross(self, touch_type, **tpd)
-            self.tps[tpd.get('k_up')] = tp
-            self.tps[tpd.get('k_down')] = tp
-            self.tps[tpd.get('k_left')] = tp
-            self.tps[tpd.get('k_right')] = tp
+            self.tps[UnifiedKeys.filter_name(tpd.get('k_up'))] = tp
+            self.tps[UnifiedKeys.filter_name(tpd.get('k_down'))] = tp
+            self.tps[UnifiedKeys.filter_name(tpd.get('k_left'))] = tp
+            self.tps[UnifiedKeys.filter_name(tpd.get('k_right'))] = tp
 
         return tp
 
@@ -655,7 +664,7 @@ class TouchProxyAdapter:
         """
         while True:
             _id = random.randint(self.TOUCH_ID_START, self.TOUCH_ID_START + self.TOUCH_ID_RANGE)
-            if _id not in self.tp_ids:
+            if _id not in self.tp_ids and _id not in [0x0413]:
                 self.tp_ids.add(_id)
                 return _id
 
@@ -668,7 +677,7 @@ class TouchProxyAdapter:
         :return:
         """
         if event.type in [pygame.KEYDOWN, pygame.KEYUP]:
-            uk = UnifiedKeyMapper.pg2uk(event.key)
+            uk = KeyMapper.pg2uk(event.key)
             if uk in self.tps:
                 _ = self.tps[uk]
                 if not _.on:
@@ -676,7 +685,7 @@ class TouchProxyAdapter:
                 _.pg_event_handler(event, coord=self.coord, *args, **kwargs)
 
         elif event.type in [pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP]:
-            uk = UnifiedKeyMapper.pg2uk(event.button)
+            uk = KeyMapper.pg2uk(event.button)
             if uk in self.tps:
                 _ = self.tps[uk]
                 if not _.on:

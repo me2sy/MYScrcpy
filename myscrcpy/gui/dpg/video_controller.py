@@ -5,6 +5,8 @@
     视频控制器，用于将RGB Frame 转为 DPG raw_texture
 
     Log:
+        2024-08-29 1.4.0 Me2sY  适配 Core/Session 架构改造
+
         2024-07-31 1.1.1 Me2sY  适配新Controller
 
         2024-07-28 1.0.0 Me2sY  发布初版
@@ -15,7 +17,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.1'
+__version__ = '1.4.0'
 
 __all__ = [
     'DpgVideoController'
@@ -24,8 +26,8 @@ __all__ = [
 import numpy as np
 import dearpygui.dearpygui as dpg
 
-from myscrcpy.controller import DeviceController
-from myscrcpy.utils import Coordinate, Param
+from myscrcpy.core import *
+from myscrcpy.utils import Coordinate, ROTATION_VERTICAL
 
 
 class DpgVideoController:
@@ -35,16 +37,12 @@ class DpgVideoController:
 
     def __init__(
             self,
-            device: DeviceController,
+            session: Session,
             max_height: int = -1, max_width: int = -1,
             coord_changed_callback=None
     ):
+        self.session = session
 
-        self.device = device
-        if not self.device.is_scrcpy_running:
-            raise RuntimeError('Connect Scrcpy First!')
-
-        self.vsc = device.vsc
         self.frame = None
         self.raw_texture_value = None
 
@@ -96,18 +94,13 @@ class DpgVideoController:
             加载Frame，检测Coordinate变化
         :return:
         """
-        self.frame = self.vsc.get_frame() if not self.is_pause else self.frame
+        self.frame = self.session.va.get_frame() if not self.is_pause else self.frame
         self.raw_texture_value = self.to_raw_texture_value(self.frame)
 
         h, w, d = self.frame.shape
         _c = Coordinate(width=w, height=h)
 
         if self.coord_frame != _c:
-
-            if self.coord_frame.rotation != _c.rotation:
-                # Update Device Info
-                self.device.update_rotation(_c.rotation)
-
             self.coord_frame = _c
             self.coord_draw = self.coord_frame.get_max_coordinate(self.max_width, self.max_height)
             self.coord_changed()
@@ -221,7 +214,7 @@ class DpgVideoController:
             通过设置coord_frame为新值，触发loop中检测机制，以此进行重置
         :return:
         """
-        self.coord_frame = Coordinate(-3 if self.coord_frame.rotation == Param.ROTATION_VERTICAL else -1, -2)
+        self.coord_frame = Coordinate(-3 if self.coord_frame.rotation == ROTATION_VERTICAL else -1, -2)
 
     def set_pause(self, is_pause: bool):
         """

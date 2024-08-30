@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-08-30 1.4.0 Me2sY  适配 Session/Connection 架构
+
         2024-08-19 1.3.3 Me2sY  去除 opencv 缩小程序包
 
         2024-08-15 1.3.0 Me2sY  新版本GUI
@@ -16,7 +18,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.3'
+__version__ = '1.4.0'
 
 __all__ = []
 
@@ -26,23 +28,17 @@ try:
     import click
     import dearpygui
     import pygame
-    import easygui
 except ImportError:
-    logger.warning('You need to install click, dearpygui, pygame, easygui, before using.')
+    logger.warning('You need to install click, dearpygui, pygame before using.')
     raise ImportError
 
 
-from myscrcpy.gui.pg.window_control import run
-from myscrcpy.gui.dpg_adv.window import start_dpg_adv
+from myscrcpy.gui.dpg.window import start_dpg_adv
 
 
 @click.command()
-@click.option('-g', '--gamemode', is_flag=True, default=False, help='直接进入控制模式')
-def cmd(gamemode):
-    if gamemode:
-        run()
-    else:
-        start_dpg_adv()
+def cmd():
+    start_dpg_adv()
 
 
 if __name__ == '__main__':

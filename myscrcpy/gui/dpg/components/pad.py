@@ -5,6 +5,10 @@
     
 
     Log:
+        2024-08-29 1.4.0 Me2sY
+            1.适配新架构
+            2.新增部分功能按键
+
         2024-08-15 1.3.0 Me2sY  发布初版
 
         2024-08-13 0.1.2 Me2sY
@@ -15,7 +19,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 
 __all__ = [
     'CPMNumPad', 'CPMControlPad',
@@ -27,7 +31,7 @@ from typing import Callable
 import dearpygui.dearpygui as dpg
 
 from myscrcpy.utils import ADBKeyCode
-from myscrcpy.gui.dpg_adv.components.component_cls import Component
+from myscrcpy.gui.dpg.components.component_cls import Component
 
 
 class CPMPad(Component):
@@ -57,9 +61,9 @@ class CPMNumPad(CPMPad):
     """
     def setup_inner(self, *args, **kwargs):
         def show_input(value):
-            if value == ADBKeyCode.BACKSPACE:
+            if value == ADBKeyCode.KB_BACKSPACE:
                 dpg.set_value(self.tag_ipt, dpg.get_value(self.tag_ipt)[:-1])
-            elif value == ADBKeyCode.ENTER:
+            elif value == ADBKeyCode.KB_ENTER:
                 dpg.set_value(self.tag_ipt, '')
             else:
                 dpg.set_value(self.tag_ipt, dpg.get_value(self.tag_ipt) + '*')
@@ -70,12 +74,12 @@ class CPMNumPad(CPMPad):
             with dpg.group(horizontal=True):
                 for j in range(1, 4):
                     bn = i * 3 + j
-                    dpg.add_button(label=f"{bn}", user_data=ADBKeyCode[f"N{bn}"], **btn_cfg)
+                    dpg.add_button(label=f"{bn}", user_data=ADBKeyCode[f"KB_{bn}"], **btn_cfg)
 
         with dpg.group(horizontal=True):
-            dpg.add_button(label="|<-", user_data=ADBKeyCode.BACKSPACE, **btn_cfg)
-            dpg.add_button(label="0", user_data=ADBKeyCode.N0, **btn_cfg)
-            dpg.add_button(label="OK", user_data=ADBKeyCode.ENTER, **btn_cfg)
+            dpg.add_button(label="|<-", user_data=ADBKeyCode.KB_BACKSPACE, **btn_cfg)
+            dpg.add_button(label="0", user_data=ADBKeyCode.KB_0, **btn_cfg)
+            dpg.add_button(label="OK", user_data=ADBKeyCode.KB_ENTER, **btn_cfg)
 
     def clear(self):
         dpg.set_value(self.tag_ipt, '')
@@ -138,6 +142,7 @@ class CPMSwitchPad(CPMPad):
         dpg.add_image_button(icons['back'], user_data=ADBKeyCode.BACK, **btn_icon_cfg)
         dpg.add_separator()
         dpg.add_image_button(icons['notification'], user_data=ADBKeyCode.NOTIFICATION, **btn_icon_cfg)
+        dpg.add_image_button(icons['settings'], user_data=ADBKeyCode.SETTINGS, **btn_icon_cfg)
         dpg.add_spacer(height=3)
         self.tag_ib_switch = dpg.add_image_button(
             self.icon_map[self.status], height=30, width=30, callback=self.switch_show
@@ -145,17 +150,33 @@ class CPMSwitchPad(CPMPad):
         dpg.add_spacer(height=3)
 
         with dpg.child_window(no_scrollbar=True, border=False, width=self.WIDTH):
-            dpg.add_image_button(icons['play'], user_data=ADBKeyCode.M_PLAY, **btn_icon_cfg)
-            dpg.add_image_button(icons['p_next'], user_data=ADBKeyCode.M_NEXT, **btn_icon_cfg)
-            dpg.add_image_button(icons['p_pre'], user_data=ADBKeyCode.M_PREV, **btn_icon_cfg)
+            dpg.add_image_button(icons['play'], user_data=ADBKeyCode.KB_MEDIA_PLAY_PAUSE, **btn_icon_cfg)
+            dpg.add_image_button(icons['p_next'], user_data=ADBKeyCode.KB_MEDIA_NEXT_TRACK, **btn_icon_cfg)
+            dpg.add_image_button(icons['p_pre'], user_data=ADBKeyCode.KB_MEDIA_PREV_TRACK, **btn_icon_cfg)
             dpg.add_separator()
-            dpg.add_image_button(icons['vol_off'], user_data=ADBKeyCode.V_MUTE, **btn_icon_cfg)
-            dpg.add_image_button(icons['vol_up'], user_data=ADBKeyCode.V_UP, **btn_icon_cfg)
-            dpg.add_image_button(icons['vol_down'], user_data=ADBKeyCode.V_DOWN, **btn_icon_cfg)
+            dpg.add_image_button(icons['mic_off'], user_data=ADBKeyCode.MIC_MUTE, **btn_icon_cfg)
+            dpg.add_image_button(icons['vol_off'], user_data=ADBKeyCode.KB_VOLUME_MUTE, **btn_icon_cfg)
+            dpg.add_image_button(icons['vol_up'], user_data=ADBKeyCode.KB_VOLUME_UP, **btn_icon_cfg)
+            dpg.add_image_button(icons['vol_down'], user_data=ADBKeyCode.KB_VOLUME_DOWN, **btn_icon_cfg)
             dpg.add_separator()
             dpg.add_image_button(icons['camera'], user_data=ADBKeyCode.CAMERA, **btn_icon_cfg)
             dpg.add_image_button(icons['zoom_in'], user_data=ADBKeyCode.ZOOM_IN, **btn_icon_cfg)
             dpg.add_image_button(icons['zoom_out'], user_data=ADBKeyCode.ZOOM_OUT, **btn_icon_cfg)
+            dpg.add_separator()
+            dpg.add_image_button(icons['brightness_up'], user_data=ADBKeyCode.BRIGHTNESS_UP, **btn_icon_cfg)
+            dpg.add_image_button(icons['brightness_down'], user_data=ADBKeyCode.BRIGHTNESS_DOWN, **btn_icon_cfg)
+            dpg.add_separator()
+            dpg.add_image_button(icons['screenshot'], user_data=ADBKeyCode.KB_PRINTSCREEN, **btn_icon_cfg)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Screenshot')
+            dpg.add_image_button(icons['voice'], user_data=ADBKeyCode.VOICE_ASSIST, **btn_icon_cfg)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Voice Assist')
+            dpg.add_image_button(icons['explore'], user_data=ADBKeyCode.EXPLORER, **btn_icon_cfg)
+            dpg.add_image_button(icons['calculate'], user_data=ADBKeyCode.CALCULATOR, **btn_icon_cfg)
+            dpg.add_image_button(icons['calendar'], user_data=ADBKeyCode.CALENDAR, **btn_icon_cfg)
+            dpg.add_image_button(icons['call'], user_data=ADBKeyCode.CALL, **btn_icon_cfg)
+            dpg.add_image_button(icons['contacts'], user_data=ADBKeyCode.CONTACTS, **btn_icon_cfg)
 
     def update(self, callback: Callable, switch_show_callback: Callable, *args, **kwargs):
         self._callback = callback

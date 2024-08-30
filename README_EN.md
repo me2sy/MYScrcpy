@@ -1,4 +1,4 @@
-# MYScrcpy V1.3.6
+# MYScrcpy V1.4.0
 
 ### [中文简介](README.md)
 
@@ -6,7 +6,7 @@ A [Scrcpy](https://github.com/Genymobile/scrcpy/) client implemented in **Python
 
 Includes comprehensive video, audio, and control flow parsing and presentation. **Developer-friendly, ready to use upon integration.**
 
-Uses [DearPyGui](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Chinese input, unlocking screen passwords, and other features.
+Uses [DearPyGui](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Window Position Record, Chinese input, unlocking screen passwords, and other features.
 
 In some control proxy scenarios, [pygame](https://www.pygame.org/) is used for mouse and keyboard control mapping GUI. 
 
@@ -14,17 +14,24 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 
 5900x + GTX1080 + Samsung Galaxy Tab S9 8gen2/Xiaomi 11pro 888 with 1920x1080 resolution, Pygame control mode can achieve **13~30ms** latency.
 
-Using **SharedMemory**, video frames are shared through memory, enabling web rendering with Nicegui and image processing with OpenCV.
+~~Using **SharedMemory**, video frames are shared through memory, enabling web rendering with Nicegui and image processing with OpenCV.~~
 
 Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
+
+### :tv: Video Introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
 ![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
 
 ## Features
-- [x] **1.3.6 NEW** New Web Interface (DEMO) by Nicegui with video and UHID keyboard/mouse
-- [x] **1.3.3 NEW** Support select audio output devices, With VB-Cables you can simulate microphone input
-- [x] **1.3.2 NEW** Video introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
-- [x] **1.3.2 NEW** Append [pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),support OBS virtual camera.
+- [x] **1.4.0 NEW** Introducing the brand-new Core/Session/Connection/Utils architecture
+- [x] **1.4.0 NEW** Record the position of window before rotation
+- [x] **1.4.0 NEW** Support for heartbeat detection with automatic reconnection upon disconnection
+- [x] **1.4.0 NEW** Device-to-PC clipboard supported
+- [x] **1.4.0 NEW** Optimize the key mapping strategy for Linux compatibility
+- [x] **1.4.0 NEW** Provide more control buttons
+- [x] 1.3.6 New Web Interface (DEMO) by Nicegui with video and UHID keyboard/mouse
+- [x] 1.3.3 Support select audio output devices, With VB-Cables you can simulate microphone input
+- [x] 1.3.2 Append [pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),support OBS virtual camera.
 - [x] Supports saving connection configurations and window size.
 - [x] Supports wireless connection, connection history, and quick connect features, eliminating the need for complicated command-line input.
 - [x] Supports proportional window resizing and freeform stretching.
@@ -56,57 +63,51 @@ Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
 ```
 
 ### 2.Structure:
-   1. **utils.py** Defines basic tool classes and various parameters
-   2. **gui/dpg** ~~DearPyGui interface implementation including video rendering, mouse events, UHID mouse and keyboard input, mapping editor, etc.~~
+   1. **utils** Defines basic tool classes and various parameters
+   2. **gui/dpg** DearPyGui interface implementation including video rendering, mouse events, UHID mouse and keyboard input, mapping editor, etc.
    3. **gui/pg** Pygame interface implementation including video rendering, mouse events, keyboard control, etc.
    4. **gui/ng** _(DEMO) Nicegui Web UI, uses SharedMemory to read video frames_
-   5. **controller/** Video stream, audio stream, control stream, device controller, etc.
+   5. **core/** Session, Connection, Video stream, audio stream, control stream, device controller, etc.
    6. **homepath/.myscrcpy/tps/*.json** Save TouchProxy configuration files in .json format
-   7. **gui/dpg_adv** Next-generation GUI
+
 
 ### 3.For developer
+
 ```python
-from myscrcpy.controller import *
+# 1.4.0 Recommend to use New Core/Session 
 
-device = DeviceFactory.device()
+from adbutils import adb
 
+from myscrcpy.core import *
+from myscrcpy.utils import *
 
 # Connect to Scrcpy
-# Create a SocketController and pass to connect method
-device.connect(
-   VideoSocketController(max_size=1366),
-   # Use Camera:
-   # VideoSocketController(max_size=1366, camera=VideoCamera(camera_size='1280x720', camera_fps=120)),
-   
-   AudioSocketController(audio_source=AudioSocketController.SOURCE_OUTPUT),
-   # AudioSocketServer
-   # AudioSocketServer(output=False),
-    
-   # ControlSocket CAN NOT Create When VideoSocket Source is Camera
-   ControlSocketController()
+# Create a Session
+
+adb_device = adb.device_list()[0]
+
+session = Session(
+   adb_device,
+   video_args=VideoArgs(max_size=1200),
+   audio_args=AudioArgs(),
+   control_args=ControlArgs()
 )
 
 
-# From extensions Import
-
-from myscrcpy.extensions.zmq_server import *
-# create ZMQ Control Server
-ZMQControlServer(device.csc).start()
-sender = ZMQControlServer.create_sender()
-sender.send(ControlSocketController.packet__screen(True))
-
 # Get RGB Frame np.ndarray
-frame = device.vsc.get_frame()
-device.csc.f_set_screen(False)
+frame = session.va.get_frame()
 
-# ZMQ Audio Server
-# from myscrcpy.controller.audio_socket_controller import ZMQAudioServer, ZMQAudioSubscriber
-# zas = ZMQAudioServer(device.asc)
-# zas.start()
+# Get PIL.Image
+image = session.va.get_image()
 
-# ZMQ Audio Subscriber
-# sub = ZMQAudioSubscriber()
-# sub.start()
+session.ca.f_set_screen(True)
+
+session.ca.f_touch_spr(
+   Action.DOWN,
+   ScalePointR(.5, .5, 0),
+   touch_id=0x0413
+)
+
 ...
 ```
 
@@ -121,16 +122,7 @@ sudo apt install portaudio19-dev
 python -m myscrcpy.run
 ```
 
-#### Run pygame GUI (high-speed control mode)
-
-:exclamation: _Using this mode requires pre-configuring the corresponding key mappings in the DPG Gui_
-
-:exclamation: _To pursue performance, this mode excludes rotation and other functions. Device rotation or switching between horizontal and vertical screens may cause termination._
-```bash
-python -m myscrcpy.run -g
-```
-
-#### Run Nicegui GUI (WEB)
+#### Run Nicegui GUI (WEB DEMO)
 ```bash
 python -m myscrcpy.gui.ng.main
 ```
@@ -167,3 +159,13 @@ Currently, the project is developed personally, with limited time, energy, and s
 Welcome to visit my [Bilibili](https://space.bilibili.com/400525682), where I will record some operational and explanatory videos. Hope you enjoy them.
 
 Finally, I deeply appreciate the support from my beloved during the development. :heart_eyes:
+
+## DECLARE
+This project is intended for educational purposes (graphics, sound, AI training, etc.) , Android testing or just for fun.
+
+**ATTENTION PLEASE:**
+
+1. Enabling the mobile debugging mode carries certain risks, such as data leakage, and it is important to ensure that you understand and can mitigate these risks before using it.
+2. **NEVER** use this project for illegal or criminal activities.
+
+The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.

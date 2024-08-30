@@ -1,5 +1,8 @@
 include LICENSE
 include README.md
-recursive-include myscrcpy/static
-recursive-include myscrcpy/configs
-recursive-include myscrcpy/libs
+include README_EN.md
+
+prune myscrcpy/test_zone
+
+graft myscrcpy/static
+graft myscrcpy/libs

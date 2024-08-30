@@ -5,6 +5,10 @@
     Scrcpy 连接属性配置组件
 
     Log:
+        2024-08-29 1.4.0 Me2sY
+            1.适配新架构
+            2.新增 clipboard 选项，调整音频设备选项
+
         2024-08-21 1.3.5 Me2sY  新增 重置 Default Config 功能
 
         2024-08-19 1.3.1 Me2sY  新增 选择Audio播放设备功能
@@ -21,7 +25,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.5'
+__version__ = '1.4.0'
 
 __all__ = [
     'CPMScrcpyCfg', 'CPMScrcpyCfgController'
@@ -32,13 +36,12 @@ from functools import partial
 from typing import Callable
 
 import dearpygui.dearpygui as dpg
+import pyaudio
 
-from myscrcpy.controller.device_controller import DeviceController
-from myscrcpy.controller.video_socket_controller import VideoSocketController as VSC
-from myscrcpy.controller.audio_socket_controller import AudioSocketController as ASC
+from myscrcpy.core import *
 from myscrcpy.utils import ValueManager
 
-from myscrcpy.gui.dpg_adv.components.component_cls import *
+from myscrcpy.gui.dpg.components.component_cls import *
 
 
 class CPMScrcpyCfgVideoCamera(ValueComponent):
@@ -93,7 +96,7 @@ class CPMScrcpyCfgVideo(CPMScrcpyCfgBase):
         """
             当 Source 为 camera 时，显示Camera配置面板
         """
-        if self.value_controller.get_value('video_source') == VSC.SOURCE_CAMERA:
+        if self.value_controller.get_value('video_source') == VideoArgs.SOURCE_CAMERA:
             dpg.show_item(self.tag_g_camera)
         else:
             dpg.hide_item(self.tag_g_camera)
@@ -114,17 +117,18 @@ class CPMScrcpyCfgVideo(CPMScrcpyCfgBase):
 
         with dpg.group(horizontal=True):
             dpg.add_combo(
-                label='codec', items=[VSC.CODEC_H264, VSC.CODEC_H265],
+                label='codec', items=[VideoArgs.CODEC_H264, VideoArgs.CODEC_H265],
                 source=self.value_controller.tag('video_codec'), width=60
             )
             self.tag_cb_source = dpg.add_combo(
-                label='d/c', items=[VSC.SOURCE_DISPLAY, VSC.SOURCE_CAMERA],
+                label='d/c', items=[VideoArgs.SOURCE_DISPLAY, VideoArgs.SOURCE_CAMERA],
                 source=self.value_controller.tag('video_source'), callback=self.source_changed, width=80
             )
             with dpg.tooltip(dpg.last_item()):
                 dpg.add_text('Video Source')
 
-        with dpg.group(show=self.value_controller.get_value('video_source') == VSC.SOURCE_CAMERA) as self.tag_g_camera:
+        with dpg.group(
+                show=self.value_controller.get_value('video_source') == VideoArgs.SOURCE_CAMERA) as self.tag_g_camera:
             CPMScrcpyCfgVideoCamera(self.value_controller).draw()
 
     def update(self, *args, **kwargs):
@@ -138,18 +142,18 @@ class CPMScrcpyCfgAudio(CPMScrcpyCfgBase):
     def setup_inner(self, *args, **kwargs):
         dpg.add_checkbox(label='Enable', source=self.value_controller.tag('audio'))
         dpg.add_combo(
-            items=[ASC.SOURCE_OUTPUT, ASC.SOURCE_MIC], source=self.value_controller.tag('audio_source'),
+            items=[AudioArgs.SOURCE_OUTPUT, AudioArgs.SOURCE_MIC], source=self.value_controller.tag('audio_source'),
             width=-45, label='Source'
         )
         dpg.add_combo(
-            items=[ASC.AUDIO_CODEC_FLAC, ASC.AUDIO_CODEC_RAW], source=self.value_controller.tag('audio_codec'),
+            items=[AudioArgs.CODEC_FLAC, AudioArgs.CODEC_RAW], source=self.value_controller.tag('audio_codec'),
             width=-45, label='Codec'
         )
 
-        devices = ASC.output_devices()
+        devices = AudioAdapter.get_output_devices()
 
         dpg.add_combo(
-            items=[_ for _ in devices.values()], source=self.value_controller.tag('output_device'),
+            items=[_['name'] for _ in devices], source=self.value_controller.tag('device_name'),
             width=-45, label='Output',
         )
 
@@ -160,7 +164,13 @@ class CPMScrcpyCfgControl(CPMScrcpyCfgBase):
     """
     def setup_inner(self, *args, **kwargs):
         dpg.add_checkbox(label='Enable', source=self.value_controller.tag('control'))
-        dpg.add_checkbox(label='Close Screen', source=self.value_controller.tag('close_screen'))
+        dpg.add_combo(
+            label='screen_status',
+            items=[ControlArgs.STATUS_ON, ControlArgs.STATUS_OFF, ControlArgs.STATUS_KEEP],
+            source=self.value_controller.tag('screen_status'),
+            width=-120
+        )
+        dpg.add_checkbox(label='clipboard', source=self.value_controller.tag('clipboard'))
 
 
 class CPMScrcpyCfgController(ValueComponent):
@@ -178,18 +188,19 @@ class CPMScrcpyCfgController(ValueComponent):
             'video': True,
             'max_size': 1920,
             'fps': 60,
-            'video_codec': VSC.CODEC_H264,
-            'video_source': VSC.SOURCE_DISPLAY,
+            'video_codec': VideoArgs.CODEC_H264,
+            'video_source': VideoArgs.SOURCE_DISPLAY,
             'camera_id': 0,
             'camera_fps': 60,
             'camera_ar': '',
             'camera_size': '',
             'audio': True,
-            'audio_source': ASC.SOURCE_OUTPUT,
-            'audio_codec': ASC.AUDIO_CODEC_FLAC,
-            'output_device': ASC.output_devices()[ASC.default_output_device_index()],
+            'audio_source': AudioArgs.SOURCE_OUTPUT,
+            'audio_codec': AudioArgs.CODEC_FLAC,
+            'device_name': pyaudio.PyAudio().get_default_output_device_info()['name'],
             'control': True,
-            'close_screen': True
+            'screen_status': ControlArgs.STATUS_KEEP,
+            'clipboard': True,
         }
 
     @classmethod
@@ -272,7 +283,7 @@ class CPMScrcpyCfgController(ValueComponent):
         self.value_controller.load(self.configs[app_data])
         self.update_callback(app_data, self.configs[app_data])
 
-    def update(self, device: DeviceController, update_callback: Callable, *args, **kwargs):
+    def update(self, device: AdvDevice, update_callback: Callable, *args, **kwargs):
         """
             加载DeviceController 获取配置并更新界面
         """
@@ -342,7 +353,7 @@ class CPMScrcpyCfg(ValueComponent):
             with dpg.tab(label='Control'):
                 CPMScrcpyCfgControl(self.value_controller).draw()
 
-    def update(self, device: DeviceController, *args, **kwargs):
+    def update(self, device: AdvDevice, *args, **kwargs):
         def load_callback(cfg_name, scrcpy_config):
             self.cpm_video.update()
 

@@ -5,6 +5,10 @@
     设备相关组件
 
     Log:
+        2024-08-29 1.4.0 Me2sY
+            1.适配新架构
+            2.简化connect功能，只回调连接参数
+
         2024-08-19 1.3.1 Me2sY
             1.新增 Reboot功能
             2.新增 Audio 选择播放设备功能
@@ -19,7 +23,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.1'
+__version__ = '1.4.0'
 
 __all__ = [
     'WinDevices', 'CPMDevice'
@@ -27,19 +31,15 @@ __all__ = [
 
 import time
 from functools import partial
-from typing import Callable
+from typing import Callable, Dict
 
 from adbutils import adb
 import dearpygui.dearpygui as dpg
 from loguru import logger
 
-from myscrcpy.utils import ValueManager as VM
-from myscrcpy.controller.device_controller import DeviceController, DeviceFactory
-from myscrcpy.controller.video_socket_controller import VideoSocketController as VSC, VideoCamera
-from myscrcpy.controller.audio_socket_controller import AudioSocketController as ASC
-from myscrcpy.controller.control_socket_controller import ControlSocketController as CSC
-from myscrcpy.gui.dpg_adv.components.component_cls import *
-from myscrcpy.gui.dpg_adv.components.scrcpy_cfg import *
+from myscrcpy.core import *
+from myscrcpy.gui.dpg.components.component_cls import *
+from myscrcpy.gui.dpg.components.scrcpy_cfg import *
 
 
 class CPMDeviceInfo(ValueComponent):
@@ -129,7 +129,7 @@ class CPMDeviceInfo(ValueComponent):
             with dpg.tooltip(dpg.last_item()):
                 dpg.add_text('Reboot Device')
 
-    def update(self, device: DeviceController):
+    def update(self, device: AdvDevice):
         """
             加载设备，显示设备信息
         """
@@ -191,96 +191,31 @@ class CPMDevice(ValueComponent):
 
     def connect(self):
         """
-            连接至Scrcpy
+            发起回调，回传选定设备及连接参数信息
+            2024-08-29 1.4.0 Me2sY 改为回测连接参数，不直接连接
         """
         if not hasattr(self, 'device') or self.device is None:
             return None
 
         cfg = self.cpm_scrcpy_cfg.use()
 
-        controllers = self.cfg2controllers(cfg)
-
-        # 创建 Scrcpy 连接
-        if controllers:
-
-            tag_win_loading = TempModal.draw_loading(f"Connecting to {self.device.serial_no}")
-
-            dpg.configure_item(self.tag_btn_connect, enabled=False, label='Connecting...')
-
-            if self.device.is_scrcpy_running:
-                try:
-                    self.device.close()
-                except Exception as e:
-                    pass
-
-            self.device = DeviceFactory.device(self.device.serial_no)
-            self.device.connect(*controllers)
+        if cfg.get('video', False) or cfg.get('audio', False) or cfg.get('control', False):
             self.device.scrcpy_cfg = self.cpm_scrcpy_cfg.config_name
+            self.connect_callback(self.device, cfg)
 
-            # 新增 最近连接设备记录
-            records = VM.get_global('recent_connected', [])
-            record = [self.device.adb_dev.serial, self.cpm_scrcpy_cfg.config_name]
-
-            try:
-                records.remove(record)
-            except ValueError:
-                pass
-
-            records.insert(0, record)
-
-            VM.set_global('recent_connected', records[:self.N_RECENT_RECORDS])
-
-            dpg.delete_item(tag_win_loading)
-
-            self.connect_callback(self.device)
         else:
             with dpg.window(no_move=True, no_resize=True, no_title_bar=True) as tag_win:
                 dpg.add_text("No V/A/C Selected!")
                 dpg.add_separator()
                 dpg.add_button(label='Close', width=-1, height=35, callback=lambda: dpg.delete_item(tag_win))
 
-    @staticmethod
-    def cfg2controllers(scrcpy_cfg: dict) -> list:
-        """
-            解析字典型配置文件，创建 V/A/C 实例
-        """
-
-        controllers = []
-        if scrcpy_cfg.get('video', False):
-
-            camera = None
-
-            if scrcpy_cfg.get('video_source', VSC.SOURCE_DISPLAY) == VSC.SOURCE_CAMERA:
-                camera = VideoCamera(**scrcpy_cfg)
-
-            controllers.append(
-                VSC(**scrcpy_cfg, camera=camera)
-            )
-
-        if scrcpy_cfg.get('audio', False):
-            device_index = -1
-            for k, v in ASC.output_devices().items():
-                if v == scrcpy_cfg['output_device']:
-                    device_index = k
-                    break
-
-            scrcpy_cfg['output_device_index'] = device_index
-            del scrcpy_cfg['output_device']
-
-            controllers.append(ASC(**scrcpy_cfg))
-
-        if scrcpy_cfg.get('control', False):
-            controllers.append(CSC(**scrcpy_cfg))
-
-        return controllers
-
     def choose(self):
         """
-            仅选择，回传ADBClient
+            仅选择，回传 AdvDevice
         """
         self.choose_callback(self.device)
 
-    def update(self, device: DeviceController, connect_callback: Callable, choose_callback: Callable):
+    def update(self, device: AdvDevice, connect_callback: Callable, choose_callback: Callable):
         """
             加载设备，显示设备信息及Scrcpy配置
         """
@@ -383,7 +318,7 @@ class CPMDeviceList(Component):
 
         dpg.delete_item(tag_win_loading)
 
-    def choose_dev(self, sender, app_data, device: DeviceController):
+    def choose_dev(self, sender, app_data, device: AdvDevice):
         self.choose_callback(device)
 
     def setup_inner(self, icons, *args, **kwargs):
@@ -427,15 +362,15 @@ class WinDevices(ValueComponent):
 
     def setup_inner(self, icons, *args, **kwargs):
 
-        def connect_scrcpy_callback(device: DeviceController):
+        def connect_scrcpy_callback(device: AdvDevice, connect_configs: Dict):
             dpg.delete_item(self.tag_container)
-            self.scrcpy_callback(device)
+            self.scrcpy_callback(device, connect_configs)
 
-        def choose_adb_callback(device: DeviceController):
+        def choose_adb_callback(device: AdvDevice):
             dpg.delete_item(self.tag_container)
             self.choose_callback(device)
 
-        def _choose_callback(device: DeviceController):
+        def _choose_callback(device: AdvDevice):
             self.cpm_device.update(device, connect_scrcpy_callback, choose_adb_callback)
 
         with dpg.group(horizontal=True, parent=self.tag_container) as tag_g:
@@ -452,9 +387,8 @@ class WinDevices(ValueComponent):
 
 if __name__ == '__main__':
 
-    import dearpygui.dearpygui as dpg
-    from loguru import logger
     from myscrcpy.utils import Param
+
     dpg.create_context()
 
     Static.load()
@@ -468,7 +402,7 @@ if __name__ == '__main__':
     dpg.bind_font(def_font)
 
     wd = WinDevices().draw(Static.ICONS).update(
-        lambda x: ..., lambda x: ...
+        lambda x: ..., lambda device, kwargs: logger.info(kwargs)
     )
 
     dpg.create_viewport(title='Test Case For Devices', x_pos=900, y_pos=600)

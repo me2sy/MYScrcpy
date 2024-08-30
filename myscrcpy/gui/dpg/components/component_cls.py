@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-08-30 1.4.0 Me2sY  适配新架构，新增信息提示窗口
+
         2024-08-19 1.3.1 Me2sY  新增 Confirm Window
 
         2024-08-15 1.3.0 Me2sY  发布初版
@@ -15,7 +17,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.1'
+__version__ = '1.4.0'
 
 __all__ = [
     'Component',
@@ -182,6 +184,25 @@ class TempModal:
             dpg.add_loading_indicator()
             dpg.add_text(default_value=msg)
         return tag_win
+
+    class LoadingWindow:
+        """
+            加载提示窗口
+            提供进度提示更新函数
+        """
+        def __init__(self, **kwargs):
+            with dpg.window(
+                no_scrollbar=True, no_resize=True, no_title_bar=True, no_move=True, autosize=True,
+                **kwargs
+            ) as self.tag_win:
+                dpg.add_loading_indicator()
+                self.tag_msg = dpg.add_text(default_value="")
+
+        def update_message(self, msg: str):
+            dpg.set_value(self.tag_msg, msg)
+
+        def close(self):
+            dpg.delete_item(self.tag_win)
 
     @classmethod
     def draw_msg_box(cls, *args, **kwargs) -> int | str:

@@ -5,146 +5,133 @@
     
 
     Log:
+        2024-08-24 1.3.7 Me2sY  配合utils分离接key_mapper进行改造
+
         2024-08-21 1.3.5 Me2sY
             创建，新增按键映射注入功能，解决不同平台下Code可能不一致问题
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.5'
+__version__ = '1.3.7'
 
 __all__ = [
     'inject_dpg_key_mapper', 'inject_pg_key_mapper'
 ]
 
 
-from loguru import logger
-
 import dearpygui.dearpygui as dpg
 import pygame
 
-
-from myscrcpy.utils import UnifiedKey, UnifiedKeyMapper
+from myscrcpy.utils.keys import UnifiedKeys, KeyMapper
 
 
 def inject_dpg_key_mapper():
     """
-        注入DPG键盘映射表
+        注入 Dearpygui 键值表
     :return:
     """
 
-    # Number
-    dpg_mapper = {
-        str(_): f"K_{_}" for _ in range(10)
+    key_mapper = {
+        dpg.mvKey_Return: UnifiedKeys.UK_KB_ENTER,
+        dpg.mvKey_Capital: UnifiedKeys.UK_KB_CAPSLOCK,
+        dpg.mvKey_Spacebar: UnifiedKeys.UK_KB_SPACE,
+        dpg.mvKey_Prior: UnifiedKeys.UK_KB_PAGE_UP,
+        dpg.mvKey_Next: UnifiedKeys.UK_KB_PAGE_DOWN,
+        dpg.mvKey_LWin: UnifiedKeys.UK_KB_WIN_L,
+        dpg.mvKey_RWin: UnifiedKeys.UK_KB_WIN_R,
+        dpg.mvKey_Apps: UnifiedKeys.UK_KB_MENU,
+        dpg.mvKey_Back: UnifiedKeys.UK_KB_BACKSPACE,
+
+        dpg.mvKey_Multiply: UnifiedKeys.UK_KB_NP_MULTIPLY,
+        dpg.mvKey_Add: UnifiedKeys.UK_KB_NP_PLUS,
+        dpg.mvKey_Subtract: UnifiedKeys.UK_KB_NP_MINUS,
+        dpg.mvKey_Decimal: UnifiedKeys.UK_KB_NP_PERIOD,
+        dpg.mvKey_Divide: UnifiedKeys.UK_KB_NP_DIVIDE,
+
+        dpg.mvKey_LShift: UnifiedKeys.UK_KB_SHIFT_L,
+        dpg.mvKey_RShift: UnifiedKeys.UK_KB_SHIFT_R,
+        dpg.mvKey_LControl: UnifiedKeys.UK_KB_CONTROL_L,
+        dpg.mvKey_RControl: UnifiedKeys.UK_KB_CONTROL_R,
+        dpg.mvKey_LMenu: UnifiedKeys.UK_KB_MENU_L,
+        dpg.mvKey_RMenu: UnifiedKeys.UK_KB_MENU_R,
+        dpg.mvKey_Plus: UnifiedKeys.UK_KB_EQUALS,
+        dpg.mvKey_Tilde: UnifiedKeys.UK_KB_BACKQUOTE,
+        dpg.mvKey_Open_Brace: UnifiedKeys.UK_KB_BRACKET_L,
+        dpg.mvKey_Close_Brace: UnifiedKeys.UK_KB_BRACKET_R,
+
+        dpg.mvMouseButton_Left: UnifiedKeys.UK_MOUSE_L,
+        dpg.mvMouseButton_Right: UnifiedKeys.UK_MOUSE_R,
+        dpg.mvMouseButton_Middle: UnifiedKeys.UK_MOUSE_WHEEL
     }
 
-    # Numpad
-    dpg_mapper.update({
-        f"NUMPAD{_}": f"NP_{_}" for _ in range(10)
-    })
-
-    # Function Keys
-    dpg_mapper.update({
-        'TILDE': 'BACKQUOTE',
-        'SHIFT': 'L_SHIFT',
-        'CONTROL': 'L_CTRL',
-        'ALT': 'L_ALT',
-        'LSHIFT': 'L_SHIFT',
-        'LCONTROL': 'L_CTRL',
-        'LALT': 'L_ALT',
-        'RSHIFT': 'R_SHIFT',
-        'RCONTROL': 'R_CTRL',
-        'RALT': 'R_ALT',
-        'PLUS': 'EQUALS',
-        'OPEN_BRACE': 'L_BRACKET',
-        'CLOSE_BRACE': 'R_BRACKET',
-        'BACK': 'BACKSPACE',
-        'SPACEBAR': 'SPACE',
-        'DIVIDE': 'NP_DIVIDE',
-        'MULTIPLY': 'NP_MULTIPLY',
-        'SUBTRACT': 'NP_MINUS',
-        'ADD': 'NP_PLUS',
-        'DECIMAL': 'NP_PERIOD',
-        'PRIOR': 'PAGE_UP',
-        'NEXT': 'PAGE_DOWN',
-        'LWIN': 'L_WIN',
-        'RWIN': 'R_WIN',
-    })
+    register_dict = {}
 
     for key, code in dpg.__dict__.items():
-        if key.startswith('mvKey_'):
 
-            _key = key[6:].upper()
+        if key.startswith('mvKey_') or key.startswith('mvMouseButton_'):
 
-            try:
-                uk = UnifiedKey[dpg_mapper.get(_key, _key)]
-                UnifiedKeyMapper.MAPPER_DPG2UK[code] = uk
-                UnifiedKeyMapper.MAPPER_UK2DPG[uk] = code
-            except KeyError:
-                ...
+            if code in key_mapper:
+                register_dict[code] = key_mapper[code]
+                continue
 
-    logger.success(f"DearPyGui Inject {len(UnifiedKeyMapper.MAPPER_DPG2UK)} Keys.")
+            _key = 'KB_' + key[6:]
+            uk = UnifiedKeys.filter_name(_key)
+            if uk:
+                register_dict[code] = uk
+            else:
+                _key = _key.replace('NumPad', 'NP_')
+                uk = UnifiedKeys.filter_name(_key)
+                if uk:
+                    register_dict[code] = uk
+
+    KeyMapper.register('dpg', register_dict)
 
 
 def inject_pg_key_mapper():
     """
-        注入 Pygame 键盘映射
+        注入 Pygame 键值表
     :return:
     """
-    dp_mapper = {
-       f"{_}": f"K_{_}" for _ in range(10)
+    key_mapper = {
+        pygame.K_LSHIFT: UnifiedKeys.UK_KB_SHIFT_L,
+        pygame.K_RSHIFT: UnifiedKeys.UK_KB_SHIFT_R,
+        pygame.K_LCTRL: UnifiedKeys.UK_KB_CONTROL_L,
+        pygame.K_RCTRL: UnifiedKeys.UK_KB_CONTROL_R,
+        pygame.K_LALT: UnifiedKeys.UK_KB_ALT_L,
+        pygame.K_RALT: UnifiedKeys.UK_KB_ALT_R,
+        pygame.K_RETURN: UnifiedKeys.UK_KB_ENTER,
+        pygame.K_UNKNOWN: UnifiedKeys.UK_UNKNOWN,
+        pygame.K_SEMICOLON: UnifiedKeys.UK_KB_COLON,
+        pygame.K_LEFTBRACKET: UnifiedKeys.UK_KB_BRACKET_L,
+        pygame.K_RIGHTBRACKET: UnifiedKeys.UK_KB_BRACKET_R,
+        pygame.K_PAGEUP: UnifiedKeys.UK_KB_PAGE_UP,
+        pygame.K_PAGEDOWN: UnifiedKeys.UK_KB_PAGE_DOWN,
+        pygame.K_LGUI: UnifiedKeys.UK_KB_WIN_L,
+        pygame.K_RGUI: UnifiedKeys.UK_KB_WIN_R,
+
+        pygame.BUTTON_LEFT: UnifiedKeys.UK_MOUSE_L,
+        pygame.BUTTON_RIGHT: UnifiedKeys.UK_MOUSE_R,
+        pygame.BUTTON_MIDDLE: UnifiedKeys.UK_MOUSE_WHEEL,
+        pygame.BUTTON_WHEELUP: UnifiedKeys.UK_MOUSE_WHEEL_UP,
+        pygame.BUTTON_WHEELDOWN: UnifiedKeys.UK_MOUSE_WHEEL_DOWN,
     }
 
-    dp_mapper.update({
-         f"KP_{_}": f"NP_{_}" for _ in range(10)
-    })
-
-    dp_mapper.update({
-        "LSHIFT": "L_SHIFT",
-        "LCTRL": "L_CTRL",
-        "LALT": "L_ALT",
-        "LGUI": "L_WIN",
-        "RSHIFT": "R_SHIFT",
-        "RCTRL": "R_CTRL",
-        "RALT": "R_ALT",
-        "RGUI": "R_WIN",
-
-        "LEFTBRACKET": "L_BRACKET",
-        "RIGHTBRACKET": "R_BRACKET",
-        "SEMICOLON": "COLON",
-
-        "KP_DIVIDE": "NP_DIVIDE",
-        "KP_MULTIPLY": "NP_MULTIPLY",
-        "KP_MINUS": "NP_MINUS",
-        "KP_PLUS": "NP_PLUS",
-        "KP_ENTER": "NP_ENTER",
-        "KP_PERIOD": "NP_PERIOD",
-
-        "PAGEUP": "PAGE_UP",
-        "PAGEDOWN": "PAGE_DOWN",
-    })
+    register_dict = {}
 
     for key, code in pygame.__dict__.items():
-        if key.startswith('K_'):
+        if key.startswith('K_') or key.startswith('BUTTON_'):
+            if code in key_mapper:
+                register_dict[code] = key_mapper[code]
+                continue
+
             _key = key[2:].upper()
+            uk = UnifiedKeys.filter_name(_key)
+            if uk:
+                register_dict[code] = uk
+            else:
+                _key = _key.replace('KP_', 'NP_')
+                uk = UnifiedKeys.filter_name(_key)
+                if uk:
+                    register_dict[code] = uk
 
-            try:
-                uk = UnifiedKey[dp_mapper.get(_key, _key)]
-                UnifiedKeyMapper.MAPPER_PG2UK[code] = uk
-                UnifiedKeyMapper.MAPPER_UK2PG[uk] = code
-
-            except KeyError:
-                ...
-
-    mouse = {
-        UnifiedKey.M_LEFT: pygame.BUTTON_LEFT,
-        UnifiedKey.M_RIGHT: pygame.BUTTON_RIGHT,
-        UnifiedKey.M_WHEEL: pygame.BUTTON_MIDDLE,
-        UnifiedKey.M_WHEEL_UP: pygame.BUTTON_WHEELUP,
-        UnifiedKey.M_WHEEL_DOWN: pygame.BUTTON_WHEELDOWN,
-    }
-
-    for uk, code in mouse.items():
-        UnifiedKeyMapper.MAPPER_PG2UK[code] = uk
-        UnifiedKeyMapper.MAPPER_UK2DPG[uk] = code
-
-    logger.success(f"Pygame Inject {len(UnifiedKeyMapper.MAPPER_PG2UK)} Keys.")
+    KeyMapper.register('pg', register_dict)

@@ -31,12 +31,12 @@ import time
 import dearpygui.dearpygui as dpg
 from loguru import logger
 
-from myscrcpy.controller import DeviceController
+from myscrcpy.core import *
 
 from myscrcpy.gui.dpg.indicator import *
 
 from myscrcpy.gui.dpg.video_controller import DpgVideoController
-from myscrcpy.utils import Coordinate, Point, ScalePoint, UnifiedKey, CfgHandler, Param
+from myscrcpy.utils import Coordinate, Point, ScalePoint, UnifiedKey, CfgHandler, Param, UnifiedKeys
 from myscrcpy.gui.pg.tp_adapter import TouchType
 
 TWIN_POS = Point(136, 10)
@@ -50,17 +50,16 @@ class WindowTwin:
         解决DPG绘制无法重叠问题
     """
     WIN_COORD_FIX = Coordinate(
-        Param.INT_LEN_WIN_BORDER * 2,
-        Param.INT_LEN_WIN_BORDER * 2 + Param.INT_LEN_WIN_TITLE_HEIGHT,
+        8 * 2,
+        8 * 2 + 19,
     )
 
     def __init__(
             self,
-            device: DeviceController,
+            session: Session,
             on_close=None
     ):
-        self.device = device
-        self.dvc = DpgVideoController(device)
+        self.dvc = DpgVideoController(session)
 
         self.tag_win_frame = dpg.generate_uuid()
         self.tag_win_mask = dpg.generate_uuid()
@@ -78,7 +77,7 @@ class WindowTwin:
             **(self.dvc.coord_draw + self.WIN_COORD_FIX).d
         )
 
-        self.tpi_factory = TouchProxyIndicatorFactory(self, device)
+        self.tpi_factory = TouchProxyIndicatorFactory(self)
 
         self.on_close = on_close
 
@@ -138,10 +137,7 @@ class WindowTwin:
 
         x, y = dpg.get_mouse_pos(local=True)
 
-        mp = Point(
-            x - Param.INT_LEN_WIN_BORDER,
-            y - Param.INT_LEN_WIN_BORDER
-        )
+        mp = Point(x - 8, y - 8)
 
         if mp.x < 0 or mp.y < 0:
             return
@@ -166,11 +162,8 @@ class TouchProxyIndicatorFactory:
     """
         触摸代理工厂类
     """
-    def __init__(
-            self, win_twin: WindowTwin, device: DeviceController
-    ):
+    def __init__(self, win_twin: WindowTwin):
         self.win_twin = win_twin
-        self.device = device
         self.draw_parent = win_twin.tag_win_mask
         self.draw_coord = win_twin.dvc.coord_draw
         self.indicators = []
@@ -280,10 +273,10 @@ class TouchProxyIndicatorFactory:
                 if ind_type == TouchType.KEY_CROSS:
 
                     d = ind_obj.to_value()
-                    dpg.draw_text(ind_obj.pos + Point(-5, -25), UnifiedKey(d['k_up']).name, **txt_cfg)
-                    dpg.draw_text(ind_obj.pos + Point(-5, 5), UnifiedKey(d['k_down']).name, **txt_cfg)
-                    dpg.draw_text(ind_obj.pos + Point(-18, -10), UnifiedKey(d['k_left']).name, **txt_cfg)
-                    dpg.draw_text(ind_obj.pos + Point(9, -10), UnifiedKey(d['k_right']).name, **txt_cfg)
+                    dpg.draw_text(ind_obj.pos + Point(-5, -25), UnifiedKeys.filter_name(d['k_up']).name, **txt_cfg)
+                    dpg.draw_text(ind_obj.pos + Point(-5, 5), UnifiedKeys.filter_name(d['k_down']).name, **txt_cfg)
+                    dpg.draw_text(ind_obj.pos + Point(-18, -10), UnifiedKeys.filter_name(d['k_left']).name, **txt_cfg)
+                    dpg.draw_text(ind_obj.pos + Point(9, -10), UnifiedKeys.filter_name(d['k_right']).name, **txt_cfg)
 
                 elif ind_type == TouchType.KEY_AIM:
                     dpg.draw_text(ind_obj.pos + Point(-5, 0), ind_obj.uk.name, **txt_cfg)
@@ -336,12 +329,12 @@ class TouchProxyIndicatorFactory:
                 try:
                     touch_type = TouchType(_.pop('touch_type'))
                     if touch_type == TouchType.KEY_CROSS:
-                        _['k_up'] = UnifiedKey(_.pop('k_up'))
-                        _['k_down'] = UnifiedKey(_.pop('k_down'))
-                        _['k_left'] = UnifiedKey(_.pop('k_left'))
-                        _['k_right'] = UnifiedKey(_.pop('k_right'))
+                        _['k_up'] = UnifiedKeys.filter_name(_.pop('k_up'))
+                        _['k_down'] = UnifiedKeys.filter_name(_.pop('k_down'))
+                        _['k_left'] = UnifiedKeys.filter_name(_.pop('k_left'))
+                        _['k_right'] = UnifiedKeys.filter_name(_.pop('k_right'))
                     else:
-                        _['unified_key'] = UnifiedKey(_.pop('unified_key'))
+                        _['unified_key'] = UnifiedKeys.filter_name(_.pop('unified_key'))
 
                     touch_x = _.pop('touch_x')
                     touch_y = _.pop('touch_y')
@@ -446,7 +439,7 @@ class TouchProxyIndicatorFactory:
 
         def _key_repeat(_k_code):
             with dpg.window(label='Warning', **MODEL_WIN_CFG) as _w:
-                dpg.add_text(f"Key > {UnifiedKey(_k_code).name} < Exists!")
+                dpg.add_text(f"Key > {UnifiedKeys.filter_name(_k_code).name} < Exists!")
                 dpg.add_button(label='Close', width=80, height=35, callback=lambda: dpg.delete_item(_w))
 
         def _aim_repeat():
@@ -461,7 +454,7 @@ class TouchProxyIndicatorFactory:
         if t_type == TouchType.KEY_CROSS:
             for k, v in ind_obj.to_value().items():
                 if k.startswith('k_'):
-                    if v is None or v == UnifiedKey.SETKEY:
+                    if v is None or v == UnifiedKeys.UK_UNKNOWN:
                         _set_key_first()
                         return
                     else:
@@ -477,7 +470,7 @@ class TouchProxyIndicatorFactory:
                     _aim_repeat()
                     return
             key_value = ind_obj.to_value().get('unified_key', None)
-            if key_value is None or key_value == UnifiedKey.SETKEY:
+            if key_value is None or key_value == UnifiedKeys.UK_UNKNOWN:
                 _set_key_first()
                 return
             else:
@@ -487,7 +480,7 @@ class TouchProxyIndicatorFactory:
                 keys.append(key_value)
 
             key_value = ind_obj.to_value().get('attack_unified_key', None)
-            if key_value is None or key_value == UnifiedKey.SETKEY:
+            if key_value is None or key_value == UnifiedKeys.UK_UNKNOWN:
                 _set_key_first()
                 return
             else:
@@ -498,7 +491,7 @@ class TouchProxyIndicatorFactory:
 
         else:
             key_value = ind_obj.to_value().get('unified_key', None)
-            if key_value is None or key_value == UnifiedKey.SETKEY:
+            if key_value is None or key_value == UnifiedKeys.UK_UNKNOWN:
                 _set_key_first()
                 return
             else:
@@ -594,11 +587,11 @@ class TouchProxyIndicatorFactory:
                     self.keys.discard(v)
 
         elif isinstance(ind_obj, IndicatorAim):
-            self.keys.discard(ind_obj.uk.value)
-            self.keys.discard(ind_obj.ind_attack.uk.value)
+            self.keys.discard(ind_obj.uk.name)
+            self.keys.discard(ind_obj.ind_attack.uk.name)
 
         else:
-            self.keys.discard(ind_obj.uk.value)
+            self.keys.discard(ind_obj.uk.name)
 
         self.draw_tps()
         self.load_tp_buttons()
@@ -621,15 +614,15 @@ class TouchProxyIndicatorFactory:
             for k, v in ind_obj.to_value().items():
                 if k.startswith('k_'):
                     self.keys.discard(v)
-                    kwargs.update({k: UnifiedKey(v)})
+                    kwargs.update({k: UnifiedKeys.filter_name(v)})
 
         elif ind_type == TouchType.KEY_AIM:
-            self.keys.discard(ind_obj.uk.value)
-            self.keys.discard(ind_obj.ind_attack.uk.value)
+            self.keys.discard(ind_obj.uk.name)
+            self.keys.discard(ind_obj.ind_attack.uk.name)
             kwargs.update({'unified_key': ind_obj.uk, 'attack_unified_key': ind_obj.ind_attack.uk})
 
         else:
-            self.keys.discard(ind_obj.uk.value)
+            self.keys.discard(ind_obj.uk.name)
             kwargs.update({'unified_key': ind_obj.uk})
 
         self.draw_tps()
@@ -735,7 +728,7 @@ class TouchProxyIndicatorFactory:
 
             if 'attack_touch_x' in default_values:
                 attack_sp = ScalePoint(default_values['attack_touch_x'], default_values['attack_touch_y'])
-                default_values['attack_unified_key'] = UnifiedKey(default_values['attack_unified_key'])
+                default_values['attack_unified_key'] = UnifiedKeys.filter_name(default_values['attack_unified_key'])
 
             itp = IndicatorAim(
                 self.draw_parent,

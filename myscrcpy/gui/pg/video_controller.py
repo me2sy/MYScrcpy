@@ -5,7 +5,9 @@
     Pygame 适配器
 
     Log:
-        2024-07-31 1.1.1 Me2sY   适配新Controller
+        2024-08-29 1.4.0 Me2sY  适配新Core/Session架构
+
+        2024-07-31 1.1.1 Me2sY  适配新Controller
 
         2024-07-28 1.0.0 Me2sY  发布初版
 
@@ -13,7 +15,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.1'
+__version__ = '1.4.0'
 
 __all__ = [
     'PGVideoController'
@@ -23,8 +25,7 @@ from loguru import logger
 import numpy as np
 import pygame as pg
 
-from myscrcpy.utils import Coordinate
-from myscrcpy.controller import DeviceController
+from myscrcpy.core import *
 
 
 class PGVideoController:
@@ -35,15 +36,14 @@ class PGVideoController:
 
     def __init__(
             self,
-            device: DeviceController
+            session: Session
     ):
 
-        self.device = device
-        if not self.device.is_scrcpy_running:
-            raise RuntimeError('Connect Scrcpy First!')
+        self.session = session
+        if not self.session.is_video_ready or not self.session.is_control_ready:
+            raise RuntimeError('Connect Scrcpy Video And Control First!')
 
-        self.vs = device.vsc
-        self.surface_video: pg.Surface = pg.surfarray.make_surface(self.transformed_frame(self.vs.get_frame()))
+        self.surface_video: pg.Surface = pg.surfarray.make_surface(self.transformed_frame(self.session.va.get_frame()))
 
     @staticmethod
     def transformed_frame(frame: np.ndarray) -> np.ndarray:
@@ -51,7 +51,7 @@ class PGVideoController:
 
     def load_frame(self):
         try:
-            pg.surfarray.blit_array(self.surface_video, self.transformed_frame(self.vs.get_frame()))
+            pg.surfarray.blit_array(self.surface_video, self.transformed_frame(self.session.va.get_frame()))
         except ValueError:
             logger.error('Failed to load video frame')
 
@@ -59,7 +59,3 @@ class PGVideoController:
     def surface(self) -> pg.Surface:
         self.load_frame()
         return self.surface_video
-
-    @property
-    def coordinate(self) -> Coordinate:
-        return self.vs.coordinate

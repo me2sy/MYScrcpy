@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-30 1.4.0 Me2sY  适配新 Session 结构
+
         2024-08-21 1.3.5 Me2sY
             1.重构 按键映射方法
             2.修复部分缺陷
@@ -50,7 +52,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.5'
+__version__ = '1.4.0'
 
 __all__ = ['start_dpg_adv']
 
@@ -59,22 +61,24 @@ import threading
 import time
 from functools import partial
 import webbrowser
+from typing import Dict
 
 from adbutils import adb
 import dearpygui.dearpygui as dpg
 from loguru import logger
 
-from myscrcpy.controller.device_controller import DeviceFactory, DeviceController
-from myscrcpy.controller.control_socket_controller import KeyboardWatcher
-from myscrcpy.gui.dpg.window_mask import WindowTwin
+from myscrcpy.core import *
 from myscrcpy.gui.pg.window_control import PGControlWindow
+from myscrcpy.gui.dpg.window_mask import WindowTwin
 
-from myscrcpy.utils import Param, Coordinate, Action, UnifiedKeyMapper, ValueManager as VM
-from myscrcpy.gui.dpg_adv.components.component_cls import TempModal, Static
-from myscrcpy.gui.dpg_adv.components.device import WinDevices, CPMDevice
-from myscrcpy.gui.dpg_adv.components.vc import VideoController, CPMVC
-from myscrcpy.gui.dpg_adv.components.pad import *
-from myscrcpy.gui.dpg_adv.components.scrcpy_cfg import CPMScrcpyCfgController
+from myscrcpy.utils import Param, Action, KeyMapper, ValueManager as VM, ADBKeyCode
+from myscrcpy.utils import Coordinate, ROTATION_VERTICAL, ROTATION_HORIZONTAL, ScalePointR
+
+from myscrcpy.gui.dpg.components.component_cls import TempModal, Static
+from myscrcpy.gui.dpg.components.device import WinDevices, CPMDevice
+from myscrcpy.gui.dpg.components.vc import VideoController, CPMVC
+from myscrcpy.gui.dpg.components.pad import *
+from myscrcpy.gui.dpg.components.scrcpy_cfg import CPMScrcpyCfgController
 
 from myscrcpy.gui.gui_utils import *
 
@@ -94,6 +98,8 @@ class WindowMain:
 
     HEIGHT_MENU = 19
     HEIGHT_BOARD = 8
+
+    N_RECENT_RECORDS = 10
 
     def __init__(self):
 
@@ -116,8 +122,8 @@ class WindowMain:
         self.tag_hr_mr_r = dpg.generate_uuid()
 
         self.device = None
-        self.vsc = None
-        self.csc = None
+        self.session = None
+
         self.video_controller = VideoController()
         self.video_controller.register_resize_callback(self._video_resize)
         self.video_controller.register_resize_callback(self._camera_resize)
@@ -139,25 +145,23 @@ class WindowMain:
 
     def close(self):
         dpg.delete_item(self.tag_window)
+        if self.session:
+            self.session.disconnect()
 
     def _adb_devices(self):
         """
             设备选择窗口
         """
-        def choose_callback(device: DeviceController):
-            if self.device:
-                self.device.close()
-
+        def choose_callback(device: AdvDevice):
             self.device = device
-
-        def connect_callback(device: DeviceController):
-            self.cpm_vc.update()
-            self.setup_device(device)
+            if self.session:
+                self.session.disconnect()
+            self.session = None
 
         self.cpm_device = WinDevices()
         self.cpm_device.draw(Static.ICONS)
         self.cpm_device.update(
-            choose_callback, connect_callback
+            choose_callback, self.setup_session
         )
 
         vpw = dpg.get_viewport_width()
@@ -173,33 +177,52 @@ class WindowMain:
 
     def disconnect(self):
         """
-            关闭设备连接
+            关闭Session连接
         """
-        if self.device and self.device.is_scrcpy_running:
-            tag_win_loading = TempModal.draw_loading(f'Closing Device {self.device.serial_no}')
-            try:
-                self.device.close()
-            except Exception as e:
-                logger.error(e)
 
-            self.device = None
-            self.vsc = None
-            self.csc = None
+        self.is_paused = True
 
-            self.video_controller.load_frame(
-                VideoController.create_default_frame(
-                    Coordinate(400, 500), rgb_color=0
-                )
+        self.device = None
+
+        win_loading = TempModal.LoadingWindow()
+        win_loading.update_message(f"Closing Session")
+
+        try:
+            self.session.disconnect()
+        except:
+            ...
+
+        self.session = None
+        self.video_controller.load_frame(
+            VideoController.create_default_frame(
+                Coordinate(400, 500), rgb_color=0
             )
+        )
 
-            dpg.configure_item(self.tag_mi_disconnect, enabled=False, show=False)
-            dpg.delete_item(tag_win_loading)
+        win_loading.update_message(f"Closing Handler")
+        # 2024-08-16 Me2sY  修复回调不释放导致多次操作问题
+        for _ in [
+            self.tag_hr_ml_c, self.tag_hr_ml_r, self.tag_hr_ml_m,
+            self.tag_hr_mr_c, self.tag_hr_mr_r,
+            self.tag_hr_wheel,
+            self.tag_mouse_ctrl
+        ]:
+            try:
+                dpg.delete_item(_)
+            except:
+                ...
+
+        dpg.configure_item(self.tag_menu_disconnect, enabled=False, show=False)
+
+        win_loading.close()
+
+        self.is_paused = False
 
     def video_fix(self, sender, app_data, user_data):
         """
             按边调整Video比例以适配原生比例
         """
-        if user_data == Param.ROTATION_VERTICAL:
+        if user_data == ROTATION_VERTICAL:
             coord_new = self.cpm_vc.coord_draw.fix_width(self.video_controller.coord_frame)
         else:
             coord_new = self.cpm_vc.coord_draw.fix_height(self.video_controller.coord_frame)
@@ -257,9 +280,7 @@ class WindowMain:
                 快速连接
             """
             serial, _cfg_name = user_data
-            device = DeviceController.from_adb_direct(serial)
-            if self.device:
-                self.device.close()
+            device = AdvDevice.from_adb_direct(serial)
 
             device.scrcpy_cfg = _cfg_name
             cfg = CPMScrcpyCfgController.get_config(device.serial_no, _cfg_name)
@@ -271,8 +292,7 @@ class WindowMain:
                 recent_connected.remove([serial, _cfg_name])
                 VM.set_global('recent_connected', recent_connected)
             else:
-                device.connect(*CPMDevice.cfg2controllers(cfg))
-                self.setup_device(device)
+                self.setup_session(device, cfg)
 
         devices = {dev.serial: dev for dev in adb.device_list()}
 
@@ -296,6 +316,47 @@ class WindowMain:
         if len(recent_connected) == 0:
             dpg.add_text('No Records', parent=parent_tag)
 
+    # 2024-08-30 1.4.0 Me2sY
+    # 受益于新 Session/Connection架构，可以实现单V/A/C重连、断连机制
+    def reconnect_adapter(self, sender, app_data, user_data):
+        """
+            重连
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :return:
+        """
+        if user_data == 'video':
+            if self.session.is_video_ready:
+                self.session.va.stop()
+
+            if self.session.va is not None:
+                self.session.va.start(self.session.adb_device)
+
+        if user_data == 'audio':
+            if self.session.is_audio_ready:
+                self.session.aa.stop()
+
+            if self.session.aa is not None:
+                self.session.aa.start(self.session.adb_device)
+
+    def disconnect_adapter(self, sender, app_data, user_data):
+        """
+            断开连接
+            目前很多逻辑不完善，不推荐使用
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :return:
+        """
+        if user_data == 'video' and self.session.is_video_ready:
+            self.session.va.stop()
+            self.is_paused = True
+
+        if user_data == 'audio' and self.session.is_audio_ready:
+            self.session.aa.stop()
+
+
     def _draw_menu(self):
         """
             初始化Menu
@@ -309,7 +370,7 @@ class WindowMain:
                 with dpg.menu(label='Recent') as self.tag_menu_recent:
                     self.load_recent_device(self.tag_menu_recent)
 
-                self.tag_mi_disconnect = dpg.add_menu_item(
+                self.tag_menu_disconnect = dpg.add_menu_item(
                     label='Disconnect', callback=self.disconnect, enabled=False, show=False
                 )
 
@@ -346,19 +407,19 @@ class WindowMain:
             with dpg.menu(label=' VAC '):
                 with dpg.menu(label='Video'):
                     self.tag_drag_video_s = dpg.add_drag_float(
-                        label='Scale', default_value=1.0, min_value=0.1, max_value=2.0, width=190,
+                        label='Scale', default_value=1.0, min_value=0.1, max_value=2.0, width=90,
                         speed=0.001, callback=self.video_scale, clamped=True
                     )
                     with dpg.group(horizontal=True):
                         drag_cfg = dict(
-                            min_value=100, max_value=9999, width=100, clamped=True, speed=1,
+                            min_value=100, max_value=9999, width=50, clamped=True, speed=1,
                             callback=self.video_set_scale
                         )
                         self.tag_drag_video_w = dpg.add_drag_int(label='x', **drag_cfg)
                         self.tag_drag_video_h = dpg.add_drag_int(**drag_cfg)
                     dpg.add_separator()
-                    dpg.add_menu_item(label='fix_W(>)', callback=self.video_fix, user_data=Param.ROTATION_VERTICAL)
-                    dpg.add_menu_item(label='fix_H(V)', callback=self.video_fix, user_data=Param.ROTATION_HORIZONTAL)
+                    dpg.add_menu_item(label='fix_W(>)', callback=self.video_fix, user_data=ROTATION_VERTICAL)
+                    dpg.add_menu_item(label='fix_H(V)', callback=self.video_fix, user_data=ROTATION_HORIZONTAL)
                     dpg.add_separator()
 
                     # 暂停画面更新
@@ -367,23 +428,43 @@ class WindowMain:
                         check=True
                     )
 
+                    dpg.add_separator()
+                    dpg.add_menu_item(label='Reconnect', callback=self.reconnect_adapter, user_data='video')
+                    dpg.add_menu_item(label='Disconnect', callback=self.disconnect_adapter, user_data='video')
+
                 with dpg.menu(label='Audio'):
                     dpg.add_menu_item(label='Mute(Scrcpy)', callback=self.audio_switch_mute)
 
                     # 2024-08-19 Me2sY  选择播放设备
                     dpg.add_menu_item(label='Output Device', callback=self.audio_choose_output_device)
 
+                    dpg.add_separator()
+                    dpg.add_menu_item(label='Reconnect', callback=self.reconnect_adapter, user_data='audio')
+                    dpg.add_menu_item(label='Disconnect', callback=self.disconnect_adapter, user_data='audio')
+
                 with dpg.menu(label='Ctrl'):
                     self.tag_cb_uhid = dpg.add_checkbox(label='UHID', default_value=True)
 
                     # 2024-08-19 Me2sY  优化为可选项
                     def set_screen(sender, app_data, user_data):
-                        self.device is not None and self.device.csc is not None and self.device.set_screen(user_data)
+                        if self.session.is_control_ready:
+                            self.session.ca.f_set_screen(user_data)
 
                     with dpg.menu(label='Screen'):
                         with dpg.group(horizontal=True):
                             dpg.add_button(label='On', callback=set_screen, user_data=True, width=50, height=30)
                             dpg.add_button(label='Off', callback=set_screen, user_data=False, width=50, height=30)
+
+                    def set_clipboard(sender, app_data, user_data):
+                        if self.session.is_control_ready:
+                            self.session.ca.set_clipboard_status(user_data)
+
+                    with dpg.menu(label='ClipBoard'):
+                        with dpg.group(horizontal=True):
+                            dpg.add_button(label='On', callback=set_clipboard, user_data=True, width=50, height=30)
+                            dpg.add_button(label='Off', callback=set_clipboard, user_data=False, width=50, height=30)
+
+                    dpg.add_separator()
 
             with dpg.menu(label='Tools'):
                 dpg.add_menu_item(label='TPEditor', callback=self.open_win_tpeditor)
@@ -410,7 +491,10 @@ class WindowMain:
                         label='v4l2loopback(Linux)', user_data='v4l2loopback', callback=self.open_virtual_camera
                     )
 
-                dpg.add_menu_item(label='StopVCam', callback=lambda: setattr(self, 'vcam_running', False))
+                    dpg.add_separator()
+
+                    dpg.add_menu_item(label='StopVCam', callback=lambda: setattr(self, 'vcam_running', False))
+
                 dpg.add_separator()
 
                 about_msg = (f"A Scrcpy client implemented by Python\n"
@@ -445,49 +529,51 @@ class WindowMain:
             选择Audio外放设备
         :return:
         """
-        if self.device and self.device.asc and self.device.asc.is_running:
 
-            def select():
-                """
-                    选择播放设备
-                :return:
-                """
-                name = dpg.get_value(tag_cb_dev)
-                if name != cur_dev['name']:
+        if self.session is None or not self.session.is_audio_ready:
+            return False
 
-                    index = -1
-                    for k, v in devices.items():
-                        if v == name:
-                            index = k
-                            break
+        def select():
+            """
+                选择播放设备
+            :return:
+            """
+            name = dpg.get_value(tag_cb_dev)
+            if name != device_info['name']:
 
-                    self.device.asc.select_player(index)
+                index = None
+                for _ in devices:
+                    if name == _['name']:
+                        index = _['index']
+                        break
 
-                dpg.delete_item(tag_win)
+                self.session.aa.select_device(index)
 
-            cur_dev = self.device.asc.audio_player.output_device
+            dpg.delete_item(tag_win)
 
-            with dpg.window(modal=True, width=268, no_move=True, no_resize=True, no_title_bar=True) as tag_win:
-                devices = self.device.asc.output_devices()
-                dpg.add_text(f"Choose Audio Output Device")
-                tag_cb_dev = dpg.add_combo(items=[_ for _ in devices.values()], default_value=cur_dev['name'], width=-1)
-                with dpg.group(horizontal=True):
-                    dpg.add_button(label='Select', callback=select, width=-60, height=35)
-                    dpg.add_button(label='Close', callback=lambda: dpg.delete_item(tag_win), height=35, width=-1)
+        with dpg.window(modal=True, width=268, no_move=True, no_resize=True, no_title_bar=True) as tag_win:
+            devices = self.session.aa.get_output_devices()
+            device_info = self.session.aa.current_output_device_info
+
+            dpg.add_text(f"Choose Audio Output Device")
+            tag_cb_dev = dpg.add_combo(items=[_['name'] for _ in devices], default_value=device_info['name'], width=-1)
+            with dpg.group(horizontal=True):
+                dpg.add_button(label='Select', callback=select, width=-60, height=35)
+                dpg.add_button(label='Close', callback=lambda: dpg.delete_item(tag_win), height=35, width=-1)
 
     def audio_switch_mute(self):
         """
             Scrcpy 静音
         """
-        if self.device and self.device.asc:
-            self.device.asc.switch_mute()
+        if self.session is not None and self.session.is_audio_ready:
+            self.session.aa.switch_mute()
 
     def open_win_tpeditor(self):
         """
             开启 TPEditor
             TODO Me2sY  待优化
         """
-        wt = WindowTwin(self.device)
+        wt = WindowTwin(self.session)
         wt.init()
 
     def open_pyg(self):
@@ -502,7 +588,7 @@ class WindowMain:
             dpg.set_value(self.tag_menu_pause, True)
             dpg.delete_item(tag_win)
 
-        if self.device and self.device.vsc and self.device.csc:
+        if self.session and self.session.is_video_ready and self.session.is_control_ready:
             with dpg.window(width=200, label='Choose TP Config', no_resize=True, no_collapse=True) as tag_win:
                 cfgs = []
                 for _ in Param.PATH_TPS.glob('*.json'):
@@ -520,7 +606,7 @@ class WindowMain:
 
     def _open_pg(self, pgcw: PGControlWindow, cfg_path: pathlib.Path):
         threading.Thread(target=pgcw.run, args=(
-            self.device, self, cfg_path
+            self.session, self.device, self.video_controller.coord_frame, cfg_path
         )).start()
 
     def _draw_control_pad(self):
@@ -575,11 +661,31 @@ class WindowMain:
                 # 2:3 Video Component
                 self.cpm_vc = CPMVC(parent_container=CPMVC.default_container(tag_g)).draw()
 
-    def _video_resize(self, tag_texture, old_coord, new_coord: Coordinate):
+    def _video_resize(self, tag_texture, old_coord: Coordinate, new_coord: Coordinate):
         """
             视频源尺寸变化回调函数
         """
         self._init_video(tag_texture, new_coord)
+
+        # 发生旋转时，记录旋转前位置，加载旋转后位置
+        if self.device is not None and old_coord.rotation != new_coord.rotation:
+
+            now_pos = dpg.get_viewport_pos()
+
+            # 加载旋转后窗口位置
+            new_pos = self.device.vm.get_value(
+                f"win_pos_{new_coord.rotation}", {'cfg': self.device.scrcpy_cfg},
+                now_pos
+            )
+
+            if old_coord.width == 0:
+                return
+            # 保存旋转前窗口位置
+            self.device.vm.set_value(f"win_pos_{old_coord.rotation}", value=now_pos, conditions={
+                'cfg': self.device.scrcpy_cfg
+            })
+
+            dpg.set_viewport_pos(new_pos)
 
     def _window_resize(self):
         """
@@ -629,7 +735,7 @@ class WindowMain:
             dpg.add_item_resize_handler(callback=self._window_resize)
         dpg.bind_item_handler_registry(self.tag_window, self.tag_hr_resize)
 
-    def send_key_event(self, keycode):
+    def send_key_event(self, keycode: int | ADBKeyCode):
         """
             通过 ADB 发送 Key Event
         """
@@ -639,32 +745,56 @@ class WindowMain:
             else:
                 self.device.adb_dev.keyevent(keycode.value)
 
-    def setup_device(self, device: DeviceController):
+    def setup_session(self, device: AdvDevice, connect_configs: Dict):
         """
-            连接设备
+            创建连接 session
         """
-        logger.debug(f"Device connected: {device}")
+
+        win_loading = TempModal.LoadingWindow()
+        win_loading.update_message(f"Connecting to {device.info.serial_no}")
 
         # 2024-08-21 Me2sY 避免重复加载
         self.is_paused = True
-
-        if self.device and self.device.is_scrcpy_running:
-            self.disconnect()
-
         self.device = device
-        self.vsc = device.vsc
 
-        if self.vsc and self.vsc.is_running:
-            frame = self.vsc.get_frame()
+        try:
+            self.session.disconnect()
+        except Exception:
+            ...
+
+        self.session = Session.connect_by_configs(self.device.adb_dev, **connect_configs)
+
+        self.device.sessions.add(self.session)
+
+        records = VM.get_global('recent_connected', [])
+        record = [self.device.adb_dev.serial, self.device.scrcpy_cfg]
+
+        # 复原位置
+        pos = self.device.vm.get_value(
+            f"win_pos_{self.device.get_rotation()}", {'cfg': self.device.scrcpy_cfg},
+            dpg.get_viewport_pos()
+        )
+        dpg.set_viewport_pos(pos)
+
+        try:
+            records.remove(record)
+        except ValueError:
+            pass
+
+        records.insert(0, record)
+
+        VM.set_global('recent_connected', records[:self.N_RECENT_RECORDS])
+
+        win_loading.update_message('Preparing Video Interface...')
+
+        if self.session.is_video_ready:
+            frame = self.session.va.get_frame()
             self.cpm_vc.draw_layer(self.cpm_vc.tag_layer_1, clear=True)
-        else:
-            frame = VideoController.create_default_frame(
-                coordinate=Coordinate(*self.device.adb_dev.window_size()),
-                rgb_color=80
-            )
 
+        else:
+            frame = VideoController.create_default_frame(coordinate=self.device.get_window_size(), rgb_color=80)
             msg = 'No Video.'
-            if self.device.csc is not None:
+            if self.session.is_control_ready:
                 if self.device.info.is_uhid_supported:
                     msg += 'UHID Mode.'
                 else:
@@ -679,35 +809,26 @@ class WindowMain:
         self.video_controller.load_frame(frame)
         self._init_resize_handler()
 
-        # TODO 2024-08-08 Me2sY  断线重连功能
         # TODO 2024-08-08 Me2sY  ADB Shell功能
         # TODO 2024-08-08 Me2sY  uiautomator2
 
-        self.csc = device.csc
-        if self.csc:
+        win_loading.update_message('Preparing Control Functions...')
+        if self.session.is_control_ready:
             self._init_mouse_control()
             self._init_uhid_keyboard_control()
-        else:
-            try:
-                dpg.delete_item(self.tag_mouse_ctrl, children_only=True)
-            except Exception:
-                pass
 
-            try:
-                dpg.delete_item(self.tag_hr_hid, children_only=True)
-            except Exception:
-                pass
-
-        dpg.configure_item(self.tag_mi_disconnect, enabled=True, show=True)
+        dpg.configure_item(self.tag_menu_disconnect, enabled=True, show=True)
         self.load_recent_device(self.tag_menu_recent)
 
         self.is_paused = False
+
+        win_loading.close()
 
     def _init_uhid_keyboard_control(self):
         """
             初始化 UHID 键盘控制
         """
-        if self.device:
+        if self.session.is_control_ready:
             dpg.configure_item(
                 self.tag_cb_uhid,
                 label='UHID Keyboard' if self.device.info.is_uhid_supported else 'UHID NOT SUPPORTED',
@@ -718,7 +839,7 @@ class WindowMain:
                 return
 
         def _send(modifiers, key_scan_codes):
-            self.csc.f_uhid_keyboard_input(
+            self.session.ca.f_uhid_keyboard_input(
                 modifiers=modifiers, key_scan_codes=key_scan_codes
             )
 
@@ -729,14 +850,14 @@ class WindowMain:
         def press(sender, app_data):
             if dpg.is_item_focused(self.cpm_vc.tag_dl) and dpg.get_value(self.tag_cb_uhid):
                 try:
-                    self.key_watcher.key_pressed(UnifiedKeyMapper.dpg2uk(app_data))
+                    self.key_watcher.key_pressed(KeyMapper.dpg2uk(app_data))
                 except:
                     pass
 
         def release(sender, app_data):
             if dpg.is_item_focused(self.cpm_vc.tag_dl) and dpg.get_value(self.tag_cb_uhid):
                 try:
-                    self.key_watcher.key_release(UnifiedKeyMapper.dpg2uk(app_data))
+                    self.key_watcher.key_release(KeyMapper.dpg2uk(app_data))
                 except:
                     pass
 
@@ -744,51 +865,43 @@ class WindowMain:
             dpg.add_key_press_handler(callback=press)
             dpg.add_key_release_handler(callback=release)
 
-        self.csc.f_uhid_keyboard_create()
+        self.session.ca.f_uhid_keyboard_create()
 
     def _init_mouse_control(self):
         """
             初始化鼠标控制器
         """
+
         with dpg.handler_registry(tag=self.tag_mouse_ctrl):
-
-            # 2024-08-16 Me2sY  修复回调不释放导致多次操作问题
-            for _ in [
-                self.tag_hr_ml_c, self.tag_hr_ml_r, self.tag_hr_ml_m,
-                self.tag_hr_mr_c, self.tag_hr_mr_r,
-                self.tag_hr_wheel
-            ]:
-                try:
-                    dpg.delete_item(_)
-                except:
-                    ...
-
             def _down(sender, app_data):
-                if self.csc is None or not self.cpm_vc.is_hovered:
+                if not self.session.is_control_ready or not self.cpm_vc.is_hovered:
                     return
 
-                cf = self.video_controller.coord_frame
-
-                self.csc.f_touch(
-                    Action.DOWN.value, touch_id=self.touch_id,
-                    **cf.d, **cf.to_point(self.cpm_vc.scale_point).d
+                self.session.ca.f_touch_spr(
+                    Action.DOWN.value,
+                    ScalePointR(*self.cpm_vc.scale_point, self.video_controller.coord_frame.rotation),
+                    touch_id=self.touch_id
                 )
 
             def _release(sender, app_data):
-                if self.csc is None:
+                if not self.session.is_control_ready:
                     return
-                cf = self.video_controller.coord_frame
-                self.csc.f_touch(
-                    Action.RELEASE.value, **cf.d, **cf.to_point(self.cpm_vc.scale_point).d, touch_id=self.touch_id
+
+                self.session.ca.f_touch_spr(
+                    Action.RELEASE.value,
+                    ScalePointR(*self.cpm_vc.scale_point, self.video_controller.coord_frame.rotation),
+                    touch_id=self.touch_id
                 )
 
             def _move(sender, app_data):
-                if self.csc is None:
+                if not self.session.is_control_ready:
                     return
+
                 if self.cpm_vc.is_hovered and dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
-                    cf = self.video_controller.coord_frame
-                    self.csc.f_touch(
-                        Action.MOVE.value, **cf.d, **cf.to_point(self.cpm_vc.scale_point).d, touch_id=self.touch_id
+                    self.session.ca.f_touch_spr(
+                        Action.MOVE.value,
+                        ScalePointR(*self.cpm_vc.scale_point, self.video_controller.coord_frame.rotation),
+                        touch_id=self.touch_id
                     )
 
             dpg.add_mouse_click_handler(
@@ -805,25 +918,19 @@ class WindowMain:
             # 单击右键后，在右键处生成一个固定触控点
             # 通过左键实现两点放大、缩小、旋转等功能
             def _down_r(sender, app_data):
-                if self.csc is None or not self.cpm_vc.is_hovered:
+
+                if not self.session.is_control_ready or not self.cpm_vc.is_hovered:
                     return
 
-                self.pos_r = dpg.get_drawing_mouse_pos()
-                cf = self.video_controller.coord_frame
-                self.csc.f_touch(
-                    Action.DOWN.value, touch_id=self.touch_id_right,
-                    **cf.d, **cf.to_point(self.cpm_vc.coord_draw.to_scale_point(*self.pos_r)).d
-                )
+                self.pos_r = ScalePointR(*self.cpm_vc.scale_point, self.video_controller.coord_frame.rotation)
+                self.session.ca.f_touch_spr(Action.DOWN.value, self.pos_r, touch_id=self.touch_id_right)
 
             def _release_r(sender, app_data):
-                if self.csc is None:
+
+                if not self.session.is_control_ready or not self.cpm_vc.is_hovered:
                     return
 
-                cf = self.video_controller.coord_frame
-                self.csc.f_touch(
-                    Action.RELEASE.value, touch_id=self.touch_id_right,
-                    **cf.d, **cf.to_point(self.cpm_vc.coord_draw.to_scale_point(*self.pos_r)).d
-                )
+                self.session.ca.f_touch_spr(Action.RELEASE.value, self.pos_r, touch_id=self.touch_id_right)
 
             dpg.add_mouse_click_handler(
                 button=dpg.mvMouseButton_Right, callback=_down_r, tag=self.tag_hr_mr_c
@@ -836,10 +943,10 @@ class WindowMain:
             # 滚轮实现上下滚动
             # 按下Ctrl 实现放大缩小
             def _wheel(sender, app_data):
-                if self.csc is None or not self.cpm_vc.is_hovered or not isinstance(app_data, int):
+                if not self.session.is_control_ready or not self.cpm_vc.is_hovered or not isinstance(app_data, int):
                     return
 
-                cf = self.video_controller.coord_frame
+                cf = self.cpm_vc.coord_draw
 
                 move_dis = cf.width // 8
 
@@ -851,17 +958,20 @@ class WindowMain:
 
                 if dpg.is_key_down(dpg.mvKey_Control):
                     # Ctrl Press Then Wheel to Zoom
-                    self.csc.f_touch(
+                    self.session.ca.f_touch_spr(
                         Action.DOWN.value,
-                        **cf.d,
-                        **cf.to_point(self.cpm_vc.to_scale_point(m_pos[0] + move_dis, m_pos[1] + move_dis)).d,
+                        ScalePointR(
+                            *self.cpm_vc.to_scale_point(m_pos[0] + move_dis, m_pos[1] + move_dis),
+                            self.video_controller.coord_frame.rotation
+                        ),
                         touch_id=self.touch_id_wheel
                     )
 
-                    self.csc.f_touch(
+                    self.session.ca.f_touch_spr(
                         Action.DOWN.value,
-                        **cf.d,
-                        **cf.to_point(self.cpm_vc.to_scale_point(*sec_pos)).d,
+                        ScalePointR(
+                            *self.cpm_vc.to_scale_point(*sec_pos), self.video_controller.coord_frame.rotation
+                        ),
                         touch_id=self.touch_id_sec
                     )
                     dis = cf.width // 20
@@ -869,45 +979,46 @@ class WindowMain:
                     for i in range(dis):
                         next_pos = [m_pos[0] + move_dis - i * step, m_pos[1] + move_dis - i * step]
 
-                        self.csc.f_touch(
+                        self.session.ca.f_touch_spr(
                             Action.MOVE.value,
-                            **cf.d,
-                            **cf.to_point(self.cpm_vc.to_scale_point(*next_pos)).d,
+                            ScalePointR(
+                                *self.cpm_vc.to_scale_point(*next_pos), self.video_controller.coord_frame.rotation
+                            ),
                             touch_id=self.touch_id_wheel
                         )
 
                         time.sleep(t)
                 else:
                     # Wheel to swipe
-                    self.csc.f_touch(
+                    self.session.ca.f_touch_spr(
                         Action.DOWN.value,
-                        **cf.d,
-                        **cf.to_point(self.cpm_vc.to_scale_point(*m_pos)).d,
+                        ScalePointR(
+                            *self.cpm_vc.to_scale_point(*m_pos), self.video_controller.coord_frame.rotation
+                        ),
                         touch_id=self.touch_id_wheel
                     )
                     dis = cf.height // 15
                     t = 0.05 / dis
                     for i in range(dis):
                         next_pos = [m_pos[0], m_pos[1] + i * step]
-                        self.csc.f_touch(
+                        self.session.ca.f_touch_spr(
                             Action.MOVE.value,
-                            **cf.d,
-                            **cf.to_point(self.cpm_vc.to_scale_point(*next_pos)).d,
+                            ScalePointR(
+                                *self.cpm_vc.to_scale_point(*next_pos), self.video_controller.coord_frame.rotation
+                            ),
                             touch_id=self.touch_id_wheel
                         )
                         time.sleep(t)
 
-                self.csc.f_touch(
+                self.session.ca.f_touch_spr(
                     Action.RELEASE.value,
-                    **cf.d,
-                    **cf.to_point(self.cpm_vc.to_scale_point(*next_pos)).d,
+                    ScalePointR(*self.cpm_vc.to_scale_point(*next_pos), self.video_controller.coord_frame.rotation),
                     touch_id=self.touch_id_wheel
                 )
 
-                self.csc.f_touch(
+                self.session.ca.f_touch_spr(
                     Action.RELEASE.value,
-                    **cf.d,
-                    **cf.to_point(self.cpm_vc.to_scale_point(*sec_pos)).d,
+                    ScalePointR(*self.cpm_vc.to_scale_point(*sec_pos), self.video_controller.coord_frame.rotation),
                     touch_id=self.touch_id_sec
                 )
 
@@ -917,7 +1028,6 @@ class WindowMain:
         """
             创建 Video 显示
         """
-
         auto_fix = True
         if self.device:
             # 加载历史窗口大小配置
@@ -934,8 +1044,8 @@ class WindowMain:
         """
             更新视频显示
         """
-        if self.vsc and not self.is_paused:
-            self.video_controller.load_frame(self.vsc.get_frame())
+        if not self.is_paused and self.session is not None and self.session.is_video_ready:
+            self.video_controller.load_frame(self.session.va.get_frame())
 
     def open_virtual_camera(self, sender=None, app_data=None, user_data=None):
         threading.Thread(target=self._virtual_camera, args=(user_data,)).start()
@@ -948,7 +1058,7 @@ class WindowMain:
         :param new_coord:
         :return:
         """
-        if self.vcam_running and self.vsc:
+        if self.vcam_running and self.session is not None and self.session.is_video_ready:
             self.vcam_running = False
             time.sleep(0.5)
             self.open_virtual_camera()
@@ -965,16 +1075,17 @@ class WindowMain:
             logger.warning('pyvirtualcam is not installed')
             return False
 
-        if self.device and self.vsc:
+        if self.session and self.session.is_video_ready:
             try:
                 with pyvirtualcam.Camera(
-                        **self.video_controller.coord_frame.d, fps=self.vsc.fps, backend=backend
+                        **self.video_controller.coord_frame.d, fps=self.session.va.conn.args.fps, backend=backend
                 ) as cam:
                     logger.success(f"Virtual Camera Running")
                     self.vcam_running = True
                     try:
-                        while self.vsc.is_running and self.vcam_running:
-                            cam.send(self.vsc.last_frame)
+                        while self.session.va.is_running and self.vcam_running:
+                            if not self.is_paused:
+                                cam.send(self.session.va.get_frame())
                             cam.sleep_until_next_frame()
 
                         # 2024-08-19 Me2sY  画面置黑
@@ -1034,11 +1145,11 @@ def start_dpg_adv():
         vph = dpg.get_viewport_height()
 
         if vpw < dpg.get_viewport_min_width() + 3:
-            dpg.set_viewport_width(dpg.get_viewport_min_width() + 3)
+            dpg.set_viewport_width(dpg.get_viewport_min_width() + 5)
             return
 
         if vph < dpg.get_viewport_min_height() + 3:
-            dpg.set_viewport_height(dpg.get_viewport_min_height() + 3)
+            dpg.set_viewport_height(dpg.get_viewport_min_height() + 5)
             return
 
     dpg.set_viewport_resize_callback(fix_vp_size)

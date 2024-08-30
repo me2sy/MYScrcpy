@@ -5,28 +5,32 @@
     pygame框架下设备控制窗口，适用于低延迟需求应用。
 
     Log:
-         2024-07-31 1.1.1 Me2sY 切换新controller
+        2024-08-29 1.4.0 Me2sY  适配Session
 
-         2024-07-28 1.0.0 Me2sY 发布初版
+        2024-08-26 1.3.7 Me2sY  适配Core架构，去除Run
+
+        2024-07-31 1.1.1 Me2sY  切换新controller
+
+        2024-07-28 1.0.0 Me2sY  发布初版
 
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.1.1'
+__version__ = '1.4.0'
 
 __all__ = [
-    'PGControlWindow', 'run'
+    'PGControlWindow'
 ]
 
 import pathlib
 
 import pygame
 
-from myscrcpy.controller import DeviceController
+from myscrcpy.core import *
 from myscrcpy.gui.pg.tp_adapter import TouchProxyAdapter
 from myscrcpy.gui.pg.video_controller import PGVideoController
 
-from myscrcpy.utils import Param
+from myscrcpy.utils import Param, Coordinate
 
 
 class PGControlWindow:
@@ -45,29 +49,32 @@ class PGControlWindow:
 
     def run(
             self,
-            device: DeviceController,
-            creator,
+            session: Session,
+            device: AdvDevice,
+            coord: Coordinate,
             cfg_path: pathlib.Path,
             fps: int = 120,
             *args, **kwargs
     ):
         """
             启动控制窗口
-        :param device:
-        :param creator:
+        :param session: Session
+        :param device: AdvDevice
+        :param coord:
         :param cfg_path:
         :param fps:
         :param args:
         :param kwargs:
         :return:
         """
-        pgv = PGVideoController(device)
-        self.tpa = TouchProxyAdapter(device, pgv.coordinate, cfg_path)
+
+        pgv = PGVideoController(session)
+        self.tpa = TouchProxyAdapter(session, device, coord, cfg_path)
 
         pygame.init()
         pygame.display.init()
 
-        main_surface = pygame.display.set_mode(pgv.coordinate)
+        main_surface = pygame.display.set_mode(coord)
         pygame.display.set_caption(f"{Param.PROJECT_NAME} - {Param.AUTHOR}")
         pygame.display.set_icon(pygame.image.load(Param.PATH_STATICS_ICON))
 
@@ -79,6 +86,14 @@ class PGControlWindow:
             pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
             pygame.MOUSEMOTION
         ])
+
+        # 2024-08-30 Me2sY
+        # 重启音频，尽量保证同步，建议使用 Flac
+        # 肯定有细微延迟，最好设备使用有线/蓝牙耳机等
+
+        if session.is_audio_ready:
+            session.aa.stop()
+            session.aa.start(session.adb_device)
 
         self.is_running = True
 
@@ -106,55 +121,3 @@ class PGControlWindow:
             clock.tick(fps)
 
         pygame.quit()
-
-
-def run():
-
-    from loguru import logger
-    import easygui
-
-    from myscrcpy.controller import DeviceFactory, VideoSocketController, ControlSocketController, AudioSocketController
-    from myscrcpy.utils import Param
-
-    DeviceFactory.load_devices()
-    devices = DeviceFactory.devices()
-
-    if len(devices) > 1:
-
-        choice = easygui.choicebox(
-            'Choose a device',
-            'Devices',
-            list(devices.keys())
-        )
-        dev = devices[choice]
-
-    else:
-        dev = devices[list(devices.keys())[0]]
-
-    size = easygui.integerbox('max_size', 'Video Max Size', dev.coordinate.max_size, upperbound=99999)
-    if size is None or size <= 0:
-        dev.close()
-        return
-
-    file_path = easygui.fileopenbox(
-        'Choose a tp config',
-        'Open',
-        default=Param.PATH_TPS.__str__() + '\\'
-    )
-    logger.info(f'Opening {Param.PATH_TPS.__str__()}')
-    logger.info(f'file_path: {file_path}')
-
-    if file_path is not None and size > 0:
-        dev.connect(
-            VideoSocketController(max_size=size),
-            AudioSocketController(),
-            ControlSocketController()
-        )
-        PGControlWindow().run(
-            dev, None, pathlib.Path(file_path)
-        )
-    dev.close()
-
-
-if __name__ == '__main__':
-    run()

@@ -5,52 +5,49 @@
     
 
     Log:
+        2024-08-30 0.1.1 Me2sY  适配新架构
+
         2024-08-22 0.1.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 __all__ = ['ng2uk']
 
 
-from myscrcpy.utils import UnifiedKey
+from myscrcpy.utils import UnifiedKeys, UnifiedKey
 
-# number
-key_mapper = {
-    f"{_}": UnifiedKey[f"K_{_}"] for _ in range(10)
-}
 
-# keys
+key_mapper = {}
+
 key_mapper.update({
+    'ENTER': UnifiedKeys.UK_KB_ENTER,
 
-    'ENTER': UnifiedKey.RETURN,
+    'SHIFTLEFT': UnifiedKeys.UK_KB_SHIFT_L,
+    'SHIFTRIGHT': UnifiedKeys.UK_KB_SHIFT_R,
 
-    'SHIFTLEFT': UnifiedKey.L_SHIFT,
-    'SHIFTRIGHT': UnifiedKey.R_SHIFT,
+    'CONTROLLEFT': UnifiedKeys.UK_KB_CONTROL_L,
+    'CONTROLRIGHT': UnifiedKeys.UK_KB_CONTROL_R,
 
-    'CONTROLLEFT': UnifiedKey.L_CTRL,
-    'CONTROLRIGHT': UnifiedKey.R_CTRL,
+    'ALTLEFT': UnifiedKeys.UK_KB_ALT_L,
+    'ALTRIGHT': UnifiedKeys.UK_KB_ALT_R,
 
-    'ALTLEFT': UnifiedKey.L_ALT,
-    'ALTRIGHT': UnifiedKey.R_ALT,
+    'EQUAL': UnifiedKeys.UK_KB_EQUALS,
+    'SEMICOLON': UnifiedKeys.UK_KB_COLON,
 
-    'EQUAL': UnifiedKey.EQUALS,
-    'SEMICOLON': UnifiedKey.COLON,
+    "BRACKETLEFT": UnifiedKeys.UK_KB_BRACKET_L,
+    "BRACKETRIGHT": UnifiedKeys.UK_KB_BRACKET_R,
+    'ARROWUP': UnifiedKeys.UK_KB_UP,
+    'ARROWDOWN': UnifiedKeys.UK_KB_DOWN,
+    'ARROWLEFT': UnifiedKeys.UK_KB_LEFT,
+    'ARROWRIGHT': UnifiedKeys.UK_KB_RIGHT,
+    'PAGEUP': UnifiedKeys.UK_KB_PAGE_UP,
+    'PAGEDOWN': UnifiedKeys.UK_KB_PAGE_DOWN,
 
-    "BRACKETLEFT": UnifiedKey.L_BRACKET,
-    "BRACKETRIGHT": UnifiedKey.R_BRACKET,
-    'ARROWUP': UnifiedKey.UP,
-    'ARROWDOWN': UnifiedKey.DOWN,
-    'ARROWLEFT': UnifiedKey.LEFT,
-    'ARROWRIGHT': UnifiedKey.RIGHT,
-    'PAGEUP': UnifiedKey.PAGE_UP,
-    'PAGEDOWN': UnifiedKey.PAGE_DOWN,
-
-    'NP_ADD': UnifiedKey.NP_PLUS,
-    'NP_SUBTRACT': UnifiedKey.NP_MINUS,
-    'NP_DECIMAL': UnifiedKey.NP_PERIOD,
-
+    'NP_ADD': UnifiedKeys.UK_KB_NP_PLUS,
+    'NP_SUBTRACT': UnifiedKeys.UK_KB_NP_MINUS,
+    'NP_DECIMAL': UnifiedKeys.UK_KB_NP_PERIOD,
 })
 
 
@@ -63,18 +60,22 @@ def ng2uk(key_code: str) -> UnifiedKey:
 
     key_code = key_code.upper()
     if key_code.startswith('KEY'):
-        key_code = key_code[3:]
+        key_code = 'KB_' + key_code[3:]
 
     elif key_code.startswith('NUMPAD'):
-        key_code = 'NP_' + key_code[6:]
+        key_code = 'KB_NP_' + key_code[6:]
 
     elif key_code.startswith('DIGIT'):
-        key_code = 'K_' + key_code[5:]
+        key_code = 'KB_' + key_code[5:]
 
     try:
-        return UnifiedKey[key_code.upper()]
+        uk = UnifiedKeys.filter_name(key_code.upper())
+        if uk is None:
+            raise KeyError
+        else:
+            return uk
     except:
         try:
             return key_mapper[key_code.upper()]
         except KeyError:
-            return UnifiedKey.SETKEY
+            return UnifiedKeys.UK_UNKNOWN

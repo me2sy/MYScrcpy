@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-08-29 1.4.0 Me2sY  适配新架构
+
         2024-08-15 1.3.0 Me2sY  发布初版
 
         2024-08-11 0.1.2 Me2sY  完成功能开发
@@ -26,7 +28,7 @@ from loguru import logger
 import numpy as np
 
 from myscrcpy.utils import Coordinate, ScalePoint
-from myscrcpy.gui.dpg_adv.components.component_cls import *
+from myscrcpy.gui.dpg.components.component_cls import *
 
 
 class VideoController:
