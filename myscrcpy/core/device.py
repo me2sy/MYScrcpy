@@ -5,13 +5,15 @@
     
 
     Log:
+        2024-08-31 1.4.1 Me2sY  改用新KVManager
+
         2024-08-29 1.4.0 Me2sY  重构，适配 Session 体系
 
         2024-08-25 0.1.0 Me2sY  重构，拆分VAC至单个连接
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 
 __all__ = [
     'DeviceInfo', 'PackageInfo',
@@ -27,7 +29,7 @@ from typing import NamedTuple, Tuple, List, Dict
 from adbutils import AdbDevice, AdbError, AppInfo, adb
 from loguru import logger
 
-from myscrcpy.utils import ValueManager as VM, Coordinate, ROTATION_HORIZONTAL, ROTATION_VERTICAL
+from myscrcpy.utils import KVManager, kv_global, Coordinate, ROTATION_HORIZONTAL, ROTATION_VERTICAL
 
 
 class DeviceInfo(NamedTuple):
@@ -143,7 +145,7 @@ class AdvDevice:
         self.info, self.prop_d = self.analysis_device(adb_device) if device_info is None else (device_info, prop_d)
         self.serial_no = self.info.serial_no
 
-        self.vm = VM(f"dev_{self.serial_no}")
+        self.kvm = KVManager(f"dev_{self.serial_no}")
 
         self.usb_dev = adb_device if adb_device.serial == self.info.serial_no else None
         self.net_dev = None if self.usb_dev else adb_device
@@ -325,9 +327,8 @@ class DeviceFactory:
         """
             加载历史连接记录
         """
-        return VM.get_global(
-            'load_history', {}
-        )
+        return kv_global.get('load_history', {})
+
 
     @staticmethod
     def _connect_device(addr: str, timeout: int):
@@ -392,7 +393,9 @@ class DeviceFactory:
                 } for serial_no, dc in cls.DEVICE_CONTROLLERS.items()
             }
             history.update(_loaded)
-            VM.set_global('load_history', history)
+
+            kv_global.set('load_history', history)
+
             logger.success(f"{len(history)} Records Saved")
 
         msg = f"Load Devices Finished! {len(cls.DEVICE_CONTROLLERS)} Devices Connected!\n"

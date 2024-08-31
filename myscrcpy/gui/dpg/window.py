@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-08-31 1.4.1 Me2sY
+            1.改用新 KVManager
+            2.优化部分功能
+
         2024-08-30 1.4.0 Me2sY  适配新 Session 结构
 
         2024-08-21 1.3.5 Me2sY
@@ -52,7 +56,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 
 __all__ = ['start_dpg_adv']
 
@@ -71,7 +75,7 @@ from myscrcpy.core import *
 from myscrcpy.gui.pg.window_control import PGControlWindow
 from myscrcpy.gui.dpg.window_mask import WindowTwin
 
-from myscrcpy.utils import Param, Action, KeyMapper, ValueManager as VM, ADBKeyCode
+from myscrcpy.utils import Param, Action, KeyMapper, KVManager, kv_global, ADBKeyCode
 from myscrcpy.utils import Coordinate, ROTATION_VERTICAL, ROTATION_HORIZONTAL, ScalePointR
 
 from myscrcpy.gui.dpg.components.component_cls import TempModal, Static
@@ -182,17 +186,28 @@ class WindowMain:
 
         self.is_paused = True
 
+        win_loading = TempModal.LoadingWindow()
+
+        # 2024-08-31 1.4.1 Me2sY  保存窗口位置
+        win_loading.update_message(f"Saving Configs")
+
+        if self.session and self.session.is_video_ready:
+            self.device.kvm.set(
+                f"win_pos_{self.session.va.coordinate.rotation}_{self.device.scrcpy_cfg}",
+                value=dpg.get_viewport_pos()
+            )
+
         self.device = None
 
-        win_loading = TempModal.LoadingWindow()
         win_loading.update_message(f"Closing Session")
 
         try:
             self.session.disconnect()
-        except:
-            ...
+        except Exception as e:
+            logger.error(f"SD {e}")
 
         self.session = None
+
         self.video_controller.load_frame(
             VideoController.create_default_frame(
                 Coordinate(400, 500), rgb_color=0
@@ -200,6 +215,7 @@ class WindowMain:
         )
 
         win_loading.update_message(f"Closing Handler")
+
         # 2024-08-16 Me2sY  修复回调不释放导致多次操作问题
         for _ in [
             self.tag_hr_ml_c, self.tag_hr_ml_r, self.tag_hr_ml_m,
@@ -209,14 +225,15 @@ class WindowMain:
         ]:
             try:
                 dpg.delete_item(_)
-            except:
-                ...
+            except Exception as e:
+                logger.warning(f"Close Control {e}")
 
         dpg.configure_item(self.tag_menu_disconnect, enabled=False, show=False)
 
         win_loading.close()
 
         self.is_paused = False
+
 
     def video_fix(self, sender, app_data, user_data):
         """
@@ -284,19 +301,19 @@ class WindowMain:
 
             device.scrcpy_cfg = _cfg_name
             cfg = CPMScrcpyCfgController.get_config(device.serial_no, _cfg_name)
-            if cfg is None:
+            if cfg is None or len(cfg) == 0:
                 TempModal.draw_msg_box(
                     partial(dpg.add_text, f"{_cfg_name} Not Found!")
                 )
                 dpg.delete_item(sender)
                 recent_connected.remove([serial, _cfg_name])
-                VM.set_global('recent_connected', recent_connected)
+                kv_global.set('recent_connected', recent_connected)
             else:
                 self.setup_session(device, cfg)
 
         devices = {dev.serial: dev for dev in adb.device_list()}
 
-        recent_connected = VM.get_global('recent_connected', [])
+        recent_connected = kv_global.get('recent_connected', [])
         for adb_serial, cfg_name in recent_connected:
             try:
                 msg = adb_serial[:15] + '/' + cfg_name[:5]
@@ -355,7 +372,6 @@ class WindowMain:
 
         if user_data == 'audio' and self.session.is_audio_ready:
             self.session.aa.stop()
-
 
     def _draw_menu(self):
         """
@@ -668,24 +684,20 @@ class WindowMain:
         self._init_video(tag_texture, new_coord)
 
         # 发生旋转时，记录旋转前位置，加载旋转后位置
-        if self.device is not None and old_coord.rotation != new_coord.rotation:
+        if self.device is not None and old_coord.rotation != new_coord.rotation and old_coord.width != 0:
 
             now_pos = dpg.get_viewport_pos()
 
             # 加载旋转后窗口位置
-            new_pos = self.device.vm.get_value(
-                f"win_pos_{new_coord.rotation}", {'cfg': self.device.scrcpy_cfg},
-                now_pos
-            )
+            new_pos = self.device.kvm.get(f"win_pos_{new_coord.rotation}_{self.device.scrcpy_cfg}", now_pos)
 
-            if old_coord.width == 0:
-                return
             # 保存旋转前窗口位置
-            self.device.vm.set_value(f"win_pos_{old_coord.rotation}", value=now_pos, conditions={
-                'cfg': self.device.scrcpy_cfg
-            })
+            self.device.kvm.set(f"win_pos_{old_coord.rotation}_{self.device.scrcpy_cfg}", value=now_pos)
+
+            time.sleep(0.5)
 
             dpg.set_viewport_pos(new_pos)
+
 
     def _window_resize(self):
         """
@@ -719,9 +731,10 @@ class WindowMain:
             dpg.set_value(self.tag_drag_video_h, new_vc_coord.height)
 
             # 记录当前设备当前配置下窗口大小
-            self.device.vm.set_value('draw_coord', value=new_vc_coord.d, conditions={
-                'r': new_vc_coord.rotation, 'cfg': self.device.scrcpy_cfg
-            })
+            self.device.kvm.set(f"draw_coord_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}", value=new_vc_coord.d)
+            # self.device.kvm.set(
+            #     f"win_pos_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}", value=dpg.get_viewport_pos()
+            # )
 
         dpg.set_viewport_title(title)
 
@@ -766,13 +779,12 @@ class WindowMain:
 
         self.device.sessions.add(self.session)
 
-        records = VM.get_global('recent_connected', [])
+        records = kv_global.get('recent_connected', [])
         record = [self.device.adb_dev.serial, self.device.scrcpy_cfg]
 
         # 复原位置
-        pos = self.device.vm.get_value(
-            f"win_pos_{self.device.get_rotation()}", {'cfg': self.device.scrcpy_cfg},
-            dpg.get_viewport_pos()
+        pos = self.device.kvm.get(
+            f"win_pos_{self.device.get_rotation()}_{self.device.scrcpy_cfg}", dpg.get_viewport_pos()
         )
         dpg.set_viewport_pos(pos)
 
@@ -783,7 +795,7 @@ class WindowMain:
 
         records.insert(0, record)
 
-        VM.set_global('recent_connected', records[:self.N_RECENT_RECORDS])
+        kv_global.set('recent_connected', records[:self.N_RECENT_RECORDS])
 
         win_loading.update_message('Preparing Video Interface...')
 
@@ -1031,7 +1043,7 @@ class WindowMain:
         auto_fix = True
         if self.device:
             # 加载历史窗口大小配置
-            his_coord = self.device.vm.get_value('draw_coord', {'r': coord.rotation, 'cfg': self.device.scrcpy_cfg})
+            his_coord = self.device.kvm.get(f"draw_coord_{coord.rotation}_{self.device.scrcpy_cfg}")
             if his_coord:
                 coord = Coordinate(**his_coord)
                 auto_fix = False
@@ -1044,8 +1056,28 @@ class WindowMain:
         """
             更新视频显示
         """
-        if not self.is_paused and self.session is not None and self.session.is_video_ready:
+        if self.is_paused:
+            return
+
+        if self.device is None:
+            return
+
+        if self.session is None:
+            return
+
+        if self.session.va is None:
+            return
+
+        try:
             self.video_controller.load_frame(self.session.va.get_frame())
+        except Exception as e:
+            logger.warning(f'LF {e}')
+
+        # if self.device is not None and not self.is_paused and self.session is not None and self.session.is_video_ready:
+        #     self.video_controller.load_frame(self.session.va.get_frame())
+        # else:
+        #     time.sleep(0.00001)
+
 
     def open_virtual_camera(self, sender=None, app_data=None, user_data=None):
         threading.Thread(target=self._virtual_camera, args=(user_data,)).start()
@@ -1123,7 +1155,7 @@ def start_dpg_adv():
     dpg.create_viewport(
         title=f"{Param.PROJECT_NAME} - {Param.AUTHOR}",
         width=500, height=600,
-        **VM.get_global('viewport_pos', {'x_pos': 400, 'y_pos': 400}),
+        **kv_global.get('viewport_pos', {'x_pos': 400, 'y_pos': 400}),
         min_width=248, min_height=350,
         large_icon=Param.PATH_STATICS_ICON.__str__(),
         small_icon=Param.PATH_STATICS_ICON.__str__()
@@ -1165,7 +1197,12 @@ def start_dpg_adv():
 
     x, y = dpg.get_viewport_pos()
 
-    VM.set_global('viewport_pos', {'x_pos': x, 'y_pos': y})
+    if wd.device:
+        wd.device.kvm.set(f"win_pos_{wd.device.get_rotation()}_{wd.device.scrcpy_cfg}", value=[x, y])
+        if wd.session and wd.session.is_running:
+            wd.session.disconnect()
+
+    kv_global.set('viewport_pos', {'x_pos': x, 'y_pos': y})
 
     dpg.destroy_context()
 

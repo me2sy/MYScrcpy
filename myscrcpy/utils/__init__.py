@@ -5,13 +5,15 @@
     工具类
 
     Log:
-        2024-08-25 1.4.0 Me2sY 新增 ScalePointR
+        2024-08-31 1.4.1 Me2sY  重写 KeyValueManager, 弃用 TinyDB，改用 SQLite
 
-        2024-08-24 1.3.7 Me2sY 随着项目的发展，原utils过于臃肿与繁重，遂将Utils分离，方便后期扩展。
+        2024-08-25 1.4.0 Me2sY  新增 ScalePointR
+
+        2024-08-24 1.3.7 Me2sY  随着项目发展，原utils过于臃肿与繁重，遂将Utils分离，方便后期扩展。
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 
 __all__ = [
     # Params
@@ -28,7 +30,7 @@ __all__ = [
 
     # Config manager
     'CfgHandler',
-    'ValueRecord', 'ValueManager'
+    'KeyValue', 'KVManager', 'kv_global'
 ]
 
 from myscrcpy.utils.params import *

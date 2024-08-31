@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "myscrcpy"
-version = "1.4.0"
+version = "1.4.1"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -22,9 +22,6 @@ classifiers = [
 dependencies = [
     # Base
     'loguru', 'adbutils', 'pyperclip',
-
-    # Config Manager
-    'tinydb',
 
     # Video
     'av', 'numpy',

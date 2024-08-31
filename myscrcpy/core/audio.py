@@ -5,6 +5,8 @@
     音频相关类
 
     Log:
+        2024-08-31 1.4.1 Me2sY  修复Linux下缺陷
+
         2024-08-28 1.4.0 Me2sY  创建，优化 Player/Adapter 结构
 
         2024-08-25 0.1.0 Me2sY
@@ -13,7 +15,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 
 __all__ = [
     'AudioArgs', 'AudioAdapter'
@@ -109,18 +111,21 @@ class Player:
         :return:
         """
         self.is_ready = False
-        try:
-            if self.stream is not None:
-                self.stream.stop_stream()
-                self.stream.close()
-        except OSError:
-            ...
 
-        try:
-            if self._player:
-                self._player.terminate()
-        except:
-            ...
+        # 2024-08-31 1.4.1 Me2sY
+        # May Cause Error In Ubuntu!
+        # try:
+        #     if self.stream is not None:
+        #         self.stream.stop_stream()
+        #         self.stream.close()
+        # except OSError:
+        #     ...
+        #
+        # try:
+        #     if self._player:
+        #         self._player.terminate()
+        # except:
+        #     ...
 
     def play(self, audio_bytes: bytes):
         """

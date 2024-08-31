@@ -5,6 +5,8 @@
     Scrcpy 连接属性配置组件
 
     Log:
+        2024-08-31 1.4.1 Me2sY  改用新 KVManager
+
         2024-08-29 1.4.0 Me2sY
             1.适配新架构
             2.新增 clipboard 选项，调整音频设备选项
@@ -25,7 +27,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 
 __all__ = [
     'CPMScrcpyCfg', 'CPMScrcpyCfgController'
@@ -39,7 +41,7 @@ import dearpygui.dearpygui as dpg
 import pyaudio
 
 from myscrcpy.core import *
-from myscrcpy.utils import ValueManager
+from myscrcpy.utils import KVManager
 
 from myscrcpy.gui.dpg.components.component_cls import *
 
@@ -180,7 +182,7 @@ class CPMScrcpyCfgController(ValueComponent):
     """
 
     DEFAULT_CONTAINER_ADD_METHOD = dpg.add_group
-    VM_NAME = 'scrcpy_cfg'
+    KVM_NAME = 'scrcpy_cfg'
 
     @staticmethod
     def default_cfg() -> dict:
@@ -208,7 +210,7 @@ class CPMScrcpyCfgController(ValueComponent):
         """
             获取设备指定名称的Scrcpy配置文件
         """
-        return ValueManager(cls.VM_NAME).get_value(f"dev_{device_serial}", default_value={}).get(cfg_name, None)
+        return KVManager(cls.KVM_NAME).get(f"dev_{device_serial}", default_value={}).get(cfg_name, None)
 
     @property
     def config_name(self) -> str:
@@ -218,7 +220,7 @@ class CPMScrcpyCfgController(ValueComponent):
         """
             加载设备对应Scrcpy配置文件
         """
-        self.configs = self.vm.get_value(
+        self.configs = self.kvm.get(
             f"dev_{device_serial}",
             default_value={'default': self.default_cfg()}
         )
@@ -241,7 +243,7 @@ class CPMScrcpyCfgController(ValueComponent):
         """
             新建 Scrcpy 连接配置
         """
-        def save():
+        def _new():
             _name = dpg.get_value(tag_ipt_name)
             if _name is None or _name == '':
                 return
@@ -254,7 +256,7 @@ class CPMScrcpyCfgController(ValueComponent):
         with dpg.window(modal=True, label='New Config', no_resize=True, width=252) as tag_win:
             tag_ipt_name = dpg.add_input_text(label='Config Name', width=-100)
             with dpg.group(horizontal=True):
-                dpg.add_button(label='Create', width=150, height=45, callback=save)
+                dpg.add_button(label='Create', width=150, height=45, callback=_new)
                 dpg.add_button(label='Close', width=-1, height=45, callback=lambda: dpg.delete_item(tag_win))
 
     def save_config(self):
@@ -271,7 +273,7 @@ class CPMScrcpyCfgController(ValueComponent):
 
         tag_win_loading = TempModal.draw_loading(f'Saved to {cfg_name}')
 
-        self.vm.set_value(key, self.configs)
+        self.kvm.set(key, self.configs)
 
         time.sleep(0.2)
         dpg.delete_item(tag_win_loading)
@@ -306,7 +308,7 @@ class CPMScrcpyCfgController(ValueComponent):
             self.configs.pop(cfg_name)
             dpg.configure_item(self.tag_cb_cfgs, items=list(self.configs.keys()), default_value='default')
             self.load_config(self.tag_cb_cfgs, 'default')
-            self.vm.set_value(f"dev_{self.device.serial_no}", self.configs)
+            self.kvm.set(f"dev_{self.device.serial_no}", self.configs)
 
             dpg.delete_item(tag_win)
 

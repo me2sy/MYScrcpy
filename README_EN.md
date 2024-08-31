@@ -1,4 +1,4 @@
-# MYScrcpy V1.4.0
+# MYScrcpy V1.4.1
 
 ### [中文简介](README.md)
 
@@ -14,15 +14,14 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 
 5900x + GTX1080 + Samsung Galaxy Tab S9 8gen2/Xiaomi 11pro 888 with 1920x1080 resolution, Pygame control mode can achieve **13~30ms** latency.
 
-~~Using **SharedMemory**, video frames are shared through memory, enabling web rendering with Nicegui and image processing with OpenCV.~~
-
-Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
+Managing Configuration with SQLite.
 
 ### :tv: Video Introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
 ![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
 
 ## Features
+- [x] **1.4.1 NEW** Managing Configuration with SQLite
 - [x] **1.4.0 NEW** Introducing the brand-new Core/Session/Connection/Utils architecture
 - [x] **1.4.0 NEW** Record the position of window before rotation
 - [x] **1.4.0 NEW** Support for heartbeat detection with automatic reconnection upon disconnection
@@ -35,7 +34,6 @@ Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
 - [x] Supports saving connection configurations and window size.
 - [x] Supports wireless connection, connection history, and quick connect features, eliminating the need for complicated command-line input.
 - [x] Supports proportional window resizing and freeform stretching.
-- [x] Uses TinyDB for dynamic configuration saving.
 - [x] Support for reconnecting after disconnection, connection history, and automatic reconnection attempts
 - [x] Support for H265 Video Stream
 - [x] Video stream parsing (H264) to generate numpy.ndarray for graphic processing with OpenCV, image, etc.
@@ -74,7 +72,7 @@ Managing Configuration with [TinyDB](https://github.com/msiemens/tinydb).
 ### 3.For developer
 
 ```python
-# 1.4.0 Recommend to use New Core/Session 
+# 1.4.X Recommend to use New Core/Session 
 
 from adbutils import adb
 

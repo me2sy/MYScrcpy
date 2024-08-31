@@ -1,4 +1,4 @@
-# MYScrcpy V1.4.0
+# MYScrcpy V1.4.1
 
 ### [README in English](README_EN.md)
 
@@ -10,10 +10,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 在5900x + gtx1080 + 三星Galaxy Tab S9 8gen2/小米11pro 888 1920x1080分辨率下， Pygame控制模式可以达到13~30ms的延迟。
 
-~~使用SharedMemory，将视频帧通过内存共享，可以实现 [Nicegui](https://github.com/zauberzeug/nicegui) 的网页绘制展现、~~
-[OpenCV](https://opencv.org/) 图像处理等。
-
-使用[TinyDB](https://github.com/msiemens/tinydb)进行配置管理。
+使用SQLite进行配置管理。
 
 ### :tv: 视频简介 [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
@@ -21,7 +18,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 
 ## 特性
-
+- [x] **1.4.1 NEW** 改用SQLite进行配置管理
 - [x] **1.4.0 NEW** 久等了！全新Core/Session/Connection/Utils架构
 - [x] **1.4.0 NEW** 新增窗口位置记忆功能，记录旋转前位置
 - [x] **1.4.0 NEW** 支持心跳检测，自动断线重连
@@ -34,7 +31,6 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 - [x] 支持连接配置保存，窗口大小保存
 - [x] 支持无线连接，历史连接记录及快速连接功能，告别繁琐命令行
 - [x] 支持按比例调整窗口大小、任意拉伸等功能
-- [x] 使用TinyDB，动态保存配置
 - [x] 支持有线、无线连接安卓设备
 - [x] 支持断线重连，连接历史记录并自动尝试连接功能
 - [x] 支持 H265连接
@@ -78,7 +74,7 @@ pip install myscrcpy-X.X.X.tar.gz
 ### 3. 程序引用使用，便于自行开发
 
 ```python
-# 1.4.0 新 Core/Session 架构，推荐使用
+# 1.4.X 新 Core/Session 架构，推荐使用
 
 from adbutils import adb
 

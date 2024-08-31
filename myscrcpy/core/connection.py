@@ -173,6 +173,9 @@ class Connection:
         while self.is_connected and not self._stream.closed:
             try:
                 w = self._stream.read_string(1)
+                if w == b'':
+                    logger.warning(f"Stream Lost Connection")
+                    break
                 if w == '\n':
                     logger.info(f"{device_name:<32} => {msg}")
                     msg = ''

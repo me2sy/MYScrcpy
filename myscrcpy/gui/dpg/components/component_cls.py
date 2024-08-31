@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-08-31 1.4.1 Me2sY  改用新 KVManager
+
         2024-08-30 1.4.0 Me2sY  适配新架构，新增信息提示窗口
 
         2024-08-19 1.3.1 Me2sY  新增 Confirm Window
@@ -17,7 +19,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 
 __all__ = [
     'Component',
@@ -31,7 +33,7 @@ from typing import NamedTuple, Any, Callable
 
 import dearpygui.dearpygui as dpg
 
-from myscrcpy.utils import Param, ValueManager
+from myscrcpy.utils import Param, KVManager
 
 
 class Component:
@@ -157,12 +159,12 @@ class ValueComponent(Component):
         重写 update 方法，操作数据类，进行组件显示更新等
     """
 
-    VM_NAME = None
+    KVM_NAME = None
 
     def __init__(self, value_controller: ValueController = None, parent_container=None, *args, **kwargs):
         super().__init__(parent_container, *args, **kwargs)
         self.value_controller = ValueController() if value_controller is None else value_controller
-        self.vm = ValueManager(self.VM_NAME)
+        self.kvm = KVManager(self.KVM_NAME)
 
     def update(self, *args, **kwargs):
         raise NotImplementedError
