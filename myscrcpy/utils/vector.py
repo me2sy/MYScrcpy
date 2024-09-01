@@ -5,13 +5,15 @@
     
 
     Log:
+        2024-09-01 1.4.2 Me2sY  新增 部分方法
+
         2024-08-25 1.4.0 Me2sY  新增 ScalePointR, 带方向的 ScalePoint
 
         2024-08-24 1.3.7 Me2sY utils中分离
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.4.2'
 
 __all__ = [
     'ROTATION_VERTICAL', 'ROTATION_HORIZONTAL',
@@ -19,7 +21,7 @@ __all__ = [
     'Coordinate'
 ]
 
-from typing import NamedTuple, Literal
+from typing import NamedTuple
 
 
 ROTATION_VERTICAL = 0
@@ -133,6 +135,9 @@ class Coordinate(NamedTuple):
 
     def to_scale_point(self, x: int, y: int) -> ScalePoint:
         return ScalePoint(x / self.width, y / self.height)
+
+    def to_scale_point_r(self, x: int, y: int) -> ScalePointR:
+        return ScalePointR(x / self.width, y / self.height, self.rotation)
 
     def rotate(self) -> 'Coordinate':
         """

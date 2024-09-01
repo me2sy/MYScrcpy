@@ -9,7 +9,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.7'
+__version__ = '1.4.2'
 
 __all__ = [
     'project_path',
@@ -41,7 +41,7 @@ class Param:
 
     PROJECT_NAME = PROJECT_NAME
     AUTHOR = 'Me2sY'
-    VERSION = '1.4.0'
+    VERSION = '1.4.2'
     EMAIL = 'me2sy@outlook.com'
     GITHUB = 'https://github.com/Me2sY/myscrcpy'
 

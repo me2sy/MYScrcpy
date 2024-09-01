@@ -1,4 +1,4 @@
-# MYScrcpy V1.4.1
+# MYScrcpy V1.4.2
 
 ### [中文简介](README.md)
 
@@ -6,7 +6,7 @@ A [Scrcpy](https://github.com/Genymobile/scrcpy/) client implemented in **Python
 
 Includes comprehensive video, audio, and control flow parsing and presentation. **Developer-friendly, ready to use upon integration.**
 
-Uses [DearPyGui](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Window Position Record, Chinese input, unlocking screen passwords, and other features.
+Uses [DearPyGui](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Window Position Record, Right-click gesture control, Chinese input, unlocking screen passwords, and other features.
 
 In some control proxy scenarios, [pygame](https://www.pygame.org/) is used for mouse and keyboard control mapping GUI. 
 
@@ -20,7 +20,11 @@ Managing Configuration with SQLite.
 
 ![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
 
+**1.4.2 Right-Click Gesture Control Feature**
+![dpg_gesture](myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
+
 ## Features
+- [x] **1.4.2 NEW** With [moosegesture](https://github.com/asweigart/moosegesture), Right-click gesture control functionality available, supporting features such as simulating a second touch point, line-based undo, volume adjustment, media playback, and more
 - [x] **1.4.1 NEW** Managing Configuration with SQLite
 - [x] **1.4.0 NEW** Introducing the brand-new Core/Session/Connection/Utils architecture
 - [x] **1.4.0 NEW** Record the position of window before rotation
@@ -58,6 +62,8 @@ Managing Configuration with SQLite.
 ### 1.Install or clone the project
 ```bash
  pip install myscrcpy-X.X.X.tar.gz
+ 
+ pip install loguru adbutils pyperclip moosegesture av numpy pyaudio pyflac dearpygui pygame pyvirtualcam nicegui
 ```
 
 ### 2.Structure:

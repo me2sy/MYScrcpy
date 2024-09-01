@@ -1,10 +1,10 @@
-# MYScrcpy V1.4.1
+# MYScrcpy V1.4.2
 
 ### [README in English](README_EN.md)
 
 python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客户端。包含完整的视频、音频、控制解析及展现，**开发友好，引入即用！**
 
-采用 [DearPyGui](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。支持窗口位置记忆、断线重连、中文输入，锁屏密码解锁等功能。
+采用 [DearPyGui](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。支持窗口位置记忆、右键手势控制、断线重连、中文输入，锁屏密码解锁等功能。
 同时在某些控制代理场景，使用[pygame](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。pygame提供了鼠标隐藏、按键事件监听等功能，
 适用于第一人称相关应用的按键映射。
 
@@ -15,9 +15,12 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 ### :tv: 视频简介 [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
 ![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
-
+**1.4.2 手势控制功能**
+![dpg_gesture](myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
 
 ## 特性
+
+- [x] **1.4.2 NEW** 使用[moosegesture](https://github.com/asweigart/moosegesture)实现右键手势控制功能，支持模拟第二个点、画线后退、调整音量、播放媒体等功能
 - [x] **1.4.1 NEW** 改用SQLite进行配置管理
 - [x] **1.4.0 NEW** 久等了！全新Core/Session/Connection/Utils架构
 - [x] **1.4.0 NEW** 新增窗口位置记忆功能，记录旋转前位置
@@ -55,6 +58,8 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 ### 1.  克隆本项目至本地 或安装
 ```bash
 pip install myscrcpy-X.X.X.tar.gz
+
+pip install loguru adbutils pyperclip moosegesture av numpy pyaudio pyflac dearpygui pygame pyvirtualcam nicegui
 ```
 
 ### 2. 结构如下：

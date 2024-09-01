@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "myscrcpy"
-version = "1.4.1"
+version = "1.4.2"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -21,7 +21,7 @@ classifiers = [
 
 dependencies = [
     # Base
-    'loguru', 'adbutils', 'pyperclip',
+    'loguru', 'adbutils', 'pyperclip', 'moosegesture',
 
     # Video
     'av', 'numpy',
@@ -30,5 +30,5 @@ dependencies = [
     'pyaudio', 'pyflac',
 
     # GUI
-    'dearpygui', 'pygame', 'pyvirtualcam', 'pyzmq', 'nicegui', 'easygui'
+    'dearpygui', 'pygame', 'pyvirtualcam', 'nicegui'
 ]

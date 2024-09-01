@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-09-01 1.4.2 Me2sY  配合右键手势控制功能，添加显示layer
+
         2024-08-29 1.4.0 Me2sY  适配新架构
 
         2024-08-15 1.3.0 Me2sY  发布初版
@@ -15,7 +17,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.0'
+__version__ = '1.4.2'
 
 __all__ = [
     'VideoController', 'CPMVC'
@@ -27,7 +29,7 @@ import dearpygui.dearpygui as dpg
 from loguru import logger
 import numpy as np
 
-from myscrcpy.utils import Coordinate, ScalePoint
+from myscrcpy.utils import Coordinate, ScalePoint, ScalePointR
 from myscrcpy.gui.dpg.components.component_cls import *
 
 
@@ -139,9 +141,14 @@ class CPMVC(Component):
     def coord_draw(self) -> Coordinate:
         return self._coord_draw
 
-    @property
+    def get_coord_draw(self) -> Coordinate:
+        return self._coord_draw
+
     def is_hovered(self) -> bool:
         return dpg.is_item_hovered(self.tag_dl)
+
+    def spr(self) -> ScalePointR:
+        return self._coord_draw.to_scale_point_r(*dpg.get_drawing_mouse_pos())
 
     @property
     def scale_point(self) -> ScalePoint:
@@ -158,6 +165,12 @@ class CPMVC(Component):
             with dpg.draw_layer() as self.tag_layer_1:
                 ...
             with dpg.draw_layer(label='cross') as self.tag_layer_2:
+                ...
+            with dpg.draw_layer(label='right_track') as self.tag_layer_track:
+                ...
+            with dpg.draw_layer(label='right_msg') as self.tag_layer_msg:
+                ...
+            with dpg.draw_layer(label='right_sec_point') as self.tag_layer_sec_point:
                 ...
 
     def draw_layer(self, layer_tag, *args, clear: bool = True, **kwargs):

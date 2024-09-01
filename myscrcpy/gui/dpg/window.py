@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-01 1.4.2 Me2sY  新增 鼠标控制器，优化结构，支持鼠标收拾功能
+
         2024-08-31 1.4.1 Me2sY
             1.改用新 KVManager
             2.优化部分功能
@@ -56,7 +58,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.1'
+__version__ = '1.4.2'
 
 __all__ = ['start_dpg_adv']
 
@@ -75,14 +77,15 @@ from myscrcpy.core import *
 from myscrcpy.gui.pg.window_control import PGControlWindow
 from myscrcpy.gui.dpg.window_mask import WindowTwin
 
-from myscrcpy.utils import Param, Action, KeyMapper, KVManager, kv_global, ADBKeyCode
-from myscrcpy.utils import Coordinate, ROTATION_VERTICAL, ROTATION_HORIZONTAL, ScalePointR
+from myscrcpy.utils import Param, KeyMapper, kv_global, ADBKeyCode
+from myscrcpy.utils import Coordinate, ROTATION_VERTICAL, ROTATION_HORIZONTAL
 
 from myscrcpy.gui.dpg.components.component_cls import TempModal, Static
-from myscrcpy.gui.dpg.components.device import WinDevices, CPMDevice
+from myscrcpy.gui.dpg.components.device import WinDevices
 from myscrcpy.gui.dpg.components.vc import VideoController, CPMVC
 from myscrcpy.gui.dpg.components.pad import *
 from myscrcpy.gui.dpg.components.scrcpy_cfg import CPMScrcpyCfgController
+from myscrcpy.gui.dpg.mouse_handler import *
 
 from myscrcpy.gui.gui_utils import *
 
@@ -109,21 +112,8 @@ class WindowMain:
 
         self.tag_window = dpg.generate_uuid()
         self.tag_cw_ctrl = dpg.generate_uuid()
-        self.tag_cw_switch = dpg.generate_uuid()
         self.tag_hr_resize = dpg.generate_uuid()
-        self.tag_msg_log = dpg.generate_uuid()
-        self.tag_mouse_ctrl = dpg.generate_uuid()
-
         self.tag_hr_hid = dpg.generate_uuid()
-        self.tag_hr_wheel = dpg.generate_uuid()
-
-        self.tag_hr_ml_c = dpg.generate_uuid()
-        self.tag_hr_ml_r = dpg.generate_uuid()
-
-        self.tag_hr_ml_m = dpg.generate_uuid()
-
-        self.tag_hr_mr_c = dpg.generate_uuid()
-        self.tag_hr_mr_r = dpg.generate_uuid()
 
         self.device = None
         self.session = None
@@ -133,18 +123,14 @@ class WindowMain:
         self.video_controller.register_resize_callback(self._camera_resize)
 
         self.is_paused = False
-        self.dev_cfg = None
 
         self.v_last_vp_width = dpg.get_viewport_width()
         self.v_last_vp_height = dpg.get_viewport_height()
         self.h_last_vp_width = dpg.get_viewport_width()
         self.h_last_vp_height = dpg.get_viewport_height()
 
-        self.touch_id = 0x0413
-        self.touch_id_right = self.touch_id + 10
-        self.touch_id_wheel = self.touch_id + 20
-        self.touch_id_sec = self.touch_id + 30
-        self.pos_r = None
+        self.mouse_handler = None
+
         self.vcam_running = False
 
     def close(self):
@@ -174,7 +160,7 @@ class WindowMain:
         w, h = dpg.get_item_rect_size(self.cpm_device.tag_container)
 
         if w > vpw:
-            dpg.set_viewport_width(w + 32)
+            dpg.set_viewport_width(w + 64)
 
         if h > vph:
             dpg.set_viewport_height(h + 64)
@@ -216,24 +202,20 @@ class WindowMain:
 
         win_loading.update_message(f"Closing Handler")
 
-        # 2024-08-16 Me2sY  修复回调不释放导致多次操作问题
-        for _ in [
-            self.tag_hr_ml_c, self.tag_hr_ml_r, self.tag_hr_ml_m,
-            self.tag_hr_mr_c, self.tag_hr_mr_r,
-            self.tag_hr_wheel,
-            self.tag_mouse_ctrl
-        ]:
+        # 2024-09-01 1.4.2 Me2sY  关闭鼠标控制器
+        if self.mouse_handler:
             try:
-                dpg.delete_item(_)
-            except Exception as e:
-                logger.warning(f"Close Control {e}")
+                self.mouse_handler.close()
+            except:
+                ...
+
+            self.mouse_handler = None
 
         dpg.configure_item(self.tag_menu_disconnect, enabled=False, show=False)
 
         win_loading.close()
 
         self.is_paused = False
-
 
     def video_fix(self, sender, app_data, user_data):
         """
@@ -698,7 +680,6 @@ class WindowMain:
 
             dpg.set_viewport_pos(new_pos)
 
-
     def _window_resize(self):
         """
             窗口调整回调函数
@@ -732,9 +713,6 @@ class WindowMain:
 
             # 记录当前设备当前配置下窗口大小
             self.device.kvm.set(f"draw_coord_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}", value=new_vc_coord.d)
-            # self.device.kvm.set(
-            #     f"win_pos_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}", value=dpg.get_viewport_pos()
-            # )
 
         dpg.set_viewport_title(title)
 
@@ -748,7 +726,7 @@ class WindowMain:
             dpg.add_item_resize_handler(callback=self._window_resize)
         dpg.bind_item_handler_registry(self.tag_window, self.tag_hr_resize)
 
-    def send_key_event(self, keycode: int | ADBKeyCode):
+    def send_key_event(self, keycode: int | ADBKeyCode, *args, **kwargs):
         """
             通过 ADB 发送 Key Event
         """
@@ -881,160 +859,56 @@ class WindowMain:
 
     def _init_mouse_control(self):
         """
-            初始化鼠标控制器
+            初始化鼠标控制
+        :return:
         """
 
-        with dpg.handler_registry(tag=self.tag_mouse_ctrl):
-            def _down(sender, app_data):
-                if not self.session.is_control_ready or not self.cpm_vc.is_hovered:
-                    return
+        # 2024-09-01 1.4.2 Me2sY 使用MouseHandler，支持手势功能
 
-                self.session.ca.f_touch_spr(
-                    Action.DOWN.value,
-                    ScalePointR(*self.cpm_vc.scale_point, self.video_controller.coord_frame.rotation),
-                    touch_id=self.touch_id
-                )
+        self.mouse_handler = MouseHandler(
+            self.session,
+            # 定义手势对应功能
+            {
+                'L': GesAction('Back', partial(self.send_key_event, ADBKeyCode.BACK)),
+                'U': GesAction('Home', partial(self.send_key_event, ADBKeyCode.HOME)),
 
-            def _release(sender, app_data):
-                if not self.session.is_control_ready:
-                    return
+                'D': GesAction('Play/Pause', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_PLAY_PAUSE)),
+                'D|L': GesAction('Media Prev', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_PREV_TRACK)),
+                'D|R': GesAction('Media Next', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_NEXT_TRACK)),
 
-                self.session.ca.f_touch_spr(
-                    Action.RELEASE.value,
-                    ScalePointR(*self.cpm_vc.scale_point, self.video_controller.coord_frame.rotation),
-                    touch_id=self.touch_id
-                )
+                'R': GesAction('Volume Mute', partial(self.send_key_event, ADBKeyCode.KB_VOLUME_MUTE)),
+                'R|U': GesAction('Volume Up', partial(self.send_key_event, ADBKeyCode.KB_VOLUME_UP)),
+                'R|D': GesAction('Volume Down', partial(self.send_key_event, ADBKeyCode.KB_VOLUME_DOWN)),
 
-            def _move(sender, app_data):
-                if not self.session.is_control_ready:
-                    return
+            }
+        )
 
-                if self.cpm_vc.is_hovered and dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
-                    self.session.ca.f_touch_spr(
-                        Action.MOVE.value,
-                        ScalePointR(*self.cpm_vc.scale_point, self.video_controller.coord_frame.rotation),
-                        touch_id=self.touch_id
-                    )
+        user_data = MouseHandlerUserData(
+            active=self.cpm_vc.is_hovered,
+            spr=self.cpm_vc.spr,
+            draw_coord=self.cpm_vc.get_coord_draw,
+            layer_track=self.cpm_vc.tag_layer_track,
+            layer_msg=self.cpm_vc.tag_layer_msg,
+            layer_sec_point=self.cpm_vc.tag_layer_sec_point
+        )
 
+        with dpg.handler_registry(tag=self.mouse_handler.tag_hr):
             dpg.add_mouse_click_handler(
-                tag=self.tag_hr_ml_c, button=dpg.mvMouseButton_Left, callback=_down
+                callback=self.mouse_handler.click_event_handler, tag=self.mouse_handler.tag_mouse_click,
+                user_data=user_data
             )
             dpg.add_mouse_release_handler(
-                tag=self.tag_hr_ml_r, button=dpg.mvMouseButton_Left, callback=_release
+                callback=self.mouse_handler.release_event_handler, tag=self.mouse_handler.tag_mouse_release,
+                user_data=user_data
             )
             dpg.add_mouse_move_handler(
-                tag=self.tag_hr_ml_m, callback=_move
+                callback=self.mouse_handler.move_event_handler, tag=self.mouse_handler.tag_mouse_move,
+                user_data=user_data
             )
-
-            # 右键旋转/旋转
-            # 单击右键后，在右键处生成一个固定触控点
-            # 通过左键实现两点放大、缩小、旋转等功能
-            def _down_r(sender, app_data):
-
-                if not self.session.is_control_ready or not self.cpm_vc.is_hovered:
-                    return
-
-                self.pos_r = ScalePointR(*self.cpm_vc.scale_point, self.video_controller.coord_frame.rotation)
-                self.session.ca.f_touch_spr(Action.DOWN.value, self.pos_r, touch_id=self.touch_id_right)
-
-            def _release_r(sender, app_data):
-
-                if not self.session.is_control_ready or not self.cpm_vc.is_hovered:
-                    return
-
-                self.session.ca.f_touch_spr(Action.RELEASE.value, self.pos_r, touch_id=self.touch_id_right)
-
-            dpg.add_mouse_click_handler(
-                button=dpg.mvMouseButton_Right, callback=_down_r, tag=self.tag_hr_mr_c
+            dpg.add_mouse_wheel_handler(
+                callback=self.mouse_handler.wheel_event_handler, tag=self.mouse_handler.tag_wheel,
+                user_data=user_data
             )
-            dpg.add_mouse_release_handler(
-                button=dpg.mvMouseButton_Right, callback=_release_r, tag=self.tag_hr_mr_r
-            )
-
-            # Use Mouse Wheel To zoom or swipe
-            # 滚轮实现上下滚动
-            # 按下Ctrl 实现放大缩小
-            def _wheel(sender, app_data):
-                if not self.session.is_control_ready or not self.cpm_vc.is_hovered or not isinstance(app_data, int):
-                    return
-
-                cf = self.cpm_vc.coord_draw
-
-                move_dis = cf.width // 8
-
-                m_pos = dpg.get_drawing_mouse_pos()
-
-                sec_pos = [m_pos[0] - move_dis, m_pos[1] - move_dis]
-
-                step = 1 * (1 if app_data > 0 else -1)
-
-                if dpg.is_key_down(dpg.mvKey_Control):
-                    # Ctrl Press Then Wheel to Zoom
-                    self.session.ca.f_touch_spr(
-                        Action.DOWN.value,
-                        ScalePointR(
-                            *self.cpm_vc.to_scale_point(m_pos[0] + move_dis, m_pos[1] + move_dis),
-                            self.video_controller.coord_frame.rotation
-                        ),
-                        touch_id=self.touch_id_wheel
-                    )
-
-                    self.session.ca.f_touch_spr(
-                        Action.DOWN.value,
-                        ScalePointR(
-                            *self.cpm_vc.to_scale_point(*sec_pos), self.video_controller.coord_frame.rotation
-                        ),
-                        touch_id=self.touch_id_sec
-                    )
-                    dis = cf.width // 20
-                    t = 0.08 / dis
-                    for i in range(dis):
-                        next_pos = [m_pos[0] + move_dis - i * step, m_pos[1] + move_dis - i * step]
-
-                        self.session.ca.f_touch_spr(
-                            Action.MOVE.value,
-                            ScalePointR(
-                                *self.cpm_vc.to_scale_point(*next_pos), self.video_controller.coord_frame.rotation
-                            ),
-                            touch_id=self.touch_id_wheel
-                        )
-
-                        time.sleep(t)
-                else:
-                    # Wheel to swipe
-                    self.session.ca.f_touch_spr(
-                        Action.DOWN.value,
-                        ScalePointR(
-                            *self.cpm_vc.to_scale_point(*m_pos), self.video_controller.coord_frame.rotation
-                        ),
-                        touch_id=self.touch_id_wheel
-                    )
-                    dis = cf.height // 15
-                    t = 0.05 / dis
-                    for i in range(dis):
-                        next_pos = [m_pos[0], m_pos[1] + i * step]
-                        self.session.ca.f_touch_spr(
-                            Action.MOVE.value,
-                            ScalePointR(
-                                *self.cpm_vc.to_scale_point(*next_pos), self.video_controller.coord_frame.rotation
-                            ),
-                            touch_id=self.touch_id_wheel
-                        )
-                        time.sleep(t)
-
-                self.session.ca.f_touch_spr(
-                    Action.RELEASE.value,
-                    ScalePointR(*self.cpm_vc.to_scale_point(*next_pos), self.video_controller.coord_frame.rotation),
-                    touch_id=self.touch_id_wheel
-                )
-
-                self.session.ca.f_touch_spr(
-                    Action.RELEASE.value,
-                    ScalePointR(*self.cpm_vc.to_scale_point(*sec_pos), self.video_controller.coord_frame.rotation),
-                    touch_id=self.touch_id_sec
-                )
-
-            dpg.add_mouse_wheel_handler(tag=self.tag_hr_wheel, callback=_wheel)
 
     def _init_video(self, tag_texture: int | str, coord: Coordinate):
         """
@@ -1070,14 +944,8 @@ class WindowMain:
 
         try:
             self.video_controller.load_frame(self.session.va.get_frame())
-        except Exception as e:
-            logger.warning(f'LF {e}')
-
-        # if self.device is not None and not self.is_paused and self.session is not None and self.session.is_video_ready:
-        #     self.video_controller.load_frame(self.session.va.get_frame())
-        # else:
-        #     time.sleep(0.00001)
-
+        except:
+            ...
 
     def open_virtual_camera(self, sender=None, app_data=None, user_data=None):
         threading.Thread(target=self._virtual_camera, args=(user_data,)).start()
