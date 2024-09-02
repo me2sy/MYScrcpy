@@ -3,32 +3,59 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "myscrcpy"
-version = "1.4.2"
+name = "mysc"
+version = "1.5.1"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
-description = "A Scrcpy client implemented using Python, dearpygui/pygame, etc., With video, audio, and controls. Supports UHID Keyboard and Chinese input, key proxy, and more."
+description = "A Scrcpy client implemented in Python. Gui with dearpygui/pygame. \n With Video, Audio, also Control. GUI Supports Key Proxy, window position record, right-click gesture control, UHID Keyboard and Chinese input and more."
 readme = "README.md"
-requires-python = ">=3.11"
-keywords = ["scrcpy", "android", "adbutils", "av", "numpy", "DearPyGui", "Pygame"]
-license = {text = "MIT"}
+requires-python = ">= 3.11"
+keywords = ["scrcpy", "android", "adbutils", "av", "numpy", "DearPyGui", "Pygame", "adb", "pyaudio"]
 classifiers = [
-    "Topic :: Scrcpy",
-    "Framework :: adbutils",
-    "Programming Language :: Python :: 3"
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: Chinese (Simplified)",
+    "Topic :: Multimedia :: Graphics :: Capture :: Screen Capture"
 ]
 
 dependencies = [
     # Base
-    'loguru', 'adbutils', 'pyperclip', 'moosegesture',
+    "loguru", "adbutils",
 
     # Video
-    'av', 'numpy',
+    "av", "numpy",
 
     # Audio
-    'pyaudio', 'pyflac',
-
-    # GUI
-    'dearpygui', 'pygame', 'pyvirtualcam', 'nicegui'
+    "pyaudio", "pyflac"
 ]
+
+
+[project.optional-dependencies]
+# For GUI USE
+gui = [
+    # GUI Framework
+    "dearpygui", "pygame",
+
+    # GUI Functions
+    "pyperclip", "moosegesture", "pyvirtualcam"
+]
+
+# Web USE
+web = [
+    "nicegui"
+]
+
+
+[project.scripts]
+mys-cli = "myscrcpy.run:run"
+
+
+[project.gui-scripts]
+mys-gui = "myscrcpy.run:run"
+
+
+[project.urls]
+Homepage = "https://github.com/me2sy/MYScrcpy"
+Issues = "https://github.com/me2sy/MYScrcpy/issues"

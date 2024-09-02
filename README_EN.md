@@ -1,6 +1,6 @@
-# MYScrcpy V1.4.2
+# MYScrcpy V1.5.1
 
-### [中文简介](README.md)
+### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
 A [Scrcpy](https://github.com/Genymobile/scrcpy/) client implemented in **Python**. 
 
@@ -18,12 +18,13 @@ Managing Configuration with SQLite.
 
 ### :tv: Video Introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
-![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
+![dpg Screenshot](/src/myscrcpy/files/images/mys_1_3_4.jpg)
 
 **1.4.2 Right-Click Gesture Control Feature**
-![dpg_gesture](myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
+![dpg_gesture](/src/myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
 
 ## Features
+- [x] **1.5.0 NEW** **pypi** support. Use `pip install myscrcpy` or with gui: `pip install myscrcpy[gui]`. then run `mys-gui` or `mys-cli` (with console)
 - [x] **1.4.2 NEW** With [moosegesture](https://github.com/asweigart/moosegesture), Right-click gesture control functionality available, supporting features such as simulating a second touch point, line-based undo, volume adjustment, media playback, and more
 - [x] **1.4.1 NEW** Managing Configuration with SQLite
 - [x] **1.4.0 NEW** Introducing the brand-new Core/Session/Connection/Utils architecture
@@ -59,9 +60,31 @@ Managing Configuration with SQLite.
 
 ## Basic Usage
 
+### 1.Install
+```bash
+pip install mysc
+
+# NOT myscrcpy... my-scrcpy already exists in pypi...
+
+# Use Gui then:
+pip install mysc[gui]
+
+# use Web GUI then:
+pip install mysc[web]
+
+
+# After install, use 
+mys-cli
+# For a console
+
+mys-gui
+# GUI without log console
+
+```
+
 ### 1.Install or clone the project
 ```bash
- pip install myscrcpy-X.X.X.tar.gz
+ pip install mysc-X.X.X.tar.gz
  
  pip install loguru adbutils pyperclip moosegesture av numpy pyaudio pyflac dearpygui pygame pyvirtualcam nicegui
 ```
@@ -118,11 +141,15 @@ session.ca.f_touch_spr(
 ### 4.Using the GUI
 :exclamation: _On Ubuntu and other Linux systems, installing portaudio first_
 ```bash
-sudo apt install portaudio19-dev
+sudo apt install build-essential python3-dev ffmpeg libav-tools portaudio19-dev
 ```
 
 #### Run DearPyGui GUI
 ```bash
+mys-cli # With Log Console
+mys-gui # Only GUI
+
+# or
 python -m myscrcpy.run
 ```
 
@@ -135,16 +162,16 @@ python -m myscrcpy.gui.ng.main
 ## Screenshots
 
 ### Main interface
-![dpg Screenshot](myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
+![dpg Screenshot](/src/myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
 
 ### Nicegui Web Interface **NEW 1.3.6**（DEMO）
-![Nicegui Demo](myscrcpy/files/images/Nicegui_DEMO.jpg)
+![Nicegui Demo](/src/myscrcpy/files/images/Nicegui_DEMO.jpg)
 
 ### Key mapping editor (TPEditor)
-![Touch Proxy Editor](myscrcpy/files/images/edit_touch_proxy.jpg)
+![Touch Proxy Editor](/src/myscrcpy/files/images/edit_touch_proxy.jpg)
 
 ### 7ms latency
-![7ms](myscrcpy/files/images/7ms.jpg)
+![7ms](/src/myscrcpy/files/images/7ms.jpg)
 
 
 ## Thoughts

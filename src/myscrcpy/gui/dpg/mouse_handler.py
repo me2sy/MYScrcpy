@@ -25,6 +25,7 @@ import time
 from typing import Callable, Tuple, Dict, List
 
 import dearpygui.dearpygui as dpg
+from loguru import logger
 import moosegesture
 
 from myscrcpy.core import Session
@@ -283,6 +284,16 @@ class MouseHandler:
                 except:
                     ...
 
+    @staticmethod
+    def safe_run(func):
+        def wrapper(self, sender, app_data, user_data, *args, **kwargs):
+            try:
+                return func(self, sender, app_data, user_data, *args, **kwargs)
+            except Exception as e:
+                logger.error(f"MouseHandlerError => {e}")
+        return wrapper
+
+    @safe_run
     def move_event_handler(self, sender, app_data, user_data: MouseHandlerUserData):
         """
             移动事件处理器
@@ -303,6 +314,7 @@ class MouseHandler:
         if dpg.is_mouse_button_down(dpg.mvMouseButton_Right):
             self.handler_draw.move(user_data)
 
+    @safe_run
     def click_event_handler(self, sender, app_data, user_data: MouseHandlerUserData):
         """
             单击(按下)事件处理器
@@ -326,6 +338,7 @@ class MouseHandler:
         if app_data == dpg.mvMouseButton_Right:
             self.handler_draw.click(user_data)
 
+    @safe_run
     def release_event_handler(self, sender, app_data, user_data: MouseHandlerUserData):
         """
             释放按键处理器
@@ -348,6 +361,7 @@ class MouseHandler:
         if app_data == dpg.mvMouseButton_Right:
             self.handler_draw.release(user_data)
 
+    @safe_run
     def wheel_event_handler(self, sender, app_data, user_data: MouseHandlerUserData):
         """
             滚轮事件处理器，Wheel为上下滚动，Ctrl + Wheel为缩放操作
@@ -362,7 +376,7 @@ class MouseHandler:
 
         vc_draw_coord = user_data.draw_coord()
 
-        move_dis = vc_draw_coord.width // 14
+        move_dis = vc_draw_coord.width // 8
 
         m_pos = dpg.get_drawing_mouse_pos()
         fir_pos = [m_pos[0] + move_dis, m_pos[1] + move_dis]
@@ -373,14 +387,13 @@ class MouseHandler:
 
         if dpg.is_key_down(dpg.mvKey_Control):      # Ctrl Press Then Wheel to Zoom
 
+            self.session.ca.f_touch_spr(
+                Action.DOWN.value, vc_draw_coord.to_scale_point_r(*sec_pos), touch_id=self.touch_id_sec,
+            )
+
             # First Point
             self.session.ca.f_touch_spr(
                 Action.DOWN.value, vc_draw_coord.to_scale_point_r(*fir_pos), touch_id=self.touch_id_wheel
-            )
-
-            # Second Point
-            self.session.ca.f_touch_spr(
-                Action.DOWN.value, vc_draw_coord.to_scale_point_r(*sec_pos), touch_id=self.touch_id_sec,
             )
 
             # 移动距离

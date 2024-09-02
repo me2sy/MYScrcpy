@@ -103,9 +103,10 @@ class VideoController:
 
             self._init_texture(_c, self.to_raw_texture_value(frame))
             if self.coord_frame.rotation != _c.rotation:
-                threading.Thread(target=self._frame_rotation, args=(self.coord_frame, _c)).start()
+                self._frame_rotation(self.coord_frame, _c)
 
-            threading.Thread(target=self._frame_resize, args=(self.coord_frame, _c)).start()
+            self._frame_resize(self.coord_frame, _c)
+
             self.coord_frame = _c
 
         dpg.set_value(self.tag_texture, self.to_raw_texture_value(frame))

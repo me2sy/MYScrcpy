@@ -20,8 +20,6 @@ __version__ = '0.2.0'
 
 __all__ = []
 
-import base64
-
 from loguru import logger
 
 import numpy as np
@@ -38,7 +36,7 @@ from fastapi import Response
 
 from myscrcpy.utils import Action, Param
 from myscrcpy.controller import VideoStream, ControlSocketController as CSC
-from myscrcpy.extensions.zmq_server import ZMQControlServer
+from myscrcpy.test_zone.zmq_server import ZMQControlServer
 
 
 class NGController:
@@ -54,8 +52,6 @@ class NGController:
 
 
 ngc = NGController()
-black_1px = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBg+A8AAQQBAHAgZQsAAAAASUVORK5CYII='
-placeholder = Response(content=base64.b64decode(black_1px.encode('ascii')), media_type='image/png')
 
 
 def convert(frame: np.ndarray) -> bytes:

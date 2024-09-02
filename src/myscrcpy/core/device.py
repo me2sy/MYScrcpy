@@ -495,7 +495,7 @@ class DeviceFactory:
         for dev in [*cls.DEVICE_CONTROLLERS.values()]:
             dev.stop()
         time.sleep(0.5)
-        logger.success('All Device Closed!')
+        logger.warning('All Device Closed!')
 
     @classmethod
     def disconnect(cls, device_serial: str) -> bool:

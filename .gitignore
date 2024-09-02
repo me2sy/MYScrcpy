@@ -9,3 +9,9 @@ dist/myscrcpy-1.0.0-py3-none-any.whl
 /myscrcpy/dist
 *.spec
 /myscrcpy/test_zone
+/src/mysc.egg-info
+/src/mysc.egg-info
+/src/myscrcpy.egg-info
+/src/mysc.egg-info
+/src/myscrcpy.egg-info
+/src/myscrcpy/test_zone

@@ -1,6 +1,6 @@
-# MYScrcpy V1.4.2
+# MYScrcpy V1.5.1
 
-### [README in English](README_EN.md)
+### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
 python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客户端。包含完整的视频、音频、控制解析及展现，**开发友好，引入即用！**
 
@@ -14,12 +14,12 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 ### :tv: 视频简介 [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
-![dpg Screenshot](myscrcpy/files/images/mys_1_3_4.jpg)
+![dpg Screenshot](/src/myscrcpy/files/images/mys_1_3_4.jpg)
 **1.4.2 手势控制功能**
-![dpg_gesture](myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
+![dpg_gesture](/src/myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
 
 ## 特性
-
+- [x] **1.5.0 NEW** 现已上线**pypi** 使用 `pip install myscrcpy` （GUI版本`pip install myscrcpy[gui]`） 使用`mys-gui` or `mys-cli` (带console版本)命令打开GUI
 - [x] **1.4.2 NEW** 使用[moosegesture](https://github.com/asweigart/moosegesture)实现右键手势控制功能，支持模拟第二个点、画线后退、调整音量、播放媒体等功能
 - [x] **1.4.1 NEW** 改用SQLite进行配置管理
 - [x] **1.4.0 NEW** 久等了！全新Core/Session/Connection/Utils架构
@@ -55,10 +55,28 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 
 ## 基本使用
 
-### 1.  克隆本项目至本地 或安装
+### 1.1 直接安装使用
 ```bash
-pip install myscrcpy-X.X.X.tar.gz
+pip install mysc
+# NOT myscrcpy... my-scrcpy already exists in pypi...
 
+# 若使用界面 则：
+pip install mysc[gui]
+
+# 若使用web demo 则：
+pip install mysc[web]
+
+安装完成后，运行
+mys-cli
+# Gui 及 日志 console
+
+mys-gui
+# 只GUI 无Console
+```
+
+### 1.2  克隆本项目至本地或下载release package， 使用pip安装所需包
+```bash
+pip install mysc-X.X.X.tar.gz
 pip install loguru adbutils pyperclip moosegesture av numpy pyaudio pyflac dearpygui pygame pyvirtualcam nicegui
 ```
 
@@ -120,11 +138,15 @@ session.ca.f_touch_spr(
 
 :exclamation: _Ubuntu等Linux下 使用pyaudio 需要先安装portaudio_
 ```bash
-sudo apt install portaudio19-dev
+sudo apt install build-essential python3-dev ffmpeg libav-tools portaudio19-dev
 ```
 
 #### 运行DearPyGui GUI
 ```bash
+mys-cli # With Log Console
+mys-gui # Only GUI
+
+# or
 python -m myscrcpy.run
 ```
 
@@ -137,16 +159,16 @@ python -m myscrcpy.gui.ng.main
 ## 程序截图
 
 ### 主界面
-![dpg Screenshot](myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
+![dpg Screenshot](/src/myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
 
 ### Nicegui Web 界面 **NEW 1.3.6**（DEMO）
-![Nicegui Demo](myscrcpy/files/images/Nicegui_DEMO.jpg)
+![Nicegui Demo](/src/myscrcpy/files/images/Nicegui_DEMO.jpg)
 
 ### 按键映射编辑器
-![Touch Proxy Editor](myscrcpy/files/images/edit_touch_proxy.jpg)
+![Touch Proxy Editor](/src/myscrcpy/files/images/edit_touch_proxy.jpg)
 
 ### 7ms延迟
-![7ms](myscrcpy/files/images/7ms.jpg)
+![7ms](/src/myscrcpy/files/images/7ms.jpg)
 
 ## 所思所想
 作为从 Scrcpy 1.X时代就开始使用的老玩家，感叹于Scrcpy的发展及神奇的功能的同时，也一直想做点什么。不过碍于有其他项目（~~懒~~）一直迟迟没有动手。 

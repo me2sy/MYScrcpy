@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-02 1.5.0 Me2sY  修复部分缺陷，发布pypi初版
+
         2024-09-01 1.4.2 Me2sY  新增 鼠标控制器，优化结构，支持鼠标收拾功能
 
         2024-08-31 1.4.1 Me2sY
@@ -58,7 +60,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.2'
+__version__ = '1.5.0'
 
 __all__ = ['start_dpg_adv']
 
@@ -179,26 +181,17 @@ class WindowMain:
 
         if self.session and self.session.is_video_ready:
             self.device.kvm.set(
-                f"win_pos_{self.session.va.coordinate.rotation}_{self.device.scrcpy_cfg}",
-                value=dpg.get_viewport_pos()
+                f"win_pos_{self.session.va.coordinate.rotation}_{self.device.scrcpy_cfg}", value=dpg.get_viewport_pos()
             )
-
-        self.device = None
 
         win_loading.update_message(f"Closing Session")
 
         try:
             self.session.disconnect()
-        except Exception as e:
-            logger.error(f"SD {e}")
+        except:
+            ...
 
         self.session = None
-
-        self.video_controller.load_frame(
-            VideoController.create_default_frame(
-                Coordinate(400, 500), rgb_color=0
-            )
-        )
 
         win_loading.update_message(f"Closing Handler")
 
@@ -210,6 +203,19 @@ class WindowMain:
                 ...
 
             self.mouse_handler = None
+
+        try:
+            dpg.delete_item(self.tag_hr_hid)
+        except:
+            ...
+
+        self.device = None
+
+        self.video_controller.load_frame(
+            VideoController.create_default_frame(Coordinate(400, 500), rgb_color=0)
+        )
+        # 避免下次连接不加载窗口位置
+        self.video_controller.coord_frame = Coordinate(0, 0)
 
         dpg.configure_item(self.tag_menu_disconnect, enabled=False, show=False)
 
@@ -251,6 +257,13 @@ class WindowMain:
             2024-08-20 Me2sY 更新计算逻辑 解决Linux系统下 边框宽度计算问题
             2024-08-21 Me2sY 新增暂停机制
         """
+
+        # 2024-09-02 1.4.3 优化窗口大小调整，避免过小导致错误
+        if coord.width < dpg.get_viewport_min_width() + 16:
+            return
+
+        if coord.height < dpg.get_viewport_min_height() + 16:
+            return
 
         _pause = self.is_paused
         self.is_paused = True
@@ -495,11 +508,13 @@ class WindowMain:
 
                 dpg.add_separator()
 
-                about_msg = (f"A Scrcpy client implemented by Python\n"
-                              f"GUI: Dearpygui/pygame, etc.\n"
-                              f"With video, audio, and controls. \n"
-                              f"Supports UHID Keyboard and Chinese input.\n"
-                              f"Key proxy, and more. ")
+                about_msg = (f"A Scrcpy client implemented in Python. \n"
+                             f"Gui with dearpygui/pygame. \n "
+                             f"With Video, Audio, also Control. \n"
+                             f"GUI Supports Key Proxy, \n"
+                             f"window position record,\n"
+                             f" right-click gesture control, \n"
+                             f"UHID Keyboard and Chinese input and more.")
 
                 dpg.add_menu_item(label='About', callback=lambda: TempModal.draw_msg_box(
                     partial(dpg.add_text, f"MYScrcpy V{Param.VERSION}\nBY {Param.AUTHOR}"),
@@ -569,7 +584,6 @@ class WindowMain:
     def open_win_tpeditor(self):
         """
             开启 TPEditor
-            TODO Me2sY  待优化
         """
         wt = WindowTwin(self.session)
         wt.init()
@@ -577,7 +591,6 @@ class WindowMain:
     def open_pyg(self):
         """
             开启 Pygame GameMode
-            TODO Me2sY  待优化
         """
         def run():
             pgcw = PGControlWindow()
@@ -662,23 +675,44 @@ class WindowMain:
     def _video_resize(self, tag_texture, old_coord: Coordinate, new_coord: Coordinate):
         """
             视频源尺寸变化回调函数
+        :param tag_texture:
+        :param old_coord:
+        :param new_coord:
+        :return:
         """
+
+        if self.device is not None:
+
+            if old_coord.width == 0:
+                ...
+            else:
+                if self.device:
+                    now_pos = dpg.get_viewport_pos()
+                    # 保存旋转前窗口位置
+                    self.device.kvm.set(f"win_pos_{old_coord.rotation}_{self.device.scrcpy_cfg}", value=now_pos)
+
+            if self.device:
+                new_pos = self.device.kvm.get(f"win_pos_{new_coord.rotation}_{self.device.scrcpy_cfg}", [])
+                if new_pos:
+                    dpg.set_viewport_pos(new_pos)
+
         self._init_video(tag_texture, new_coord)
 
-        # 发生旋转时，记录旋转前位置，加载旋转后位置
-        if self.device is not None and old_coord.rotation != new_coord.rotation and old_coord.width != 0:
+    def _init_video(self, tag_texture: int | str, coord: Coordinate):
+        """
+            创建 Video 显示
+        """
+        auto_fix = True
+        if self.device:
+            # 加载历史窗口大小配置
+            his_coord = self.device.kvm.get(f"draw_coord_{coord.rotation}_{self.device.scrcpy_cfg}")
+            if his_coord:
+                coord = Coordinate(**his_coord)
+                auto_fix = False
 
-            now_pos = dpg.get_viewport_pos()
+        draw_coord = self.cpm_vc.init_image(tag_texture, coord, auto_fix=auto_fix)
 
-            # 加载旋转后窗口位置
-            new_pos = self.device.kvm.get(f"win_pos_{new_coord.rotation}_{self.device.scrcpy_cfg}", now_pos)
-
-            # 保存旋转前窗口位置
-            self.device.kvm.set(f"win_pos_{old_coord.rotation}_{self.device.scrcpy_cfg}", value=now_pos)
-
-            time.sleep(0.5)
-
-            dpg.set_viewport_pos(new_pos)
+        self.set_d2v(draw_coord)
 
     def _window_resize(self):
         """
@@ -713,14 +747,26 @@ class WindowMain:
 
             # 记录当前设备当前配置下窗口大小
             self.device.kvm.set(f"draw_coord_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}", value=new_vc_coord.d)
+            self.device.kvm.set(
+                f"win_pos_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}", value=dpg.get_viewport_pos()
+            )
+
+        else:
+            dpg.set_value(self.tag_drag_video_s, 1)
+            dpg.set_value(self.tag_drag_video_w, new_vc_coord.width)
+            dpg.set_value(self.tag_drag_video_h, new_vc_coord.height)
 
         dpg.set_viewport_title(title)
 
     def _init_resize_handler(self):
+        """
+            Resize 回调函数
+        :return:
+        """
         try:
             dpg.delete_item(self.tag_hr_resize)
         except Exception:
-            pass
+            ...
 
         with dpg.item_handler_registry(tag=self.tag_hr_resize):
             dpg.add_item_resize_handler(callback=self._window_resize)
@@ -757,14 +803,9 @@ class WindowMain:
 
         self.device.sessions.add(self.session)
 
+        # 最近连接记录
         records = kv_global.get('recent_connected', [])
         record = [self.device.adb_dev.serial, self.device.scrcpy_cfg]
-
-        # 复原位置
-        pos = self.device.kvm.get(
-            f"win_pos_{self.device.get_rotation()}_{self.device.scrcpy_cfg}", dpg.get_viewport_pos()
-        )
-        dpg.set_viewport_pos(pos)
 
         try:
             records.remove(record)
@@ -772,10 +813,11 @@ class WindowMain:
             pass
 
         records.insert(0, record)
-
         kv_global.set('recent_connected', records[:self.N_RECENT_RECORDS])
 
         win_loading.update_message('Preparing Video Interface...')
+
+        # 准备视频
 
         if self.session.is_video_ready:
             frame = self.session.va.get_frame()
@@ -797,7 +839,13 @@ class WindowMain:
 
         # 更新界面，如果未连接则显示默认界面
         self.video_controller.load_frame(frame)
-        self._init_resize_handler()
+        if not self.session.is_video_ready:
+            self.video_controller.coord_frame = Coordinate(0, 0)
+            dpg.set_viewport_resizable(False)
+
+        else:
+            dpg.set_viewport_resizable(True)
+            self._init_resize_handler()
 
         # TODO 2024-08-08 Me2sY  ADB Shell功能
         # TODO 2024-08-08 Me2sY  uiautomator2
@@ -872,6 +920,9 @@ class WindowMain:
                 'L': GesAction('Back', partial(self.send_key_event, ADBKeyCode.BACK)),
                 'U': GesAction('Home', partial(self.send_key_event, ADBKeyCode.HOME)),
 
+                'UL': GesAction('Apps', partial(self.send_key_event, ADBKeyCode.APP_SWITCH)),
+                'DR': GesAction('ScreenShot', partial(self.send_key_event, ADBKeyCode.KB_PRINTSCREEN)),
+
                 'D': GesAction('Play/Pause', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_PLAY_PAUSE)),
                 'D|L': GesAction('Media Prev', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_PREV_TRACK)),
                 'D|R': GesAction('Media Next', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_NEXT_TRACK)),
@@ -910,22 +961,6 @@ class WindowMain:
                 user_data=user_data
             )
 
-    def _init_video(self, tag_texture: int | str, coord: Coordinate):
-        """
-            创建 Video 显示
-        """
-        auto_fix = True
-        if self.device:
-            # 加载历史窗口大小配置
-            his_coord = self.device.kvm.get(f"draw_coord_{coord.rotation}_{self.device.scrcpy_cfg}")
-            if his_coord:
-                coord = Coordinate(**his_coord)
-                auto_fix = False
-
-        draw_coord = self.cpm_vc.init_image(tag_texture, coord, auto_fix=auto_fix)
-
-        self.set_d2v(draw_coord)
-
     def update(self):
         """
             更新视频显示
@@ -948,6 +983,13 @@ class WindowMain:
             ...
 
     def open_virtual_camera(self, sender=None, app_data=None, user_data=None):
+        """
+            开启虚拟摄像头
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :return:
+        """
         threading.Thread(target=self._virtual_camera, args=(user_data,)).start()
 
     def _camera_resize(self, tag_texture, old_coord, new_coord):
@@ -1067,18 +1109,14 @@ def start_dpg_adv():
 
     if wd.device:
         wd.device.kvm.set(f"win_pos_{wd.device.get_rotation()}_{wd.device.scrcpy_cfg}", value=[x, y])
-        if wd.session and wd.session.is_running:
-            wd.session.disconnect()
 
     kv_global.set('viewport_pos', {'x_pos': x, 'y_pos': y})
-
-    dpg.destroy_context()
 
     DeviceFactory.close_all_devices()
 
 
 if __name__ == '__main__':
     # 注意！ DearPyGui https://github.com/hoffstadt/DearPyGui/issues/2049
-    # Windows11 窗口最小化后会导致内存大量占用，目前问题尚未修复
+    # Windows11 窗口最小化后可能会导致内存大量占用，目前问题DPG尚未修复
 
     start_dpg_adv()
