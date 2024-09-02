@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.1
+# MYScrcpy V1.5.2
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -19,7 +19,7 @@ python语言实现的一个 [Scrcpy](https://github.com/Genymobile/scrcpy/) 客�
 ![dpg_gesture](/src/myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
 
 ## 特性
-- [x] **1.5.0 NEW** 现已上线**pypi** 使用 `pip install myscrcpy` （GUI版本`pip install myscrcpy[gui]`） 使用`mys-gui` or `mys-cli` (带console版本)命令打开GUI
+- [x] **1.5.0 NEW** 现已上线**pypi** 使用 `pip install mysc` （GUI版本`pip install mysc[gui]`） 使用`mysc-gui` or `mysc-cli` (带console版本)命令打开GUI
 - [x] **1.4.2 NEW** 使用[moosegesture](https://github.com/asweigart/moosegesture)实现右键手势控制功能，支持模拟第二个点、画线后退、调整音量、播放媒体等功能
 - [x] **1.4.1 NEW** 改用SQLite进行配置管理
 - [x] **1.4.0 NEW** 久等了！全新Core/Session/Connection/Utils架构
@@ -67,10 +67,10 @@ pip install mysc[gui]
 pip install mysc[web]
 
 安装完成后，运行
-mys-cli
+mysc-cli
 # Gui 及 日志 console
 
-mys-gui
+mysc-gui
 # 只GUI 无Console
 ```
 
@@ -143,8 +143,8 @@ sudo apt install build-essential python3-dev ffmpeg libav-tools portaudio19-dev
 
 #### 运行DearPyGui GUI
 ```bash
-mys-cli # With Log Console
-mys-gui # Only GUI
+mysc-cli # With Log Console
+mysc-gui # Only GUI
 
 # or
 python -m myscrcpy.run

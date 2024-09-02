@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.1
+# MYScrcpy V1.5.2
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -24,7 +24,7 @@ Managing Configuration with SQLite.
 ![dpg_gesture](/src/myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
 
 ## Features
-- [x] **1.5.0 NEW** **pypi** support. Use `pip install myscrcpy` or with gui: `pip install myscrcpy[gui]`. then run `mys-gui` or `mys-cli` (with console)
+- [x] **1.5.0 NEW** **pypi** support. Use `pip install mysc` or with gui: `pip install mysc[gui]`. then run `mysc-gui` or `mysc-cli` (with console)
 - [x] **1.4.2 NEW** With [moosegesture](https://github.com/asweigart/moosegesture), Right-click gesture control functionality available, supporting features such as simulating a second touch point, line-based undo, volume adjustment, media playback, and more
 - [x] **1.4.1 NEW** Managing Configuration with SQLite
 - [x] **1.4.0 NEW** Introducing the brand-new Core/Session/Connection/Utils architecture
@@ -74,10 +74,10 @@ pip install mysc[web]
 
 
 # After install, use 
-mys-cli
+mysc-cli
 # For a console
 
-mys-gui
+mysc-gui
 # GUI without log console
 
 ```
@@ -146,8 +146,8 @@ sudo apt install build-essential python3-dev ffmpeg libav-tools portaudio19-dev
 
 #### Run DearPyGui GUI
 ```bash
-mys-cli # With Log Console
-mys-gui # Only GUI
+mysc-cli # With Log Console
+mysc-gui # Only GUI
 
 # or
 python -m myscrcpy.run

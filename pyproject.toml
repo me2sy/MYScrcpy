@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.5.1"
+version = "1.5.2"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -49,11 +49,11 @@ web = [
 
 
 [project.scripts]
-mys-cli = "myscrcpy.run:run"
+mysc-cli = "myscrcpy.run:run"
 
 
 [project.gui-scripts]
-mys-gui = "myscrcpy.run:run"
+mysc-gui = "myscrcpy.run:run"
 
 
 [project.urls]

@@ -5,11 +5,13 @@
     
 
     Log:
+        2024-09-02 1.5.2 Me2sY  Pypi发布
+
         2024-08-24 1.3.7 Me2sY  从utils中抽离
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.2'
+__version__ = '1.5.2'
 
 __all__ = [
     'project_path',
@@ -41,7 +43,7 @@ class Param:
 
     PROJECT_NAME = PROJECT_NAME
     AUTHOR = 'Me2sY'
-    VERSION = '1.4.2'
+    VERSION = '1.5.2'
     EMAIL = 'me2sy@outlook.com'
     GITHUB = 'https://github.com/Me2sY/myscrcpy'
 
