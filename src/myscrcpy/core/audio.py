@@ -39,10 +39,8 @@ from loguru import logger
 
 import pyaudio
 
-FLAC_AVA = False
 try:
     import pyflac
-    FLAC_AVA = True
 except:
     ...
 
@@ -50,11 +48,9 @@ except:
 # pyogg导入后会污染环境，导致pyflac无法引入！
 # 需先引入FLAC
 # opuslib 提供解析方法
-OPUS_AVA = False
 try:
     from pyogg import opus
     import opuslib
-    OPUS_AVA = True
 except:
     ...
 
