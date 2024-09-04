@@ -220,7 +220,7 @@ class VideoAdapter(ScrcpyAdapter):
 
     def main_thread(self):
         """
-            解析主进程，读取Scrcpy视频流，解析为 np.ndarray RGB 存放至 _last_frame
+            解析主进程，读取Scrcpy视频流
         :return:
         """
 

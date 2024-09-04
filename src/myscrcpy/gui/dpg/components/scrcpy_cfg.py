@@ -5,6 +5,8 @@
     Scrcpy 连接属性配置组件
 
     Log:
+        2024-09-04 1.5.3 Me2sY  支持 Opus
+
         2024-08-31 1.4.1 Me2sY  改用新 KVManager
 
         2024-08-29 1.4.0 Me2sY
@@ -27,7 +29,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.1'
+__version__ = '1.5.3'
 
 __all__ = [
     'CPMScrcpyCfg', 'CPMScrcpyCfgController'
@@ -147,8 +149,10 @@ class CPMScrcpyCfgAudio(CPMScrcpyCfgBase):
             items=[AudioArgs.SOURCE_OUTPUT, AudioArgs.SOURCE_MIC], source=self.value_controller.tag('audio_source'),
             width=-45, label='Source'
         )
+
+        # 2024-09-04 1.5.3 Me2sY 支持 OPUS解析
         dpg.add_combo(
-            items=[AudioArgs.CODEC_FLAC, AudioArgs.CODEC_RAW], source=self.value_controller.tag('audio_codec'),
+            items=list(AudioAdapter.DECODER_MAPPER.keys()), source=self.value_controller.tag('audio_codec'),
             width=-45, label='Codec'
         )
 

@@ -158,7 +158,7 @@ class Connection:
         self.socket = _conn
         self.is_connected = True
 
-        # 现实 Scrcpy Server 回传运行信息
+        # 读取 Scrcpy Server 回传运行信息
         if read_stream:
             threading.Thread(target=self._thread_load_stream, args=(_device_name,)).start()
 
