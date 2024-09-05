@@ -5,6 +5,8 @@
     音频相关类
 
     Log:
+        2024-09-05 1.5.4 Me2sY 优化pyaudio引入，适配termux
+
         2024-09-04 1.5.3 Me2sY
             1.新增 Opus解析
             2.重构类结构
@@ -37,7 +39,10 @@ from typing import ClassVar, Callable, Mapping, List, Any
 from adbutils import AdbDevice
 from loguru import logger
 
-import pyaudio
+try:
+    import pyaudio
+except ImportError as e:
+    logger.warning(f"Import pyaudio failed: {e}")
 
 try:
     import pyflac

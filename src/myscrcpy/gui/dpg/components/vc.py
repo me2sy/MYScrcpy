@@ -2,9 +2,10 @@
 """
     Video/Control Component
     ~~~~~~~~~~~~~~~~~~~~~~~
-    
 
     Log:
+        2024-09-05 1.5.4 Me2sY  优化CPU占用
+
         2024-09-01 1.4.2 Me2sY  配合右键手势控制功能，添加显示layer
 
         2024-08-29 1.4.0 Me2sY  适配新架构
@@ -17,7 +18,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.2'
+__version__ = '1.5.4'
 
 __all__ = [
     'VideoController', 'CPMVC'
@@ -25,9 +26,11 @@ __all__ = [
 
 import threading
 
+import av
 import dearpygui.dearpygui as dpg
 from loguru import logger
 import numpy as np
+
 
 from myscrcpy.utils import Coordinate, ScalePoint, ScalePointR
 from myscrcpy.gui.dpg.components.component_cls import *
@@ -57,18 +60,40 @@ class VideoController:
     def create_default_frame(coordinate, rgb_color: int = 0) -> np.ndarray:
         """
             创建初始化页面
+            RGB 3D uint8 0...255
         """
         return np.full((coordinate.height, coordinate.width, 3), rgb_color, dtype=np.uint8)
 
     @staticmethod
-    def to_raw_texture_value(frame: np.ndarray) -> np.ndarray:
+    def create_default_av_video_frame(coordinate, rgb_color: int = 0) -> av.VideoFrame:
         """
-            输出一维 float RGB
-            重新该函数以实现图像处理
+            创建 av.VideoFrame
+            2024-09-05 1.5.4 适配新版本
+        :param coordinate:
+        :param rgb_color:
+        :return:
+        """
+        return av.VideoFrame.from_ndarray(
+            array=np.full((coordinate.height, coordinate.width, 3), rgb_color, dtype=np.uint8), format='rgb24'
+        )
+
+    def to_raw_texture_value(self, frame: av.VideoFrame) -> np.ndarray:
+        """
+            输出 1D float32 RGB 0..1
+            重写该函数以实现更多图像处理
         :param frame:
         :return:
         """
-        return np.true_divide(frame.ravel().astype(np.float32), 255.0)
+
+        # 2024-09-05 1.5.4 Me2sY
+        # Issue #6
+        # 经查 DPG 绘图使用 rgb float32 0..1 1D
+        # av.to_ndarray 为 rgb uint8 0..255 3D
+        # 需进行 dtype 1D化 及 归一化
+        # 原方法单帧转换耗时在6ms左右，占CPU资源较大
+
+        self.u2f[:] = frame.reformat(format='rgb24').planes[0]
+        return self.u2f / 255.0
 
     def _init_texture(
             self,
@@ -85,22 +110,40 @@ class VideoController:
             pass
 
         with dpg.texture_registry(show=False):
+            # 2024-09-05 Me2sY dynamic 效果并不太好
+            # 需要使用 float_rgba 增加计算量
+            #
+            # dpg.add_dynamic_texture(
+            #     tag=self.tag_texture, **frame_coord.d,
+            #     default_value=default_value if default_value is not None else self.create_default_frame(
+            #         frame_coord, self.default_rgb_color
+            #     )
+            # )
+
             dpg.add_raw_texture(
-                tag=self.tag_texture, **frame_coord.d,
-                default_value=default_value if default_value is not None else self.create_default_frame(
-                    frame_coord, self.default_rgb_color
-                ), format=dpg.mvFormat_Float_rgb
+                tag=self.tag_texture, **frame_coord.d, format=dpg.mvFormat_Float_rgb,
+                default_value=default_value if default_value is not None else (
+                        self.create_default_frame(
+                            frame_coord, self.default_rgb_color
+                        ).astype(np.float32).ravel() / 255.0)
             )
 
-    def load_frame(self, frame: np.ndarray):
+    def load_frame(self, frame: av.VideoFrame):
         """
             加载 Frame
         """
-        h, w, d = frame.shape
-        _c = Coordinate(width=w, height=h)
+        # 2024-09-05 1.5.4 Me2sY
+        # 改用 av.VideoFrame
+        # h, w, d = frame.shape
+        # _c = Coordinate(width=w, height=h)
+
+        _c = Coordinate(width=frame.width, height=frame.height)
 
         if _c != self.coord_frame:
 
+            # float32 容器 用于快速转换
+            # 较 .astype 单帧节约 2ms
+            self.u2f = np.empty(_c.width * _c.height * 3, dtype=np.float32)
             self._init_texture(_c, self.to_raw_texture_value(frame))
             if self.coord_frame.rotation != _c.rotation:
                 self._frame_rotation(self.coord_frame, _c)

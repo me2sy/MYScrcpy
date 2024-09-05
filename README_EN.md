@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.3
+# MYScrcpy V1.5.4
 
 ---
 
@@ -250,7 +250,7 @@ The author and this project are not responsible for any related consequences res
 ## ChangeLog
 
 ---
-
+- **1.5.4 NEW** Reduce CPU usage
 - **1.5.3 NEW** Update Readme
 - **1.5.3 NEW** OPUS available
 - **1.5.0 NEW** **pypi** support. Use `pip install mysc` or with gui: `pip install mysc[gui]`. then run `mysc-gui` or `mysc-cli` (with console)

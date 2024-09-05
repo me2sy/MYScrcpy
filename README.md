@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.3
+# MYScrcpy V1.5.4
 
 ---
 
@@ -249,7 +249,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 ## 更新日志
 
 ---
-
+- **1.5.4 NEW** 降低CPU占用
 - **1.5.3 NEW** 更新 Readme 文件
 - **1.5.3 NEW** 支持Opus音频解析
 - **1.5.0 NEW** 现已上线**pypi**

@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-05 1.5.4 Me2sY  降低CPU占用
+
         2024-09-02 1.5.0 Me2sY  修复部分缺陷，发布pypi初版
 
         2024-09-01 1.4.2 Me2sY  新增 鼠标控制器，优化结构，支持鼠标收拾功能
@@ -60,7 +62,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.0'
+__version__ = '1.5.4'
 
 __all__ = ['start_dpg_adv']
 
@@ -212,7 +214,7 @@ class WindowMain:
         self.device = None
 
         self.video_controller.load_frame(
-            VideoController.create_default_frame(Coordinate(400, 500), rgb_color=0)
+            VideoController.create_default_av_video_frame(Coordinate(400, 500), rgb_color=0)
         )
         # 避免下次连接不加载窗口位置
         self.video_controller.coord_frame = Coordinate(0, 0)
@@ -820,11 +822,15 @@ class WindowMain:
         # 准备视频
 
         if self.session.is_video_ready:
-            frame = self.session.va.get_frame()
+            # 2024-09-05
+            # frame = self.session.va.get_frame()
+            frame = self.session.va.get_video_frame()
             self.cpm_vc.draw_layer(self.cpm_vc.tag_layer_1, clear=True)
 
         else:
-            frame = VideoController.create_default_frame(coordinate=self.device.get_window_size(), rgb_color=80)
+            frame = VideoController.create_default_av_video_frame(
+                coordinate=self.device.get_window_size(), rgb_color=80
+            )
             msg = 'No Video.'
             if self.session.is_control_ready:
                 if self.device.info.is_uhid_supported:
@@ -978,7 +984,8 @@ class WindowMain:
             return
 
         try:
-            self.video_controller.load_frame(self.session.va.get_frame())
+            # 2024-09-05 1.5.4 Me2sY Use av.VideoFrame
+            self.video_controller.load_frame(self.session.va.get_video_frame())
         except:
             ...
 
@@ -1102,8 +1109,8 @@ def start_dpg_adv():
     logger.success(f"MYScrcpy {Param.VERSION} Ready To Move!\n {'-' * 100}")
 
     while dpg.is_dearpygui_running():
-        wd.update()
         dpg.render_dearpygui_frame()
+        wd.update()
 
     x, y = dpg.get_viewport_pos()
 
