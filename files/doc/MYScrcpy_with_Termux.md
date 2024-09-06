@@ -26,7 +26,7 @@ python -V
 
 ```bash
 # Basic
-pkg install build-essential binutils adb
+pkg install build-essential binutils android-tools
 
 # for pyav
 pkg install ffmpeg
@@ -42,6 +42,9 @@ pkg install rust
 ### 4. 安装MYScrcpy
 
 ```bash
+pip install mysc[web]
+
+# 加速：
 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple mysc[web]
 ```
 
