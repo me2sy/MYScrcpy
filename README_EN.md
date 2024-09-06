@@ -26,7 +26,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 - `pip install mysc[all]` and ready to go
 - Session/Connection/Adapter/Args Framework, One Line And get A Image or Numpy.ndarray RGB
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
-- Minimize references on demand. Core can be deployed in **Termux**, unlocking even more possibilities
+- Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](/files/doc/MYScrcpy%20with%20Termux.md)
 
 ### GUI
 - Supports wired and wirelessly connected devices

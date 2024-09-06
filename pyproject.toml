@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.5.5"
+version = "1.5.6"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -25,10 +25,14 @@ dependencies = [
     "loguru", "adbutils",
 
     # Video
-    "av", "numpy",
+    "av==12.3.0",
+    "numpy",
 
     # Audio
-    "pyaudio"
+    "pyaudio",
+
+    # Control
+    "pyperclip"
 ]
 
 
@@ -39,7 +43,7 @@ gui = [
     "dearpygui", "pygame",
 
     # GUI Functions
-    "pyperclip", "moosegesture", "pyvirtualcam"
+    "moosegesture", "pyvirtualcam"
 ]
 
 # Web USE

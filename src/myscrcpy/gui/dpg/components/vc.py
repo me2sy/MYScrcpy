@@ -91,8 +91,10 @@ class VideoController:
         # av.to_ndarray 为 rgb uint8 0..255 3D
         # 需进行 dtype 1D化 及 归一化
         # 原方法单帧转换耗时在6ms左右，占CPU资源较大
-
-        self.u2f[:] = frame.reformat(format='rgb24').planes[0]
+        try:
+            self.u2f[:] = frame.reformat(format='rgb24').planes[0]
+        except:
+            self.u2f[:] = frame.to_ndarray(format='rgb24').astype(np.float32).ravel()
         return self.u2f / 255.0
 
     def _init_texture(
