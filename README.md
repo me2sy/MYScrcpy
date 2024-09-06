@@ -22,7 +22,7 @@
 - 开箱即用 `pip install mysc[full]`
 - 使用Session/Connection/Adapter/Args架构，一行代码获取图像
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
-- 按需最小化引用。Core可在**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](/files/doc/MYScrcpy%20with%20Termux.md)
+- 按需最小化引用。Core可在**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
 - 支持有线、无线连接设备
