@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.4
+# MYScrcpy V1.5.5
 
 ---
 
@@ -16,7 +16,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 
 ### :tv: Video Introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
-![dpg Screenshot](/src/myscrcpy/files/images/mys_1_3_4.jpg)
+![dpg Screenshot](/files/images/mys_1_3_4.jpg)
 
 ## Features
 
@@ -202,16 +202,16 @@ python -m myscrcpy.gui.ng.main
 ---
 
 ### Main interface
-![dpg Screenshot](/src/myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
+![dpg Screenshot](/files/images/myscrcpy_1_3_0_main.jpg)
 
 ### Right-Click Gesture Control Feature
-![dpg_gesture](/src/myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
+![dpg_gesture](/files/images/myscrcpy_1_4_2_g.jpg)
 
 ### Nicegui Web Interface **NEW 1.3.6**（DEMO）
-![Nicegui Demo](/src/myscrcpy/files/images/Nicegui_DEMO.jpg)
+![Nicegui Demo](/files/images/Nicegui_DEMO.jpg)
 
 ### Key mapping editor (TPEditor)
-![Touch Proxy Editor](/src/myscrcpy/files/images/edit_touch_proxy.jpg)
+![Touch Proxy Editor](/files/images/edit_touch_proxy.jpg)
 
 
 ## Thoughts
@@ -234,6 +234,19 @@ Welcome to visit my [Bilibili](https://space.bilibili.com/400525682), where I wi
 
 Finally, I deeply appreciate the support from my beloved during the development. :heart_eyes:
 
+
+## Acknowledgements
+
+---
+
+Thanks to [**Scrcpy**](https://github.com/Genymobile/scrcpy/) Project and Author [**@rom1v**](https://github.com/rom1v)
+There is not MYScrcpy without Scrcpy.
+
+Thanks to the packages/projects and the authors. Thanks to your efforts, we have such a great software development environment.
+
+Thanks to all the users for your support and assistance. Hope that MYScrcpy can become a handy tool and helper for you.
+
+
 ## DECLARE
 
 ---
@@ -250,19 +263,20 @@ The author and this project are not responsible for any related consequences res
 ## ChangeLog
 
 ---
+- **1.5.5 NEW** Update Nicegui Gui for termux
 - **1.5.4 NEW** Reduce CPU usage
 - **1.5.3 NEW** Update Readme
 - **1.5.3 NEW** OPUS available
 - **1.5.0 NEW** **pypi** support. Use `pip install mysc` or with gui: `pip install mysc[gui]`. then run `mysc-gui` or `mysc-cli` (with console)
-- **1.4.2 NEW** With [moosegesture](https://github.com/asweigart/moosegesture), Right-click gesture control functionality available, supporting features such as simulating a second touch point, line-based undo, volume adjustment, media playback, and more
-- **1.4.1 NEW** Managing Configuration with SQLite
-- **1.4.0 NEW** Introducing the brand-new Core/Session/Connection/Utils architecture
-- **1.4.0 NEW** Record the position of window before rotation
-- **1.4.0 NEW** Support for heartbeat detection with automatic reconnection upon disconnection
-- **1.4.0 NEW** Device-to-PC clipboard supported
-- **1.4.0 NEW** Optimize the key mapping strategy for Linux compatibility
-- **1.4.0 NEW** Provide more control buttons
-- 1.3.6 New Web Interface (DEMO) by Nicegui with video and UHID keyboard/mouse
+- 1.4.2 With [moosegesture](https://github.com/asweigart/moosegesture), Right-click gesture control functionality available, supporting features such as simulating a second touch point, line-based undo, volume adjustment, media playback, and more
+- 1.4.1 Managing Configuration with SQLite
+- 1.4.0 Introducing the brand-new Core/Session/Connection/Utils architecture
+- 1.4.0 Record the position of window before rotation
+- 1.4.0 Support for heartbeat detection with automatic reconnection upon disconnection
+- 1.4.0 Device-to-PC clipboard supported
+- 1.4.0 Optimize the key mapping strategy for Linux compatibility
+- 1.4.0 Provide more control buttons
+- 1.3.6 Web Interface (DEMO) by Nicegui with video and UHID keyboard/mouse
 - 1.3.3 Support select audio output devices, With VB-Cables you can simulate microphone input
 - 1.3.2 Append [pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),support OBS virtual camera.
 - Supports saving connection configurations and window size.

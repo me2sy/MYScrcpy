@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.4
+# MYScrcpy V1.5.5
 
 ---
 
@@ -12,7 +12,7 @@
 
 ### :tv: 视频简介 [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
-![dpg Screenshot](/src/myscrcpy/files/images/mys_1_3_4.jpg)
+![dpg Screenshot](/files/images/mys_1_3_4.jpg)
 
 ## 功能特性
 
@@ -202,16 +202,16 @@ python -m myscrcpy.gui.ng.main
 ---
 
 ### 主界面
-![dpg Screenshot](/src/myscrcpy/files/images/myscrcpy_1_3_0_main.jpg)
+![dpg Screenshot](/files/images/myscrcpy_1_3_0_main.jpg)
 
 ### 右键手势功能
-![right](/src/myscrcpy/files/images/myscrcpy_1_4_2_g.jpg)
+![right](/files/images/myscrcpy_1_4_2_g.jpg)
 
 ### Nicegui Web 界面 **NEW 1.3.6**（DEMO）
-![Nicegui Demo](/src/myscrcpy/files/images/Nicegui_DEMO.jpg)
+![Nicegui Demo](/files/images/Nicegui_DEMO.jpg)
 
 ### 按键映射编辑器
-![Touch Proxy Editor](/src/myscrcpy/files/images/edit_touch_proxy.jpg)
+![Touch Proxy Editor](/files/images/edit_touch_proxy.jpg)
 
 
 ## 所思所想
@@ -233,6 +233,17 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 最后十分感谢我的挚爱在开发中给予的支持。 :heart_eyes:
 
+
+## 鸣谢
+
+---
+
+感谢 [**Scrcpy**](https://github.com/Genymobile/scrcpy/) 项目及作者 [**rom1v**](https://github.com/rom1v)，在这一优秀项目基础上，才有了本项目。
+
+感谢使用到的各个包项目及作者们。有你们的付出，才有了如此好的软件开发环境。
+
+同时感谢各位使用者们，谢谢你们的支持与帮助，也希望MYScrcpy成为你们得心应手的好工具，好帮手。
+
 ## 声明
 
 ---
@@ -249,18 +260,19 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 ## 更新日志
 
 ---
+- **1.5.5 NEW** 优化Nicegui界面，方便termux使用
 - **1.5.4 NEW** 降低CPU占用
 - **1.5.3 NEW** 更新 Readme 文件
 - **1.5.3 NEW** 支持Opus音频解析
 - **1.5.0 NEW** 现已上线**pypi**
-- **1.4.2 NEW** 使用[moosegesture](https://github.com/asweigart/moosegesture)实现右键手势控制功能，支持模拟第二个点、画线后退、调整音量、播放媒体等功能
-- **1.4.1 NEW** 改用SQLite进行配置管理
-- **1.4.0 NEW** 久等了！全新Core/Session/Connection/Utils架构
-- **1.4.0 NEW** 新增窗口位置记忆功能，记录旋转前位置
-- **1.4.0 NEW** 支持心跳检测，自动断线重连
-- **1.4.0 NEW** 现已支持设备->PC 剪贴板
-- **1.4.0 NEW** 优化按键映射方式，Linux适用
-- **1.4.0 NEW** 更多控制按钮
+- 1.4.2 使用[moosegesture](https://github.com/asweigart/moosegesture)实现右键手势控制功能，支持模拟第二个点、画线后退、调整音量、播放媒体等功能
+- 1.4.1 改用SQLite进行配置管理
+- 1.4.0 久等了！全新Core/Session/Connection/Utils架构
+- 1.4.0 新增窗口位置记忆功能，记录旋转前位置
+- 1.4.0 支持心跳检测，自动断线重连
+- 1.4.0 现已支持设备->PC 剪贴板
+- 1.4.0 优化按键映射方式，Linux适用
+- 1.4.0 更多控制按钮
 - 1.3.6 新增网页端设备浏览页面DEMO(Nicegui),支持鼠标输入，UHID键盘输入、ADB输入及摇杆模拟鼠标输入
 - 1.3.3 新增选择音频输出设备功能，可配合VB-Cables模拟麦克风输入
 - 1.3.2 新增[pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),支持OBS虚拟摄像头

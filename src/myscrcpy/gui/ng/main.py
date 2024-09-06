@@ -5,15 +5,19 @@
     
 
     Log:
+        2024-09-06 0.1.2 Me2sY
+            1. 优化界面
+            2. 适配 Termux
+
         2024-08-30 0.1.1 Me2sY  适配新 Session / Connection 架构
 
         2024-08-22 0.1.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
-__all__ = []
+__all__ = ['run_app']
 
 import base64
 import string
@@ -37,6 +41,8 @@ placeholder = Response(content=base64.b64decode(black_1px.encode('ascii')), medi
 
 DeviceFactory.load_devices()
 
+FPS = 30
+
 
 class NGController:
     """
@@ -50,7 +56,7 @@ class NGController:
         # Create Your Own Args
         self.session = Session(
             self.dc.adb_dev,
-            video_args=VideoArgs(max_size=1200, fps=30),
+            video_args=VideoArgs(max_size=1366, fps=FPS),
             control_args=ControlArgs(screen_status=ControlArgs.STATUS_OFF)
         )
 
@@ -68,18 +74,24 @@ class NGController:
         if self.session.is_running:
             NGFactory.register(self)
 
-    def f2jpg(self) -> Response:
+    def f2jpg(self, scid: str) -> Response:
         """
             Load np.ndarray and convert it to jpg
         :return:
         """
-        if not self.session.is_video_ready:
+        # 2024-09-06 0.1.2 Me2sY 新增 SCID判断
+        if not self.session.is_video_ready or scid != self.session.va.conn.scid:
             return placeholder
 
         self.jpg_io.seek(0)
         self.jpg_io.truncate()
         self.session.va.get_image().save(self.jpg_io, 'JPEG')
         return Response(content=self.jpg_io.getvalue(), media_type="image/jpeg")
+
+    def close(self):
+        if self.session:
+            self.session.disconnect()
+        del NGFactory.ngc_dict[self.dc.serial_no]
 
 
 class NGFactory:
@@ -101,29 +113,31 @@ class NGFactory:
         cls.ngc_dict[ngc.dc.serial_no] = ngc
 
     @classmethod
-    def get_device_video(cls, device_serial: str) -> Response:
+    def get_device_video(cls, device_serial: str, scid: str) -> Response:
         """
             Get Device Video and Convert it to jpg response
         :param device_serial:
+        :param scid:
         :return:
         """
         if device_serial in cls.ngc_dict:
-            return cls.ngc_dict[device_serial].f2jpg()
+            return cls.ngc_dict[device_serial].f2jpg(scid)
         else:
             return placeholder
 
 
-@app.get('/va/frame/{device_serial}')
-async def get_frame(device_serial: str) -> Response:
+@app.get('/va/frame/{device_serial}/{scid}')
+async def get_frame(device_serial: str, scid: str) -> Response:
     """
         Create A interface To Get Device Frame
         NOTICE: EVERY ONE CAN SEE THE VIDEO FROM THE DEVICE BY THIS URL!
         CONSIDER SET A PASSWORD IN ATTR OR AUTH NEXT STEP
 
     :param device_serial:
+    :param scid: Run Scid
     :return:
     """
-    return await run.io_bound(NGFactory.get_device_video, device_serial)
+    return await run.io_bound(NGFactory.get_device_video, device_serial, scid)
 
 
 @ui.page('/device/{device_serial}')
@@ -251,54 +265,48 @@ def device_page(device_serial: str):
     # This Part to Draw The Device Page
     # It may perform poorly on mobile devices.
 
-    ui.label(f"{ngc.dc.info}")
+    def set_screen(e):
+        """
+            Switch Screen
+        :param e:
+        :return:
+        """
+        ngc.session.ca.f_set_screen(e.value)
 
-    with ui.row():
-        with ui.button_group():
-            # Function Buttons
-            ui.button(icon='apps', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.APP_SWITCH))
-            ui.button(icon='home', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.HOME))
-            ui.button(icon='arrow_back', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.BACK))
-            ui.button(
-                icon='power_settings_new', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.POWER), color='red'
-            )
+    def open_settings(e):
+        """
+            Settings Page
+        :param e:
+        :return:
+        """
+        with ui.dialog() as dlg, ui.card():
+            ui.switch('Screen', value=False, on_change=set_screen)
 
-        def set_screen(e):
-            """
-                Switch Screen
-            :param e:
-            :return:
-            """
-            ngc.session.ca.f_set_screen(e.value)
+            ui.label('Number Pad')
+            with ui.button_group():
+                for _ in range(1, 4):
+                    ui.button(text=f"{_}", on_click=partial(ngc.dc.adb_dev.keyevent, ADBKeyCode[f"KB_{_}"].value))
+                ui.button(
+                    icon='backspace', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.KB_BACKSPACE), color='red'
+                )
 
-        ui.switch('Screen', value=False, on_change=set_screen)
+            with ui.button_group():
+                for _ in range(4, 7):
+                    ui.button(text=f"{_}", on_click=partial(ngc.dc.adb_dev.keyevent, ADBKeyCode[f"KB_{_}"].value))
+                ui.button(
+                    icon='keyboard_return', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.KB_ENTER),color='green'
+                )
 
-        keyboard = ui.checkbox('Keyboard', value=True).bind_value_to(keyboard, 'active')
+            with ui.button_group():
+                for _ in range(7, 10):
+                    ui.button(
+                        text=f"{_}", on_click=partial(ngc.dc.adb_dev.keyevent, ADBKeyCode[f"KB_{_}"].value)
+                    )
+                ui.button(text=f"0", on_click=partial(ngc.dc.adb_dev.keyevent, ADBKeyCode[f"KB_0"].value))
 
-        # ADB keyevent to input password in lock screen
-        keyboard_switch = ui.switch('ADB/UHID', value=ngc.dc.info.is_uhid_supported)
-
-    # Video Controller
-    video_image = ui.interactive_image(
-        source=f"/va/frame/{device_serial}", on_mouse=mouse_event, events=['mousedown', 'mouseup', 'mousemove']
-    )
-    # .style('height: 75vh') to show all
-
-    # ------------------------- UHID Mouse Part -------------------------
-    # For Mobile Use
-
-    # For Unlock device
-    with ui.button_group():
-
-        ui.button(icon='backspace', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.BACKSPACE), color='red')
-
-        for _ in range(10):
-            ui.button(text=f"{_}", on_click=partial(ngc.dc.adb_dev.keyevent, ADBKeyCode[f"KB_{_}"].value))
-
-        ui.button(icon='keyboard_return', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.ENTER), color='green')
+        dlg.open()
 
     if ngc.dc.info.is_uhid_supported:
-
         ngc.session.ca.f_uhid_mouse_create()
 
         def joy_move(e):
@@ -310,16 +318,61 @@ def device_page(device_serial: str):
                 left_button=lb, right_button=rb
             )
 
-        with ui.row():
+        with ui.dialog().props('seamless').props('position=left') as dlg_tp, ui.card():
             ui.joystick(
                 color='blue', size=50,
                 on_move=joy_move
             )
             btn_left = ui.switch(text='LEFT')
             btn_right = ui.switch(text='RIGHT')
+            ui.separator()
+            ui.button('close', on_click=dlg_tp.close)
+
+    with ui.card().classes('h-svh w-screen items-center'):
+
+        with ui.row():
+            with ui.button_group():
+                # Function Buttons
+                ui.button(
+                    icon='power_settings_new', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.POWER), color='red'
+                )
+                ui.button(icon='apps', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.APP_SWITCH))
+                ui.button(icon='home', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.HOME))
+                ui.button(icon='arrow_back', on_click=lambda: ngc.dc.adb_dev.keyevent(ADBKeyCode.BACK))
+                ui.button(
+                    icon='settings', on_click=open_settings
+                )
+                ui.button(
+                    icon='close', on_click=ngc.close, color='yellow'
+                )
+            keyboard_switch = ui.switch('A/U', value=ngc.dc.info.is_uhid_supported)
+            with ui.button(icon='menu'):
+                with ui.menu() as menu:
+                    ui.menu_item('TouchPad', on_click=dlg_tp.open)
+
+        # Video Controller
+        video_image = ui.interactive_image(
+            source=f"/va/frame/{device_serial}/{ngc.session.va.conn.scid}",
+            on_mouse=mouse_event, events=['mousedown', 'mouseup', 'mousemove']
+        ).classes('h-5/6')
 
     # Refresh The Video
-    ui.timer(interval=1 / 30, callback=video_image.force_reload)
+    ui.timer(interval=1 / FPS, callback=video_image.force_reload)
+
+
+def close_server():
+    """
+        关闭服务
+    :return:
+    """
+    devices = [_ for _ in NGFactory.ngc_dict.values()]
+    for _ in devices:
+        try:
+            _.close()
+        except:
+            ...
+
+    app.shutdown()
 
 
 @ui.page('/')
@@ -337,10 +390,12 @@ def main():
 
     ui.separator()
     ui.button(text='Refresh', on_click=lambda: DeviceFactory.load_devices())
+    ui.button(text='Close Server', on_click=close_server, color='red')
 
 
-ui.run(
-    port=51000,
-    title=f"{Param.PROJECT_NAME} {Param.AUTHOR} NiceGui Demo",
-    reload=False
-)
+def run_app():
+    ui.run(
+        port=51000,
+        title=f"{Param.PROJECT_NAME} {Param.AUTHOR} NiceGui Demo",
+        reload=False
+    )

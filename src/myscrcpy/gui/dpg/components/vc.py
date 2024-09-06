@@ -152,7 +152,11 @@ class VideoController:
 
             self.coord_frame = _c
 
-        dpg.set_value(self.tag_texture, self.to_raw_texture_value(frame))
+        # 2024-09-06 1.5.4 Me2sY 零星加载失败情况
+        try:
+            dpg.set_value(self.tag_texture, self.to_raw_texture_value(frame))
+        except:
+            ...
 
     def _frame_rotation(self, old_coord: Coordinate, new_coord: Coordinate):
         for _ in self.rotation_callbacks:

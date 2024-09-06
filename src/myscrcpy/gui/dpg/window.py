@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-06 1.5.5 Me2sY
+            1. 新增剪切板同步功能
+            2. 修复视频加载BUG issue #7
+
         2024-09-05 1.5.4 Me2sY  降低CPU占用
 
         2024-09-02 1.5.0 Me2sY  修复部分缺陷，发布pypi初版
@@ -62,7 +66,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.4'
+__version__ = '1.5.5'
 
 __all__ = ['start_dpg_adv']
 
@@ -468,11 +472,15 @@ class WindowMain:
                             dpg.add_button(label='On', callback=set_screen, user_data=True, width=50, height=30)
                             dpg.add_button(label='Off', callback=set_screen, user_data=False, width=50, height=30)
 
+                    # ClipBoard 相关功能
+
+                    dpg.add_menu_item(label='CopyToDevice', callback=self.copy_to_device)
+
                     def set_clipboard(sender, app_data, user_data):
                         if self.session.is_control_ready:
                             self.session.ca.set_clipboard_status(user_data)
 
-                    with dpg.menu(label='ClipBoard'):
+                    with dpg.menu(label='ClipBoardSync'):
                         with dpg.group(horizontal=True):
                             dpg.add_button(label='On', callback=set_clipboard, user_data=True, width=50, height=30)
                             dpg.add_button(label='Off', callback=set_clipboard, user_data=False, width=50, height=30)
@@ -538,6 +546,16 @@ class WindowMain:
                 #     dpg.add_menu_item(label='UIAutomator2')
                 #     dpg.add_separator()
                 #     dpg.add_menu_item(label='Help')
+
+    def copy_to_device(self, *args, **kwargs):
+        """
+            copy clipboard text to device
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        if self.session.is_control_ready:
+            self.session.ca.f_clipboard_pc2device()
 
     def audio_choose_output_device(self):
         """
@@ -927,6 +945,9 @@ class WindowMain:
                 'U': GesAction('Home', partial(self.send_key_event, ADBKeyCode.HOME)),
 
                 'UL': GesAction('Apps', partial(self.send_key_event, ADBKeyCode.APP_SWITCH)),
+
+                'UL|D': GesAction('CopyToDevice', self.copy_to_device),
+
                 'DR': GesAction('ScreenShot', partial(self.send_key_event, ADBKeyCode.KB_PRINTSCREEN)),
 
                 'D': GesAction('Play/Pause', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_PLAY_PAUSE)),

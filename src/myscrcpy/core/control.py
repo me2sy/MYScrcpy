@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-09-06 1.5.5 Me2sY  增加 PC -> Device 剪贴板功能
+
         2024-08-29 1.4.0 Me2sY
             1.优化结构
             2.增加剪贴板功能
@@ -14,7 +16,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.5.5'
 
 __all__ = [
     'KeyboardWatcher',
@@ -443,6 +445,16 @@ class ControlAdapter(ScrcpyAdapter):
 
     def f_text_paste(self, text: str, paste: bool = True):
         self.send_packet(self.packet__text_paste(text, paste))
+
+    def f_clipboard_pc2device(self, paste: bool = True):
+        """
+            读取 PC 剪切板内容 粘贴至 设备
+        :param paste:
+        :return:
+        """
+        text = pyperclip.paste()
+        if text is not None and len(text) > 0:
+            self.f_text_paste(text, paste)
 
     @classmethod
     def packet__uhid_mouse_create(cls, mouse_id: int = 2):
