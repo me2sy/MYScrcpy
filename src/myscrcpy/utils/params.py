@@ -43,7 +43,7 @@ class Param:
 
     PROJECT_NAME = PROJECT_NAME
     AUTHOR = 'Me2sY'
-    VERSION = '1.5.6'
+    VERSION = '1.5.7'
     EMAIL = 'me2sy@outlook.com'
     GITHUB = 'https://github.com/Me2sY/myscrcpy'
 

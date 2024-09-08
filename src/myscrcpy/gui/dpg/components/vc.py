@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-08 1.5.7 Me2sY  更新图像解析算法
+
         2024-09-05 1.5.4 Me2sY  优化CPU占用
 
         2024-09-01 1.4.2 Me2sY  配合右键手势控制功能，添加显示layer
@@ -18,7 +20,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.4'
+__version__ = '1.5.7'
 
 __all__ = [
     'VideoController', 'CPMVC'
@@ -90,12 +92,16 @@ class VideoController:
         # 经查 DPG 绘图使用 rgb float32 0..1 1D
         # av.to_ndarray 为 rgb uint8 0..255 3D
         # 需进行 dtype 1D化 及 归一化
-        # 原方法单帧转换耗时在6ms左右，占CPU资源较大
-        try:
-            self.u2f[:] = frame.reformat(format='rgb24').planes[0]
-        except:
-            self.u2f[:] = frame.to_ndarray(format='rgb24').astype(np.float32).ravel()
-        return self.u2f / 255.0
+        # 1200x752 4ms to float32
+
+        # try:
+        #     self.u2f[:] = frame.reformat(format='rgb24').planes[0]
+        # except:
+        #     self.u2f[:] = frame.to_ndarray(format='rgb24').astype(np.float32).ravel()
+        # return self.u2f / 255.0
+
+        # 2024-09-07 1.5.7 Me2sY 时间相差不多，读取安全性高
+        return frame.to_ndarray(format='rgb24').ravel() / np.float32(255)
 
     def _init_texture(
             self,

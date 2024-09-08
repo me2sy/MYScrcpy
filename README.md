@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.6
+# MYScrcpy V1.5.7
 
 ---
 
@@ -6,7 +6,7 @@
 
 ### python语言实现的一个 [**Scrcpy**](https://github.com/Genymobile/scrcpy/) 客户端。包含完整的视频、音频、控制解析及展现，**开发友好，引入即用！**
 
-采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持窗口位置记忆、右键手势控制、断线重连、中文输入，锁屏密码解锁等功能。
+采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持窗口位置记忆、右键手势控制、断线重连、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
 
 高速模式使用[**pygame**](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。提供鼠标隐藏、按键事件监听等功能， 适用于第一人称相关应用的按键映射。
 
@@ -22,7 +22,7 @@
 - 开箱即用 `pip install mysc[full]`
 - 使用Session/Connection/Adapter/Args架构，一行代码获取图像
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
-- 按需最小化引用。Core可在**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](/files/doc/MYScrcpy_with_Termux.md)
+- 按需最小化引用。支持**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
 - 支持有线、无线连接设备
@@ -43,6 +43,7 @@
   - 拉动窗口，进行自由伸缩
   - 根据高度/宽度，自动调整窗口至视频比例
 - 支持虚拟摄像头
+  - **1.5.7 NEW** **命令行启动 mysc-t-vc** [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/Help_tools_vc_v1.md)
   - 随时开启，随时关闭，随时切换设备
   - 支持OBS虚拟摄像头/Unity Capture(windows)/v4l2loopback
 
@@ -130,6 +131,8 @@ pip install pyogg opuslib
    Session、Connection、视频流、音频流、控制流、设备控制器等核心包
    6. **~/.myscrcpy/***
    本地化配置文件，包括运行类文件*.db 按键映射文件 tps/*.json
+   7. **tools/***
+   工具类，多用于生成CLI
 
 ### 3. 程序引用使用，便于自行开发
 
@@ -260,6 +263,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 ## 更新日志
 
 ---
+- **1.5.7 NEW** CLI启动虚拟摄像头
 - **1.5.5 NEW** 优化Nicegui界面，方便termux使用
 - **1.5.4 NEW** 降低CPU占用
 - **1.5.3 NEW** 更新 Readme 文件
@@ -309,3 +313,4 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 - twisted / fastapi 接口
 - YOLO 及 快速拉框导出等训练工具
 - 视频、音频录制
+- WebRTC

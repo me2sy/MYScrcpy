@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-09-08 1.5.7 Me2sY  新增 fit_scrcpy_video 方法，适配Scrcpy Control
+
         2024-09-01 1.4.2 Me2sY  新增 部分方法
 
         2024-08-25 1.4.0 Me2sY  新增 ScalePointR, 带方向的 ScalePoint
@@ -13,7 +15,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.2'
+__version__ = '1.5.7'
 
 __all__ = [
     'ROTATION_VERTICAL', 'ROTATION_HORIZONTAL',
@@ -116,7 +118,7 @@ class Coordinate(NamedTuple):
     height: int
 
     def __repr__(self):
-        return f'w:{self.width}, h:{self.height} {"Up" if self.rotation == ROTATION_VERTICAL else "Right"}'
+        return f'w/h ({self.width:>5} / {self.height:<5}) | {"Up" if self.rotation == ROTATION_VERTICAL else "Right"}'
 
     def __add__(self, other: 'Coordinate') -> 'Coordinate':
         return Coordinate(self.width + other.width, self.height + other.height)
@@ -210,3 +212,13 @@ class Coordinate(NamedTuple):
             round(self.height / raw_coordinate.height * raw_coordinate.width),
             self.height
         )
+
+    def fit_scrcpy_video(self) -> 'Coordinate':
+        """
+            2024-09-08 1.5.7 Me2sY
+            Scrcpy 会将 Video 做降8处理，导致控制时 产生 [server] WARN: Ignore touch event, it was generated for a different device size
+            见 https://github.com/Genymobile/scrcpy/blob/master/server/src/main/java/com/genymobile/scrcpy/video/ScreenInfo.java#L115
+            此处将coord做同样处理，予以适配
+        :return:
+        """
+        return Coordinate(self.width & ~7, self.height & ~7)

@@ -12,9 +12,6 @@ termux-change-repo
 
 pkg upgrade
 
-# ADB in termux
-pkg install android-tools
-
 # install python
 pkg install python
 

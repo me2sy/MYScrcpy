@@ -98,7 +98,7 @@ class VideoArgs(ScrcpyConnectArgs):
     SOURCE_DISPLAY: ClassVar[str] = "display"
     SOURCE_CAMERA: ClassVar[str] = "camera"
 
-    max_size: int
+    max_size: int = 0
     fps: int = 60
     buffer_size: int = 131072
     video_codec: str = CODEC_H264

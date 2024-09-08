@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.6
+# MYScrcpy V1.5.7
 
 ---
 
@@ -8,7 +8,7 @@ A [**Scrcpy**](https://github.com/Genymobile/scrcpy/) client implemented in **Py
 
 Includes comprehensive video, audio, and control flow parsing and presentation. **Developer-friendly, Just pip install and ready to go!**
 
-Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Window Position Record, Right-click gesture control, Chinese input, unlocking screen passwords, and other features.
+Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Window Position Record, Right-click gesture control, Virtual Cameras, Chinese input, unlocking screen passwords, and other features.
 
 In some control proxy scenarios, [**pygame**](https://www.pygame.org/) is used for mouse and keyboard control mapping GUI. 
 
@@ -26,7 +26,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 - `pip install mysc[all]` and ready to go
 - Session/Connection/Adapter/Args Framework, One Line And get A Image or Numpy.ndarray RGB
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
-- Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](/files/doc/MYScrcpy_with_Termux.md)
+- Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
 - Supports wired and wirelessly connected devices
@@ -48,6 +48,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - Pull the window for free scaling
   - Automatically scale the window to video based on height/width
 - Support for virtual cameras
+  - **1.5.7 NEW** **CLI start ```mysc-t-vc```** [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/Help_tools_vc_v1.md)
   - On, off, switch devices at any time
   - Support OBS Virtual Camera /Unity Capture(windows)/v4l2loopback(Linux)
 
@@ -130,6 +131,7 @@ pip install pyogg opuslib
    4. **gui/ng** _(DEMO) Nicegui Web UI，Video and Control support
    5. **core/** Session, Connection, Video stream, audio stream, control stream, device controller, etc.
    6. **~/.myscrcpy/** Localization configuration file, including running config file *.db, keypress mapping file tps/*.json
+   7. **tools/*** CLI Tools
 
 
 ### 3.For developer
@@ -263,6 +265,7 @@ The author and this project are not responsible for any related consequences res
 ## ChangeLog
 
 ---
+- **1.5.7 NEW** CLI Virtual Camera
 - **1.5.5 NEW** Update Nicegui Gui for termux
 - **1.5.4 NEW** Reduce CPU usage
 - **1.5.3 NEW** Update Readme
@@ -310,3 +313,4 @@ The author and this project are not responsible for any related consequences res
 - twisted/fastapi interface
 - YOLO and train tools
 - Video and audio recording
+- WebRTC

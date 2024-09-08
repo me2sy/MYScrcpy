@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.5.6"
+version = "1.5.7"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
-description = "A Scrcpy client implemented in Python. Gui with dearpygui/pygame. With Video, Audio, also Control. GUI Supports Key Proxy, window position record, right-click gesture control, UHID Keyboard and Chinese input and more."
+description = "A Scrcpy client implemented in Python. Gui with dearpygui/pygame. With Video, Audio, also Control. GUI Supports Key Proxy, window position record, right-click gesture control, Virtual Camera, UHID Keyboard and Chinese input and more."
 readme = "README.md"
 requires-python = ">= 3.11"
 keywords = ["scrcpy", "android", "adbutils", "av", "numpy", "DearPyGui", "Pygame", "adb", "pyaudio"]
@@ -22,7 +22,7 @@ classifiers = [
 
 dependencies = [
     # Base
-    "loguru", "adbutils",
+    "loguru", "adbutils", "click",
 
     # Video
     "av==12.3.0",
@@ -59,6 +59,10 @@ opus = [
     "pyogg", "opuslib"
 ]
 
+tools = [
+    "pyvirtualcam"
+]
+
 full = [
     "dearpygui", "pygame",
     "pyperclip", "moosegesture", "pyvirtualcam",
@@ -70,6 +74,8 @@ full = [
 [project.scripts]
 mysc-cli = "myscrcpy.run:run"
 mysc-web = "myscrcpy.gui.ng.main:run_app"
+
+mysc-t-vc = "myscrcpy.tools.virtualcam:cli"
 
 
 [project.gui-scripts]

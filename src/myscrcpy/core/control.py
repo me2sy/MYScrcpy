@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-09-08 1.5.7 Me2sY  适配 Scrcpy 屏幕坐标
+
         2024-09-06 1.5.5 Me2sY  增加 PC -> Device 剪贴板功能
 
         2024-08-29 1.4.0 Me2sY
@@ -16,7 +18,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.5'
+__version__ = '1.5.7'
 
 __all__ = [
     'KeyboardWatcher',
@@ -222,6 +224,9 @@ class ControlAdapter(ScrcpyAdapter):
             return True
 
         _coord = self.get_window_size(adb_device)
+
+        # 2024-09-08 1.5.7 Me2sY  适配Scrcpy control
+        _coord = _coord.fit_scrcpy_video()
 
         if _coord.rotation == ROTATION_VERTICAL:
             _coord_v = _coord
