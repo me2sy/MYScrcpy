@@ -451,7 +451,7 @@ class ControlAdapter(ScrcpyAdapter):
     def f_text_paste(self, text: str, paste: bool = True):
         self.send_packet(self.packet__text_paste(text, paste))
 
-    def f_clipboard_pc2device(self, paste: bool = True):
+    def f_clipboard_pc2device(self, paste: bool = True) -> bool:
         """
             读取 PC 剪切板内容 粘贴至 设备
         :param paste:
@@ -460,6 +460,9 @@ class ControlAdapter(ScrcpyAdapter):
         text = pyperclip.paste()
         if text is not None and len(text) > 0:
             self.f_text_paste(text, paste)
+            return True
+        else:
+            return False
 
     @classmethod
     def packet__uhid_mouse_create(cls, mouse_id: int = 2):

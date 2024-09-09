@@ -5,6 +5,8 @@
     音频相关类
 
     Log:
+        2024-09-09 1.5.8 Me2sY  新增raw_stream
+
         2024-09-05 1.5.4 Me2sY 优化pyaudio引入，适配termux
 
         2024-09-04 1.5.3 Me2sY
@@ -21,7 +23,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.3'
+__version__ = '1.5.8'
 
 __all__ = [
     'AudioArgs', 'AudioAdapter'
@@ -389,7 +391,7 @@ class AudioArgs(ScrcpyConnectArgs):
     RECEIVE_FRAMES_PER_BUFFER: ClassVar[int] = 1024
 
     audio_source: str = SOURCE_OUTPUT
-    audio_codec: str = CODEC_FLAC
+    audio_codec: str = CODEC_RAW
     device_index: int | None = None
 
     def __post_init__(self):
@@ -477,7 +479,7 @@ class AudioAdapter(ScrcpyAdapter):
             self.player.setup_player, self.player.play, *args, **kwargs
         )
 
-        if self.conn.connect(adb_device, ['video=false', 'control=false']):
+        if self.conn.connect(adb_device):
             self.is_running = True
         else:
             return False
@@ -629,6 +631,24 @@ class AudioAdapter(ScrcpyAdapter):
         else:
             logger.error('AudioAdapter Start Failed!')
             return None
+
+    @classmethod
+    def raw_stream(cls, adb_device: AdbDevice, audio_args: AudioArgs, **kwargs) -> Connection | None:
+        """
+            原生stream
+        :param adb_device:
+        :param audio_args:
+        :param kwargs:
+        :return:
+        """
+        conn = Connection(audio_args, **kwargs)
+        _f = conn.connect(adb_device, **kwargs)
+        if _f:
+            logger.success(f"Raw Audio Stream Ready!")
+            return conn
+
+        logger.error(f"Raw Audio Stream Start Failed!")
+        return None
 
 
 if __name__ == '__main__':

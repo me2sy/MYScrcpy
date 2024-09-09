@@ -5,24 +5,27 @@
     视频相关类
 
     Log:
+        2024-09-09 1.5.8 Me2sY  新增raw_stream
+
         2024-08-28 1.4.0 Me2sY  优化调整功能结构
 
         2024-08-25 0.1.0 Me2sY  创建，分离Scrcpy.connect，Video独自连接
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.5.8'
 
 __all__ = [
     'CameraArgs', 'VideoArgs',
     'VideoAdapter'
 ]
 
+import socket
 import struct
 import threading
 import time
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Tuple
 
 from PIL.Image import Image
 from adbutils import AdbDevice
@@ -188,8 +191,13 @@ class VideoAdapter(ScrcpyAdapter):
             return True
 
         # Make Connection
-        if self.conn.connect(adb_device, ['audio=false', 'control=false']):
-            self.is_running = True
+        if self.conn.connect(adb_device):
+
+            # 2024-09-09 1.5.8 Me2sY  分离
+            self.is_running, video_c = self.decode_header(self.conn.socket)
+            if not self.is_running:
+                return False
+
             threading.Thread(target=self.main_thread).start()
             retry = 0
             while not self.is_ready:
@@ -218,13 +226,14 @@ class VideoAdapter(ScrcpyAdapter):
         self.frame_n = 0
         self.conn.disconnect()
 
-    def main_thread(self):
+    @staticmethod
+    def decode_header(socket_conn: socket.socket) -> Tuple[bool, Tuple[str, Coordinate] | None]:
         """
-            解析主进程，读取Scrcpy视频流
+            解析 Scrcpy Stream
         :return:
         """
 
-        _video_codec = self.conn.recv(4).decode()
+        _video_codec = socket_conn.recv(4).decode()
 
         if _video_codec is None or _video_codec == '':
             msg = '\n1.Check VideoSocket max_size\n'
@@ -233,17 +242,17 @@ class VideoAdapter(ScrcpyAdapter):
             msg += '4.Use scrcpy --list-camera or --list-camera-sizes then choose a RIGHT ar or size or camera_id\n'
             msg += '5.Make Sure Your Android Device >= 12\n'
             msg += '6.Some Android Device NOT SUPPORTED Camera. Use Scrcpy to see the WRONG MSG.'
-            self.is_running = False
             logger.warning(msg)
-            return False
+            return False, None
 
-        if _video_codec != self.conn.args.video_codec:
-            self.is_running = False
-            logger.warning(f"Video Codec >{_video_codec}< not supported!")
-            return False
+        (width, height,) = struct.unpack('>II', socket_conn.recv(8))
+        return True, (_video_codec, Coordinate(width, height))
 
-        (width, height,) = struct.unpack('>II', self.conn.recv(8))
-        logger.success(f"Video Socket {self.conn.scid} Connected! {_video_codec} | Width: {width}, Height: {height}")
+    def main_thread(self):
+        """
+            解析主进程，读取Scrcpy视频流
+        :return:
+        """
 
         code_context = av.CodecContext.create(self.CODEC_AV_MAP.get(self.conn.args.video_codec), 'r')
 
@@ -317,6 +326,26 @@ class VideoAdapter(ScrcpyAdapter):
         else:
             logger.error('VideoAdapter Start Failed!')
             return None
+
+    @classmethod
+    def raw_stream(cls, adb_device: AdbDevice, video_args: VideoArgs, **kwargs) -> Connection | None:
+        """
+            返回原生stream
+        :param adb_device:
+        :param video_args:
+        :param kwargs:
+        :return:
+        """
+        conn = Connection(video_args, **kwargs)
+        _f = conn.connect(adb_device, **kwargs)
+        if _f:
+            _f, args = cls.decode_header(conn.socket)
+            if _f:
+                logger.success(f"Raw Video Stream Ready! Codec: {args[0]} | {args[1]}")
+                return conn
+
+        logger.error('Raw Video Stream Start Failed!')
+        return None
 
 
 if __name__ == '__main__':

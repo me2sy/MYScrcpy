@@ -5,13 +5,15 @@
     连接类，用于创建 Scrcpy 连接，连接状态管理、自动重连等
 
     Log:
+        2024-09-09 1.5.8 Me2sY  新增自动屏蔽方法
+
         2024-08-28 1.4.0 Me2sY
             1.创建
             2.优化server启动逻辑，使用clean降低错误发生，同时不同线程推送不同server文件，确保clean不会误删文件
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.5.8'
 
 __all__ = [
     'Connection'
@@ -33,7 +35,7 @@ class Connection:
         连接类，用于创建 Scrcpy 连接，状态管理等
     """
 
-    def __init__(self, args, retry_n: int = 3):
+    def __init__(self, args, retry_n: int = 3, **kwargs):
         """
             初始化连接参数
         :param args: Scrcpy Connect Args
@@ -101,8 +103,8 @@ class Connection:
     @clean
     def connect(
             self, adb_device: AdbDevice, extra_cmd: list = None, timeout: int = 5,
-            read_stream: bool = True,
-            _retry_n: int = 0
+            read_stream: bool = True, auto_exclude: bool = True,
+            _retry_n: int = 0, **kwargs
     ) -> bool:
         """
             连接至 Scrcpy，建立重连机制。
@@ -110,6 +112,7 @@ class Connection:
         :param extra_cmd: 附加命令
         :param timeout: 连接超时时间
         :param read_stream: 读取stream回传信息
+        :param auto_exclude: 自动屏蔽其他连接
         :param _retry_n: 已重试测试，用于重试，不建议赋值
         :return:
         """
@@ -124,6 +127,15 @@ class Connection:
         extra_cmd = [] if extra_cmd is None else extra_cmd
         cmd = Param.SCRCPY_SERVER_START_CMD + self.args.to_args() + extra_cmd + [f"scid={self.scid}"]
         cmd[0] = cmd[0] + push_path
+
+        if auto_exclude:
+            # 自动屏蔽其他socket
+            if 'video=true' in cmd:
+                cmd += ['audio=false', 'control=false']
+            elif 'audio=true' in cmd:
+                cmd += ['video=false', 'control=false']
+            elif 'control=true' in cmd:
+                cmd += ['video=false', 'audio=false']
 
         # logger.debug(f"Adb Run => {cmd}")
 

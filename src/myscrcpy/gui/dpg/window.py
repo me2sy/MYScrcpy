@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-09 1.5.8 Me2sY  支持文件拷贝
+
         2024-09-06 1.5.5 Me2sY
             1. 新增剪切板同步功能
             2. 修复视频加载BUG issue #7
@@ -66,7 +68,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.5'
+__version__ = '1.5.8'
 
 __all__ = ['start_dpg_adv']
 
@@ -94,8 +96,9 @@ from myscrcpy.gui.dpg.components.vc import VideoController, CPMVC
 from myscrcpy.gui.dpg.components.pad import *
 from myscrcpy.gui.dpg.components.scrcpy_cfg import CPMScrcpyCfgController
 from myscrcpy.gui.dpg.mouse_handler import *
-
 from myscrcpy.gui.gui_utils import *
+
+from myscrcpy.tools.file_manager import FileManager
 
 inject_pg_key_mapper()
 inject_dpg_key_mapper()
@@ -555,7 +558,11 @@ class WindowMain:
         :return:
         """
         if self.session.is_control_ready:
-            self.session.ca.f_clipboard_pc2device()
+            if self.session.ca.f_clipboard_pc2device():
+                return
+
+        # 2024-09-09 1.5.8 Me2sY 新增文件拷贝方法
+        FileManager(self.device.adb_dev).push_clipboard_to_device()
 
     def audio_choose_output_device(self):
         """
@@ -946,7 +953,7 @@ class WindowMain:
 
                 'UL': GesAction('Apps', partial(self.send_key_event, ADBKeyCode.APP_SWITCH)),
 
-                'UL|D': GesAction('CopyToDevice', self.copy_to_device),
+                'D|U': GesAction('CopyToDevice', self.copy_to_device),
 
                 'DR': GesAction('ScreenShot', partial(self.send_key_event, ADBKeyCode.KB_PRINTSCREEN)),
 

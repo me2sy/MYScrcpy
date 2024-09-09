@@ -15,3 +15,4 @@ dist/myscrcpy-1.0.0-py3-none-any.whl
 /src/mysc.egg-info
 /src/myscrcpy.egg-info
 /src/myscrcpy/test_zone
+/notebooks

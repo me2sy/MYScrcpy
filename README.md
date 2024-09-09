@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.7
+# MYScrcpy V1.5.8
 
 ---
 
@@ -6,7 +6,7 @@
 
 ### python语言实现的一个 [**Scrcpy**](https://github.com/Genymobile/scrcpy/) 客户端。包含完整的视频、音频、控制解析及展现，**开发友好，引入即用！**
 
-采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持窗口位置记忆、右键手势控制、断线重连、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
+采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持窗口位置记忆、右键手势控制、断线重连、文件拷贝、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
 
 高速模式使用[**pygame**](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。提供鼠标隐藏、按键事件监听等功能， 适用于第一人称相关应用的按键映射。
 
@@ -19,12 +19,19 @@
 ---
 
 ### 开发
+- **1.5.8 NEW** 支持获取视频、音频原格式流，方便二次开发
 - 开箱即用 `pip install mysc[full]`
 - 使用Session/Connection/Adapter/Args架构，一行代码获取图像
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
 - 按需最小化引用。支持**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
+- **1.5.8 NEW** 支持Windows系统下，文件传输功能
+  - 使用右键手势 下|上 快速拷贝
+  - 也可使用 VAC -> Control -> CopyToDevice 使用
+  - 先选中PC中文件或文件夹（支持多选），在MYScrcpy界面绘制拷贝手势，则拷贝选中文件/文件夹至设备 /sdcard/MYScrcpy/ 文件夹下
+  - 先进行PC屏幕截图，在MYScrcpy界面绘制拷贝手势，则拷贝截图至设备 /sdcard/DCIM/ 文件夹下
+  - 若选中文本，则拷贝文本至设备剪贴板
 - 支持有线、无线连接设备
 - 支持设置无线端口，设置后自动重连功能
 - 支持加载历史连接记录功能，自动记忆历史连接记录，快速连接
@@ -175,6 +182,23 @@ session.ca.f_touch_spr(
    touch_id=0x0413
 )
 
+
+# 1.5.8 NEW
+# 获取原始视频流/音频流
+video_conn = VideoAdapter.raw_stream(adb_device, VideoArgs(max_size=1366, video_codec=VideoArgs.CODEC_H264))
+while True:
+    video_raw_bytes = video_conn.recv(1024)
+    # Your Code Here
+    break
+video_conn.disconnect()
+
+audio_conn = AudioAdapter.raw_stream(adb_device, AudioArgs(audio_codec=AudioArgs.CODEC_OPUS))
+while True:
+    audio_raw_bytes = audio_conn.recv(1024)
+    # Your Code Here
+    break
+audio_conn.disconnect()
+
 ...
 ```
 
@@ -261,8 +285,8 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 本人及本项目不对以上产生的相关后果负相关责任，请斟酌使用。
 
 ## 更新日志
-
----
+- **1.5.8 NEW** 支持文件/文件夹/截屏一键拷贝至设备
+- **1.5.8 NEW** 支持输出原始视频/音频流
 - **1.5.7 NEW** CLI启动虚拟摄像头
 - **1.5.5 NEW** 优化Nicegui界面，方便termux使用
 - **1.5.4 NEW** 降低CPU占用

@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.7
+# MYScrcpy V1.5.8
 
 ---
 
@@ -23,13 +23,20 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 ---
 
 ### Develop
+- **1.5.8 NEW** Supports output the original format streams of video and audio to facilitate your development work
 - `pip install mysc[all]` and ready to go
 - Session/Connection/Adapter/Args Framework, One Line And get A Image or Numpy.ndarray RGB
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
 - Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
-- Supports wired and wirelessly connected devices
+- **1.5.8 NEW** Supports file transfer on Windows systems
+  - Use the right-click gesture Down|Up to quickly copy
+  - Alternatively, use VAC -> Control -> CopyToDevice
+  - Select files or folders on the PC (supports multi-selection), then draw the copy gesture on the MYScrcpy interface to copy the selected files/folders to the device's /sdcard/MYScrcpy/ folder
+  - Take a screenshot of the PC screen, then draw the copy gesture on the MYScrcpy interface to copy the screenshot to the device's /sdcard/DCIM/ folder
+  - If text is selected, it will be copied to the device's clipboard
+- Supports wired and wireless connected devices
 - Support wireless port setting, automatic reconnect function after setting
 - Support loading history connection records, automatic memory history connection records, fast connection
 - It can configure the corresponding connection mode according to the device and save the connection parameters
@@ -175,6 +182,24 @@ session.ca.f_touch_spr(
    touch_id=0x0413
 )
 
+
+# 1.5.8 NEW
+# Get Raw Video / Audio Stream Bytes from scrcpy server
+video_conn = VideoAdapter.raw_stream(adb_device, VideoArgs(max_size=1366, video_codec=VideoArgs.CODEC_H264))
+while True:
+    video_raw_bytes = video_conn.recv(1024)
+    # Your Code Here
+    break
+video_conn.disconnect()
+
+audio_conn = AudioAdapter.raw_stream(adb_device, AudioArgs(audio_codec=AudioArgs.CODEC_OPUS))
+while True:
+    audio_raw_bytes = audio_conn.recv(1024)
+    # Your Code Here
+    break
+audio_conn.disconnect()
+
+
 ...
 ```
 
@@ -265,6 +290,8 @@ The author and this project are not responsible for any related consequences res
 ## ChangeLog
 
 ---
+- **1.5.8 NEW** Support Copy Files or Dirs or ScreenShot from pc to device
+- **1.5.8 NEW** Raw Video/Audio Stream Output
 - **1.5.7 NEW** CLI Virtual Camera
 - **1.5.5 NEW** Update Nicegui Gui for termux
 - **1.5.4 NEW** Reduce CPU usage
