@@ -231,12 +231,11 @@ class TempModal:
             for _ in args:
                 _(parent=tag_win)
             dpg.add_separator()
-            with dpg.group(horizontal=True):
-                dpg.add_button(
-                    label='Confirm', width=-66, height=35,
-                    callback=lambda s, a, u: dpg.delete_item(tag_win) or confirm_callback()
-                )
-                dpg.add_button(label='Close', width=-1, height=35, callback=lambda: dpg.delete_item(tag_win))
+            dpg.add_button(
+                label='Confirm', width=-1, height=35,
+                callback=lambda s, a, u: dpg.delete_item(tag_win) or confirm_callback()
+            )
+            dpg.add_button(label='Close', width=-1, height=35, callback=lambda: dpg.delete_item(tag_win))
         return tag_win
 
 

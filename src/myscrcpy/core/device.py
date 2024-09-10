@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-09-10 1.5.9 Me2sY  新增文件管理器，支持拷贝、上传、删除等功能
+
         2024-08-31 1.4.1 Me2sY  改用新KVManager
 
         2024-08-29 1.4.0 Me2sY  重构，适配 Session 体系
@@ -13,7 +15,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.1'
+__version__ = '1.5.9'
 
 __all__ = [
     'DeviceInfo', 'PackageInfo',
@@ -22,14 +24,16 @@ __all__ = [
 
 import datetime
 import re
+import stat
 import threading
 import time
+from pathlib import PurePosixPath, Path
 from typing import NamedTuple, Tuple, List, Dict
 
-from adbutils import AdbDevice, AdbError, AppInfo, adb
+from adbutils import AdbDevice, AdbError, AppInfo, adb, FileInfo
 from loguru import logger
 
-from myscrcpy.utils import KVManager, kv_global, Coordinate, ROTATION_HORIZONTAL, ROTATION_VERTICAL
+from myscrcpy.utils import KVManager, kv_global, Coordinate, ROTATION_HORIZONTAL, ROTATION_VERTICAL, Param
 
 
 class DeviceInfo(NamedTuple):
@@ -66,6 +70,188 @@ class PackageInfo(NamedTuple):
     """
     package_name: str
     activity: str
+
+
+class FileManager:
+    """
+        文件管理器
+    """
+
+    def __init__(self, adb_device: AdbDevice):
+        self.adb_device = adb_device
+
+        self.path_base = Param.PATH_DEV_BASE
+        self.path_cur = self.path_base
+        self.path_push = Param.PATH_DEV_PUSH
+
+        if not self.adb_device.sync.exists(self.path_push.__str__()):
+            self.adb_device.shell(['mkdir', self.path_push.__str__()])
+
+    def __repr__(self):
+        return self.path_cur.__str__()
+
+    def ls(self, path: str = None) -> List[FileInfo]:
+        """
+            ls
+        :param path:
+        :return:
+        """
+        _path = PurePosixPath(path) if path else self.path_cur
+        return self.adb_device.sync.list(_path.__str__())
+
+    def rm(self, abs_path: PurePosixPath | str):
+        """
+            Remove Path
+        :param abs_path:
+        :return:
+        """
+
+        file_info = self.adb_device.sync.stat(abs_path.__str__())
+        if file_info.mode == 0 and file_info.size == 0 and file_info.mtime is None:
+            logger.warning(f"{abs_path} Not Exists")
+            return
+
+        if stat.S_ISDIR(file_info.mode):
+            sr = self.adb_device.shell2(f"rm -rf {abs_path}")
+            if sr.returncode != 0:
+                logger.warning(f"rm {abs_path} Error => {sr.output}")
+            else:
+                logger.error(f"{abs_path} Removed!")
+
+        elif stat.S_ISREG(file_info.mode) or stat.S_ISLNK(file_info.mode):
+            sr = self.adb_device.shell2(f"rm {abs_path}")
+            if sr.returncode != 0:
+                logger.warning(f"rm {abs_path} Error => {sr.output}")
+            else:
+                logger.error(f"{abs_path} Removed!")
+
+    def cd(self, path: str | PurePosixPath) -> PurePosixPath:
+        """
+            CD
+        :param path:
+        :return:
+        """
+        _path = self.path_cur / path
+        if self.adb_device.sync.exists(_path.__str__()):
+
+            sr = self.adb_device.shell2(f"cd {_path} && pwd")
+            if sr.returncode == 0:
+                self.path_cur = PurePosixPath(sr.output.replace('\n', ''))
+            else:
+                logger.warning(f"{_path} => {sr.output}")
+        else:
+            logger.warning(f"{_path} does not exist")
+        return self.path_cur
+
+    def pwd(self) -> PurePosixPath:
+        """
+            file manager pwd
+        :return:
+        """
+        return self.path_cur
+
+    def push(
+            self, src: Path, dest: PurePosixPath = None,
+            mode: int = 0o755, check: bool = False,
+            to_default_path: bool = True
+    ):
+        """
+            上传文件
+        :param src:
+        :param dest:
+        :param mode:
+        :param check:
+        :param to_default_path:
+        :return:
+        """
+        if not src.is_file():
+            logger.warning(f"{src} is not a file")
+
+        if dest is None:
+            if to_default_path:
+                dest = self.path_push
+            else:
+                dest = self.path_cur
+
+        self.adb_device.sync.push(src, dest.__str__(), mode=mode, check=check)
+        logger.info(f"pushed {src} to {dest}")
+
+    def push_dir(self, src: Path, dest: PurePosixPath = None, to_default_path: bool = True, **kwargs):
+        """
+            上传路径
+        :param src:
+        :param dest:
+        :param to_default_path:
+        :param kwargs:
+        :return:
+        """
+
+        dest = dest or (self.path_push if to_default_path else self.path_cur)
+
+        for _ in src.iterdir():
+
+            if _.is_dir():
+                self.adb_device.shell(['mkdir', (dest / _.name).__str__()])
+                logger.info(f"mkdir {dest / _.name}")
+                self.push_dir(_, dest / _.name, **kwargs)
+
+            elif _.is_file():
+                self.push(_, dest, **kwargs)
+
+    def pull(self, *args, **kwargs):
+        return self.adb_device.sync.pull(*args, **kwargs)
+
+    def pull_file(self, file_name: str, dest: Path):
+        """
+            拉取当前目录下文件
+        :param file_name:
+        :param dest:
+        :return:
+        """
+        return self.adb_device.sync.pull((self.path_cur / file_name).__str__(), dest / file_name)
+
+    def pull_dir(self, *args, **kwargs):
+        return self.adb_device.sync.pull_dir(*args, **kwargs)
+
+    def push_clipboard_to_device(self, path: PurePosixPath = None):
+        """
+            将剪切板内容推送至设备
+        :return:
+        """
+        try:
+            from PIL import ImageGrab
+        except ImportError:
+            logger.error(f"PIL Not Install.")
+            return False
+
+        im = ImageGrab.grabclipboard()
+
+        if im is None:
+            pass
+
+        elif isinstance(im, list):
+
+            path_push = self.path_push if path is None else path
+
+            for _ in im:
+                p = Path(_)
+                if p.is_dir():
+                    self.adb_device.shell(['mkdir', (path_push / p.name).__str__()])
+                    logger.info(f"mkdir {(path_push / p.name).__str__()}")
+                    self.push_dir(p, path_push / p.name)
+
+                elif p.is_file():
+                    self.push(p, path)
+        else:
+            # 截图 放置到 DCIM文件夹
+            try:
+                fp = Param.PATH_TEMP / ('ps_' + datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.jpg')
+                with fp.open('wb') as f:
+                    im.save(f, 'JPEG')
+                self.push(fp, Param.PATH_DEV_SCREENSHOT if path is None else path)
+                fp.unlink()
+            except:
+                pass
 
 
 class AdvDevice:
@@ -153,6 +339,9 @@ class AdvDevice:
 
         self.scrcpy_cfg = None
         self.sessions = set()
+
+        # 2024-09-10 1.5.9 Me2sY 新增文件管理器
+        self.file_manager = FileManager(adb_device)
 
     def __repr__(self):
         return f"AdvDevice > {self.info}"

@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.8
+# MYScrcpy V1.5.9
 
 ---
 
@@ -8,7 +8,7 @@ A [**Scrcpy**](https://github.com/Genymobile/scrcpy/) client implemented in **Py
 
 Includes comprehensive video, audio, and control flow parsing and presentation. **Developer-friendly, Just pip install and ready to go!**
 
-Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Window Position Record, Right-click gesture control, Virtual Cameras, Chinese input, unlocking screen passwords, and other features.
+Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Window Position Record, Right-click gesture control, Virtual Cameras, File Manager, Chinese input, unlocking screen passwords, and other features.
 
 In some control proxy scenarios, [**pygame**](https://www.pygame.org/) is used for mouse and keyboard control mapping GUI. 
 
@@ -30,6 +30,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 - Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
+- **1.5.9 NEW** File Manager with upload, download, delete and more [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/file_manager/Help_file_manager.md)
 - **1.5.8 NEW** Supports file transfer on Windows systems
   - Use the right-click gesture Down|Up to quickly copy
   - Alternatively, use VAC -> Control -> CopyToDevice
@@ -55,7 +56,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - Pull the window for free scaling
   - Automatically scale the window to video based on height/width
 - Support for virtual cameras
-  - **1.5.7 NEW** **CLI start ```mysc-t-vc```** [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/Help_tools_vc_v1.md)
+  - **1.5.7 NEW** **CLI start ```mysc-t-vc```** [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/Help_tools_vc_v1.md)
   - On, off, switch devices at any time
   - Support OBS Virtual Camera /Unity Capture(windows)/v4l2loopback(Linux)
 
@@ -290,6 +291,7 @@ The author and this project are not responsible for any related consequences res
 ## ChangeLog
 
 ---
+- **1.5.9 NEW** File Manager with upload, download, delete and more
 - **1.5.8 NEW** Support Copy Files or Dirs or ScreenShot from pc to device
 - **1.5.8 NEW** Raw Video/Audio Stream Output
 - **1.5.7 NEW** CLI Virtual Camera
@@ -319,16 +321,12 @@ The author and this project are not responsible for any related consequences res
 - Control key mapping and mouse mapping
 - Mixed use of UHID-Mouse and mouse clicks, enabling mixed use of mouse on Android and PC interfaces
 - UHID-Keyboard for simulating an external keyboard, supporting direct Chinese input (tested with Sogou Input Method)
-- SharedMemory for low-latency video frame sharing between processes
-- ZMQ communication using ZMQ pull/push for controlling the phone
 - Mouse wheel zoom, scroll functions under DPG GUI
 - Unlock device screen using InputPad to input password
 - Automatic adjustment of device video stream rotation and unrestricted zooming under DPG GUI
 - Adjust mouse movement speed with Ctrl In Game Mode
 - TwinWindow approach to solve DPG widget overlap issues, implementing DPG control mapping editor (**TPEditor**)
 - Minimum latency of 7ms in pure Pygame control mode
-- Audio ZMQ Server to transmit audio streams over network sockets, enabling remote sound transmission, MIC monitoring, and more
-- Friendly to low Android version devices, automatically disabling Audio, Camera, UHID, etc., for better performance, recommended **Android 12** or above
 
 ## Development Plan
 

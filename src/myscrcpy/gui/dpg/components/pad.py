@@ -5,6 +5,8 @@
     
 
     Log:
+        2024-09-10 1.5.9 Me2sY  新增文件管理器
+
         2024-08-29 1.4.0 Me2sY
             1.适配新架构
             2.新增部分功能按键
@@ -19,19 +21,26 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.5.9'
 
 __all__ = [
     'CPMNumPad', 'CPMControlPad',
-    'CPMSwitchPad'
+    'CPMSwitchPad', 'CPMFilePad'
 ]
 
+import pathlib
+import stat
+import threading
+import time
 from typing import Callable
+import webbrowser
 
+from loguru import logger
 import dearpygui.dearpygui as dpg
 
-from myscrcpy.utils import ADBKeyCode
-from myscrcpy.gui.dpg.components.component_cls import Component
+from myscrcpy.utils import ADBKeyCode, Param
+from myscrcpy.gui.dpg.components.component_cls import Component, TempModal
+from myscrcpy.core import AdvDevice
 
 
 class CPMPad(Component):
@@ -182,3 +191,339 @@ class CPMSwitchPad(CPMPad):
         self._callback = callback
         self._switch_show_callback = switch_show_callback
         self.status = kwargs.get('status', False)
+
+
+class CPMFilePad(CPMPad):
+    """
+        文件管理面板
+    """
+    def setup_inner(self, *args, **kwargs):
+
+        self.tag_filter = dpg.generate_uuid()
+        self.tag_table = dpg.generate_uuid()
+
+        # Download Delete
+        with dpg.group(horizontal=True):
+            # Open Download File
+            dpg.add_button(
+                label='F', callback=lambda: webbrowser.open(Param.PATH_DOWNLOAD / self.adv_device.serial_no)
+            )
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Open Download File')
+
+            # Upload File in PC clipboard to current path
+            dpg.add_button(label='UP', callback=self.upload)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Upload Files in Clipboard')
+
+            # Download Selected Files
+            dpg.add_button(label='DLD', callback=self.download_selected)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Download Selected File')
+
+            # Delete Selected Files
+            dpg.add_button(label='DEL', callback=self.rm_selected)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Delete Selected File')
+
+            dpg.add_spacer(width=2)
+
+            self.tag_txt_info = dpg.add_text(default_value='0 Selected')
+            with dpg.tooltip(dpg.last_item()):
+                self.tag_txt_info_detail = dpg.add_text(default_value='No Item Selected')
+
+        dpg.add_separator()
+
+        # File Select and Filter
+        with dpg.group(horizontal=True):
+
+            dpg.add_button(label='A', callback=self.select_all)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Select All')
+
+            dpg.add_button(label='C', callback=self.unselect_all)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Unselect All')
+
+            self.tag_filter = dpg.add_input_text(
+                label="Filter", user_data=self.tag_table, width=-40,
+                callback=lambda s, a, u: dpg.set_value(self.tag_table, dpg.get_value(s))
+            )
+
+        # Path
+        with dpg.group(horizontal=True):
+            dpg.add_button(label='R', callback=self.draw_path)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text('Reload Path')
+
+            dpg.add_button(
+                label='..', user_data='..', width=40,
+                callback=lambda s, a, u: self.open_dir(s, a, u) or
+                                         dpg.set_value(self.tag_filter, '') or
+                                         dpg.set_value(self.tag_table, '')
+            )
+
+            # Current Path
+            self.tag_path_cur = dpg.add_text('')
+            with dpg.tooltip(self.tag_path_cur):
+                self.tag_path_full = dpg.add_text('')
+
+        dpg.add_separator()
+
+        dpg.add_table(
+            tag=self.tag_table,
+            delay_search=True,
+        )
+
+    def update(self, callback: Callable, adv_device: AdvDevice, *args, **kwargs):
+        """
+            初始化控件
+        :param callback:
+        :param adv_device:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        self.adv_device = adv_device
+        self.fm = self.adv_device.file_manager
+        self.draw_path()
+
+    def draw_path(self):
+        """
+            更新路径显示窗口
+        :return:
+        """
+
+        self.all_cb = set()
+        self.selected(None, None, None)
+
+
+        # 显示当前路径
+        path_cur = self.fm.path_cur.__str__()
+        if len(path_cur) > 20:
+            path_cur = '...' + path_cur[-20:]
+        else:
+            path_cur = path_cur
+
+        dpg.set_value(self.tag_path_cur, path_cur)
+        dpg.set_value(self.tag_path_full, self.fm.path_cur.__str__())
+
+        # 加载路径文件列表
+        fs = self.fm.ls()
+
+        # 清空并绘制表格
+        dpg.delete_item(self.tag_table, children_only=True)
+        dpg.add_table_column(label='cb', parent=self.tag_table, init_width_or_weight=0.1)
+        dpg.add_table_column(label='path', parent=self.tag_table)
+
+        for ind, _ in enumerate(fs):
+
+            abs_path = self.fm.path_cur / _.path
+
+            with dpg.table_row(filter_key=f"{_.path}", parent=self.tag_table) as tag_row:
+
+                # column function
+                tag_sel = dpg.add_selectable(
+                    label=str(ind + 1), default_value=False, user_data=(abs_path, ind),
+                    callback=lambda s, a, u: self.selected(s, a, u) or self.highlight(s, a, u)
+                )
+                with dpg.popup(tag_sel, no_move=True):
+                    dpg.add_text(default_value=abs_path.__str__())
+                    dpg.add_separator()
+
+                    if stat.S_ISREG(_.mode) and _.size < Param.OPEN_MAX_SIZE:
+                        dpg.add_selectable(
+                            label='Open', user_data=abs_path,
+                            callback=lambda s, a, u: self.open_file(u) or dpg.set_value(s, False)
+                        )
+                    dpg.add_selectable(
+                        label='Download', user_data=abs_path,
+                        callback=lambda s, a, u: self.download(u) or dpg.set_value(s, False)
+                    )
+                    dpg.add_selectable(
+                        label='Delete', user_data=abs_path,
+                        callback=lambda s, a, u: self.rm(u) or dpg.set_value(s, False)
+                    )
+
+                self.all_cb.add(tag_sel)
+                self.highlight(tag_sel, False, (abs_path, ind))
+
+                # column path
+                if stat.S_ISDIR(_.mode) or stat.S_ISLNK(_.mode):
+                    dpg.add_selectable(
+                        label=f"> {_.path}", default_value=False, user_data=abs_path,
+                        callback=lambda s, a, u: self.open_dir(s, a, u)
+                    )
+                else:
+                    dpg.add_text(default_value=f"{_.path}")
+
+                with dpg.tooltip(dpg.last_item()):
+                    dpg.add_text(f"{stat.filemode(_.mode)} | {_.mtime} | {_.size} | {_.path}")
+
+    def upload(self):
+        """
+            上传文件至当前位置
+            因为是异步上传，大文件时可能存在刷新延迟未显示情况
+        :return:
+        """
+        self.fm.push_clipboard_to_device(self.fm.path_cur)
+        self.draw_path()
+
+    def download(self, file_path):
+        """
+            下载文件
+        :param file_path:
+        :return:
+        """
+        path_download = Param.PATH_DOWNLOAD / self.adv_device.serial_no
+        path_download.mkdir(parents=True, exist_ok=True)
+
+        file_stat = self.adv_device.adb_dev.sync.stat(file_path.__str__())
+        if stat.S_ISDIR(file_stat.mode):
+            path_base = path_download / file_path.name
+            path_base.mkdir(parents=True, exist_ok=True)
+            self.adv_device.adb_dev.sync.pull_dir(file_path.__str__(), path_base)
+            logger.success(f"Dir {file_path} Download to {path_download}")
+        elif stat.S_ISREG(file_stat.mode):
+            self.adv_device.adb_dev.sync.pull(file_path.__str__(), path_download / file_path.name)
+            logger.success(f"File {file_path} Download to {path_download}")
+
+    def download_selected(self):
+        """
+            下载选中文件
+        :return:
+        """
+        for _ in self.all_cb:
+            if dpg.get_value(_):
+                self.download(dpg.get_item_user_data(_)[0])
+        self.draw_path()
+
+    def rm_selected(self):
+        """
+            删除选中项
+        :return:
+        """
+        selected = [dpg.get_item_user_data(_) for _ in self.all_cb if dpg.get_value(_)]
+        if len(selected) == 0:
+            return
+
+        def _rm():
+            for path, ind in selected:
+                self.fm.rm(path)
+
+            self.draw_path()
+
+        TempModal.draw_confirm(f"Delete {len(selected)} selected items?", _rm)
+
+    def rm(self, file_path):
+        """
+            删除单个文件
+        :param file_path:
+        :return:
+        """
+        def _rm():
+            self.fm.rm(file_path)
+            self.draw_path()
+
+        TempModal.draw_confirm(f"Delete {file_path} ?", _rm)
+
+    def highlight(self, sender, app_data, user_data):
+        """
+            高亮选中项
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :return:
+        """
+        if app_data:
+            dpg.highlight_table_cell(self.tag_table, user_data[1], 1, [100, 100, 100])
+        else:
+            dpg.unhighlight_table_cell(self.tag_table, user_data[1], 1)
+
+    def selected(self, sender, app_data, user_data):
+        """
+            选中回调函数
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :return:
+        """
+
+        selected_item = [_ for _ in self.all_cb if dpg.get_value(_)]
+        values = [dpg.get_item_user_data(_) for _ in selected_item]
+
+        dpg.set_value(self.tag_txt_info, f"{len(selected_item)} selected")
+        if len(selected_item) > 0:
+            msg = [f"{_[1]} | {_[0]}" for _ in values]
+            dpg.set_value(self.tag_txt_info_detail, '\n'.join(msg))
+        else:
+            dpg.set_value(self.tag_txt_info_detail, 'No Item Selected.')
+
+        for _ in self.all_cb:
+            self.highlight(_, _ in selected_item, dpg.get_item_user_data(_))
+
+    def select_all(self):
+        """
+            全选
+        :return:
+        """
+        for _ in self.all_cb:
+            dpg.set_value(_, True)
+
+        self.selected(None, None, None)
+
+    def unselect_all(self):
+        """
+            全否
+        :return:
+        """
+        for _ in self.all_cb:
+            dpg.set_value(_, False)
+
+        self.selected(None, None, None)
+
+    def open_dir(self, sender, app_data, user_data):
+        """
+            打开路径
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :return:
+        """
+
+        self.fm.cd(user_data)
+        self.draw_path()
+
+    def open_file(self, file_path):
+        """
+            本地打开文件
+            下载文件至临时目录，并打开
+        :param file_path:
+        :return:
+        """
+        path_temp = Param.PATH_TEMP / self.adv_device.serial_no
+        path_temp.mkdir(parents=True, exist_ok=True)
+
+        path_save = path_temp / file_path.name
+
+        file_info = self.adv_device.adb_dev.sync.stat(file_path.__str__())
+
+        self.adv_device.adb_dev.sync.pull(file_path.__str__(), path_save)
+        threading.Thread(target=self._open, args=(path_save, file_info.size,)).start()
+
+    def _open(self, path_save: pathlib.Path, file_size: int):
+        """
+            使用线程打开，避免大文件导致下载时间过长
+        :param path_save:
+        :param file_size:
+        :return:
+        """
+        retry_n = file_size // (1024 * 1024) + 5
+        while path_save.stat().st_size != file_size:
+            time.sleep(1)
+            logger.warning(f"File Still Downloading...")
+            retry_n -= 1
+            if retry_n == 0:
+                logger.error(f"File Download Failed")
+                return
+        webbrowser.open(path_save.__str__())

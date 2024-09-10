@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-10 1.5.9 Me2sY  新增文件管理器
+
         2024-09-09 1.5.8 Me2sY  支持文件拷贝
 
         2024-09-06 1.5.5 Me2sY
@@ -68,7 +70,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.8'
+__version__ = '1.5.9'
 
 __all__ = ['start_dpg_adv']
 
@@ -98,7 +100,6 @@ from myscrcpy.gui.dpg.components.scrcpy_cfg import CPMScrcpyCfgController
 from myscrcpy.gui.dpg.mouse_handler import *
 from myscrcpy.gui.gui_utils import *
 
-from myscrcpy.tools.file_manager import FileManager
 
 inject_pg_key_mapper()
 inject_dpg_key_mapper()
@@ -110,7 +111,7 @@ class WindowMain:
         主界面
     """
 
-    WIDTH_CTRL = 120
+    WIDTH_CTRL = 248
     WIDTH_SWITCH = 38
     WIDTH_BOARD = 8
 
@@ -562,7 +563,7 @@ class WindowMain:
                 return
 
         # 2024-09-09 1.5.8 Me2sY 新增文件拷贝方法
-        FileManager(self.device.adb_dev).push_clipboard_to_device()
+        self.device.file_manager.push_clipboard_to_device()
 
     def audio_choose_output_device(self):
         """
@@ -652,8 +653,13 @@ class WindowMain:
             绘制Control Pad
         """
         with dpg.child_window(tag=self.tag_cw_ctrl, width=self.WIDTH_CTRL, no_scrollbar=True, show=False):
-            with dpg.collapsing_header(label='CtrlPad', default_open=True):
+            with dpg.collapsing_header(label='CtrlPad', default_open=False):
                 CPMControlPad().draw().update(self.send_key_event)
+
+            with dpg.collapsing_header(label='FileManagerPad', default_open=True):
+                self.cpm_file_pad = CPMFilePad()
+                self.cpm_file_pad.draw()
+
             dpg.add_separator()
 
     def _draw_switch_pad(self, parent_tag):
@@ -820,6 +826,8 @@ class WindowMain:
         # 2024-08-21 Me2sY 避免重复加载
         self.is_paused = True
         self.device = device
+
+        self.cpm_file_pad.update(lambda: ..., self.device)
 
         try:
             self.session.disconnect()

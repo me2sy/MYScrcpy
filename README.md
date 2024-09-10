@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.8
+# MYScrcpy V1.5.9
 
 ---
 
@@ -6,7 +6,7 @@
 
 ### python语言实现的一个 [**Scrcpy**](https://github.com/Genymobile/scrcpy/) 客户端。包含完整的视频、音频、控制解析及展现，**开发友好，引入即用！**
 
-采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持窗口位置记忆、右键手势控制、断线重连、文件拷贝、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
+采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持窗口位置记忆、右键手势控制、断线重连、文件管理器、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
 
 高速模式使用[**pygame**](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。提供鼠标隐藏、按键事件监听等功能， 适用于第一人称相关应用的按键映射。
 
@@ -26,6 +26,7 @@
 - 按需最小化引用。支持**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
+- **1.5.9 NEW** 新增文件管理器，支持设备文件管理，下载、上传及预览 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/file_manager/Help_file_manager.md)
 - **1.5.8 NEW** 支持Windows系统下，文件传输功能
   - 使用右键手势 下|上 快速拷贝
   - 也可使用 VAC -> Control -> CopyToDevice 使用
@@ -50,7 +51,7 @@
   - 拉动窗口，进行自由伸缩
   - 根据高度/宽度，自动调整窗口至视频比例
 - 支持虚拟摄像头
-  - **1.5.7 NEW** **命令行启动 mysc-t-vc** [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/Help_tools_vc_v1.md)
+  - **1.5.7 NEW** **命令行启动 mysc-t-vc** [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/Help_tools_vc_v1.md)
   - 随时开启，随时关闭，随时切换设备
   - 支持OBS虚拟摄像头/Unity Capture(windows)/v4l2loopback
 
@@ -285,6 +286,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 本人及本项目不对以上产生的相关后果负相关责任，请斟酌使用。
 
 ## 更新日志
+- **1.5.9 NEW** 新增文件管理器，支持设备文件管理，下载、上传及预览
 - **1.5.8 NEW** 支持文件/文件夹/截屏一键拷贝至设备
 - **1.5.8 NEW** 支持输出原始视频/音频流
 - **1.5.7 NEW** CLI启动虚拟摄像头
@@ -315,16 +317,12 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 - 实现了控制按键映射，鼠标映射
 - 实现了UHID-Mouse与鼠标点击混用，可以实现Android界面中鼠标与PC混用模式
 - 实现了UHID-Keyboard，支持模拟外接键盘，直接输入中文（搜狗输入法测试通过）
-- 实现了SharedMemory，不同进程间通过内存低延迟共享视频画面
-- 实现了ZMQ通讯，使用ZMQ pull/push 对手机进行控制
 - 实现了DPG GUI下，鼠标滚轮缩放、滑动等功能
 - 实现了设备锁屏下，通过InputPad输入密码解锁功能
 - DPG GUI下设备翻转图像自动调整，无限制拉伸缩放等功能
 - 实现了Ctrl调节鼠标移动速度功能
 - 采用TwinWindow思路，解决DPG控件无法重叠问题，实现DPG控制映射编辑器（TPEditor）
 - 纯Pygame控制模式下，最低延迟在6ms
-- 实现Audio ZMQ Server, 以ZMQ发布模式，通过网络Socket传输音频流，可以实现远程声音传输、MIC监听等更多可能
-- 低Android版本设备友好，自动判断版本并禁用Audio、Camera、UHID等功能。为实现更好效果，建议使用Android 12版本以上设备
 
 
 ## 开发计划

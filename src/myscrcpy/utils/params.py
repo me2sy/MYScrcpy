@@ -2,16 +2,17 @@
 """
     Params
     ~~~~~~~~~~~~~~~~~~
-    
 
     Log:
+        2024-09-10 1.5.9 Me2sY  新增文件管理器相关路径
+
         2024-09-02 1.5.2 Me2sY  Pypi发布
 
         2024-08-24 1.3.7 Me2sY  从utils中抽离
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.2'
+__version__ = '1.5.9'
 
 __all__ = [
     'project_path',
@@ -43,7 +44,7 @@ class Param:
 
     PROJECT_NAME = PROJECT_NAME
     AUTHOR = 'Me2sY'
-    VERSION = '1.5.8'
+    VERSION = '1.5.9'
     EMAIL = 'me2sy@outlook.com'
     GITHUB = 'https://github.com/Me2sY/myscrcpy'
 
@@ -65,6 +66,15 @@ class Param:
 
     PATH_CONFIGS = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath('configs')
     PATH_CONFIGS.mkdir(parents=True, exist_ok=True)
+
+    PATH_DOWNLOAD = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath('download')
+    PATH_DOWNLOAD.mkdir(parents=True, exist_ok=True)
+
+    # 设备基础位置
+    PATH_DEV_BASE = pathlib.PurePosixPath('/storage/emulated/0/')
+    PATH_DEV_PUSH = PATH_DEV_BASE / PROJECT_NAME
+    PATH_DEV_SCREENSHOT = PATH_DEV_BASE / 'DCIM'
+    OPEN_MAX_SIZE = 1024 * 1024 * 100  # 100 MB
 
     # Scrcpy
     SCRCPY_SERVER_VER = '2.6.1'
