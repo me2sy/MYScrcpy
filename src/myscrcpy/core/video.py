@@ -211,6 +211,7 @@ class VideoAdapter(ScrcpyAdapter):
                 self.is_ready = not self.get_video_frame() is None
 
             else:
+                logger.success(f"Video Socket {self.conn.scid} Connected! Codec: {video_c}")
                 return True
 
         return False

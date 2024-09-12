@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-12 1.5.10 Me2sY 新增 Extensions
+
         2024-09-10 1.5.9 Me2sY  新增文件管理器
 
         2024-09-09 1.5.8 Me2sY  支持文件拷贝
@@ -70,7 +72,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.9'
+__version__ = '1.5.10'
 
 __all__ = ['start_dpg_adv']
 
@@ -100,6 +102,9 @@ from myscrcpy.gui.dpg.components.scrcpy_cfg import CPMScrcpyCfgController
 from myscrcpy.gui.dpg.mouse_handler import *
 from myscrcpy.gui.gui_utils import *
 
+from importlib.machinery import SourceFileLoader
+from myscrcpy.extensions import MYScrcpyExtension, ExtRunEnv
+
 
 inject_pg_key_mapper()
 inject_dpg_key_mapper()
@@ -126,9 +131,12 @@ class WindowMain:
         self.tag_cw_ctrl = dpg.generate_uuid()
         self.tag_hr_resize = dpg.generate_uuid()
         self.tag_hr_hid = dpg.generate_uuid()
+        self.tag_ext_pad = dpg.generate_uuid()
 
         self.device = None
         self.session = None
+
+        self.extensions = []
 
         self.video_controller = VideoController()
         self.video_controller.register_resize_callback(self._video_resize)
@@ -228,6 +236,16 @@ class WindowMain:
         self.video_controller.coord_frame = Coordinate(0, 0)
 
         dpg.configure_item(self.tag_menu_disconnect, enabled=False, show=False)
+
+        for _ in self.extensions:
+            try:
+                _.stop()
+            except:
+                pass
+
+        self.extensions = []
+        self.cpm_vc.clear_drawlist()
+        dpg.delete_item(self.tag_ext_pad, children_only=True)
 
         win_loading.close()
 
@@ -656,11 +674,13 @@ class WindowMain:
             with dpg.collapsing_header(label='CtrlPad', default_open=False):
                 CPMControlPad().draw().update(self.send_key_event)
 
-            with dpg.collapsing_header(label='FileManagerPad', default_open=True):
+            with dpg.collapsing_header(label='FileManagerPad', default_open=False):
                 self.cpm_file_pad = CPMFilePad()
                 self.cpm_file_pad.draw()
 
             dpg.add_separator()
+
+            dpg.add_group(tag=self.tag_ext_pad)
 
     def _draw_switch_pad(self, parent_tag):
         """
@@ -815,18 +835,74 @@ class WindowMain:
             else:
                 self.device.adb_dev.keyevent(keycode.value)
 
+    def load_extensions(self):
+        """
+            加载Extensions
+            Extension 保存在 ~/.myscrcpy/extensions/
+            以 mysc_ext_NNN_XXX_... 命名的文件夹或py文件 注意：文件夹需定义__init__.py 并暴露 XXX类
+            其中 XXX为调用类名
+        :return:
+        """
+
+        logger.info('-' * 100)
+
+        for _ in self.extensions:
+            try:
+                _.stop()
+            except:
+                pass
+
+        dpg.delete_item(self.tag_ext_pad, children_only=True)
+        self.cpm_vc.clear_drawlist()
+
+        logger.info(f"Loading Extensions")
+
+        # 创建运行环境
+        ext_run_env = ExtRunEnv(
+            window=self, vc=self.cpm_vc, tag_pad=self.tag_ext_pad, session=self.session, adv_device=self.device
+        )
+
+        for ext in Param.PATH_EXTENSIONS.glob('mysc_ext_*'):
+
+            logger.debug(f"Loading {ext}")
+
+            try:
+                # 判断插件为 单py 还是 module
+                if ext.is_file() and ext.suffix == '.py':
+                    run_path = ext
+
+                elif ext.is_dir():
+                    run_path = ext / '__init__.py'
+
+                else:
+                    raise FileNotFoundError('No __init__.py Or Run File found!')
+
+                # 加载Extensions
+                ext_name = ext.name.split('_')[3]
+                _ = SourceFileLoader(ext_name, run_path.__str__()).load_module()
+                extension = _.__getattribute__(ext_name).register()
+
+                # 判断类为 MYScrcpyExtension
+                if issubclass(extension.__class__, MYScrcpyExtension):
+                    self.extensions.append(extension)
+                    extension.run(ext_run_env)
+                else:
+                    raise NotImplementedError('Class Must Implement MYScrcpyExtension!')
+                logger.success(f"Extension {ext_name} loaded")
+
+            except Exception as e:
+                logger.warning(f"Load Extension {ext.name} Error => {e}")
+
     def setup_session(self, device: AdvDevice, connect_configs: Dict):
         """
             创建连接 session
         """
-
         win_loading = TempModal.LoadingWindow()
         win_loading.update_message(f"Connecting to {device.info.serial_no}")
 
         # 2024-08-21 Me2sY 避免重复加载
         self.is_paused = True
         self.device = device
-
         self.cpm_file_pad.update(lambda: ..., self.device)
 
         try:
@@ -898,6 +974,8 @@ class WindowMain:
         self.load_recent_device(self.tag_menu_recent)
 
         self.is_paused = False
+
+        self.load_extensions()
 
         win_loading.close()
 

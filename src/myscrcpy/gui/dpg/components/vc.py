@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-12 1.5.10 Me2sY 支持Extensions
+
         2024-09-08 1.5.7 Me2sY  更新图像解析算法
 
         2024-09-05 1.5.4 Me2sY  优化CPU占用
@@ -20,7 +22,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.7'
+__version__ = '1.5.10'
 
 __all__ = [
     'VideoController', 'CPMVC'
@@ -214,19 +216,34 @@ class CPMVC(Component):
         return self._coord_draw.to_scale_point(x, y)
 
     def setup_inner(self, *args, **kwargs):
+        self.tags = set()
         self._coord_draw = Coordinate(1, 1)
-        with dpg.drawlist(**self._coord_draw.d) as self.tag_dl:
-            with dpg.draw_layer() as self.tag_layer_0:
-                ...
-            with dpg.draw_layer() as self.tag_layer_1:
-                ...
-            with dpg.draw_layer(label='cross') as self.tag_layer_2:
-                ...
-            with dpg.draw_layer(label='right_track') as self.tag_layer_track:
-                ...
-            with dpg.draw_layer(label='right_msg') as self.tag_layer_msg:
-                ...
-            with dpg.draw_layer(label='right_sec_point') as self.tag_layer_sec_point:
+        self.tag_dl = dpg.add_drawlist(**self._coord_draw.d)
+        self.tag_layer_0 = dpg.add_draw_layer(parent=self.tag_dl)
+        self.tag_layer_1 = dpg.add_draw_layer(parent=self.tag_dl)
+        self.tag_layer_2 = dpg.add_draw_layer(parent=self.tag_dl)
+        self.tag_layer_track = dpg.add_draw_layer(parent=self.tag_dl)
+        self.tag_layer_msg = dpg.add_draw_layer(parent=self.tag_dl)
+        self.tag_layer_sec_point = dpg.add_draw_layer(parent=self.tag_dl)
+
+    def register_layer(self) -> int | str:
+        """
+            注册 layer
+        :return:
+        """
+        _tag_layer = dpg.add_draw_layer(parent=self.tag_dl)
+        self.tags.add(_tag_layer)
+        return _tag_layer
+
+    def clear_drawlist(self):
+        """
+            清除注册页面
+        :return:
+        """
+        for _ in self.tags:
+            try:
+                dpg.delete_item(_)
+            except:
                 ...
 
     def draw_layer(self, layer_tag, *args, clear: bool = True, **kwargs):
@@ -272,13 +289,14 @@ class CPMVC(Component):
         if not hasattr(self, 'tag_image') or coord == self._coord_draw:
             return coord
 
-        try:
+        # try:
+        if 1:
             update_cfg = {}
             if texture_tag:
                 update_cfg['texture_tag'] = texture_tag
             dpg.configure_item(self.tag_image, pmax=coord, **update_cfg)
-        except Exception as e:
-            logger.error(f"Update Image Error => {e}")
+        # except Exception as e:
+        #     logger.error(f"Update Image Error => {e}")
 
         try:
             dpg.configure_item(self.tag_dl, **coord.d)

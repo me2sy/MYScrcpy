@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-12 1.5.10 Me2sY 新增 Extensions
+
         2024-09-10 1.5.9 Me2sY  新增文件管理器相关路径
 
         2024-09-02 1.5.2 Me2sY  Pypi发布
@@ -12,7 +14,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.9'
+__version__ = '1.5.10'
 
 __all__ = [
     'project_path',
@@ -43,8 +45,8 @@ class Param:
     """
 
     PROJECT_NAME = PROJECT_NAME
-    AUTHOR = 'Me2sY'
-    VERSION = '1.5.9'
+    AUTHOR = __author__
+    VERSION = __version__
     EMAIL = 'me2sy@outlook.com'
     GITHUB = 'https://github.com/Me2sY/myscrcpy'
 
@@ -69,6 +71,9 @@ class Param:
 
     PATH_DOWNLOAD = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath('download')
     PATH_DOWNLOAD.mkdir(parents=True, exist_ok=True)
+
+    PATH_EXTENSIONS = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath(f'extensions')
+    PATH_EXTENSIONS.mkdir(parents=True, exist_ok=True)
 
     # 设备基础位置
     PATH_DEV_BASE = pathlib.PurePosixPath('/storage/emulated/0/')

@@ -24,6 +24,7 @@ __author__ = 'Me2sY'
 __version__ = '1.5.9'
 
 __all__ = [
+    'CPMPad',
     'CPMNumPad', 'CPMControlPad',
     'CPMSwitchPad', 'CPMFilePad'
 ]
@@ -202,7 +203,7 @@ class CPMFilePad(CPMPad):
         self.tag_filter = dpg.generate_uuid()
         self.tag_table = dpg.generate_uuid()
 
-        # Download Delete
+        # Download Open Delete
         with dpg.group(horizontal=True):
             # Open Download File
             dpg.add_button(

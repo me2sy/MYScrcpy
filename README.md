@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.9
+# MYScrcpy V1.5.10
 
 ---
 
@@ -6,7 +6,7 @@
 
 ### python语言实现的一个 [**Scrcpy**](https://github.com/Genymobile/scrcpy/) 客户端。包含完整的视频、音频、控制解析及展现，**开发友好，引入即用！**
 
-采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持窗口位置记忆、右键手势控制、断线重连、文件管理器、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
+采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持编写插件，窗口位置记忆、右键手势控制、断线重连、文件管理器、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
 
 高速模式使用[**pygame**](https://www.pygame.org/)作为鼠标及键盘控制映射GUI。提供鼠标隐藏、按键事件监听等功能， 适用于第一人称相关应用的按键映射。
 
@@ -19,6 +19,7 @@
 ---
 
 ### 开发
+- **1.5.10 NEW** 支持自行开发扩展插件 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)
 - **1.5.8 NEW** 支持获取视频、音频原格式流，方便二次开发
 - 开箱即用 `pip install mysc[full]`
 - 使用Session/Connection/Adapter/Args架构，一行代码获取图像
@@ -286,6 +287,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 本人及本项目不对以上产生的相关后果负相关责任，请斟酌使用。
 
 ## 更新日志
+- **1.5.10 NEW** 支持插件
 - **1.5.9 NEW** 新增文件管理器，支持设备文件管理，下载、上传及预览
 - **1.5.8 NEW** 支持文件/文件夹/截屏一键拷贝至设备
 - **1.5.8 NEW** 支持输出原始视频/音频流

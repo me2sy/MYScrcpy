@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.5.9"
+version = "1.5.10"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
-description = "A Scrcpy client implemented in Python. Gui with dearpygui/pygame. With Video, Audio, also Control. GUI Supports Key Proxy, window position record, right-click gesture control, File Manager, Virtual Camera, UHID Keyboard and Chinese input and more."
+description = "A Scrcpy client implemented in Python. Gui with dearpygui/pygame. With Video, Audio, also Control. GUI Supports Key Proxy, Extensions, window position record, right-click gesture control, File Manager, Virtual Camera, UHID Keyboard and Chinese input and more."
 readme = "README.md"
 requires-python = ">= 3.11"
 keywords = ["scrcpy", "android", "adbutils", "av", "numpy", "DearPyGui", "Pygame", "adb", "pyaudio"]

@@ -1,4 +1,4 @@
-# MYScrcpy V1.5.9
+# MYScrcpy V1.5.10
 
 ---
 
@@ -8,7 +8,7 @@ A [**Scrcpy**](https://github.com/Genymobile/scrcpy/) client implemented in **Py
 
 Includes comprehensive video, audio, and control flow parsing and presentation. **Developer-friendly, Just pip install and ready to go!**
 
-Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Window Position Record, Right-click gesture control, Virtual Cameras, File Manager, Chinese input, unlocking screen passwords, and other features.
+Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, Virtual Cameras, File Manager, Chinese input, unlocking screen passwords, and other features.
 
 In some control proxy scenarios, [**pygame**](https://www.pygame.org/) is used for mouse and keyboard control mapping GUI. 
 
@@ -23,6 +23,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 ---
 
 ### Develop
+- **1.5.10 NEW** Extension Support! [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)
 - **1.5.8 NEW** Supports output the original format streams of video and audio to facilitate your development work
 - `pip install mysc[all]` and ready to go
 - Session/Connection/Adapter/Args Framework, One Line And get A Image or Numpy.ndarray RGB
@@ -291,6 +292,7 @@ The author and this project are not responsible for any related consequences res
 ## ChangeLog
 
 ---
+- **1.5.10 NEW** Extensions Support
 - **1.5.9 NEW** File Manager with upload, download, delete and more
 - **1.5.8 NEW** Support Copy Files or Dirs or ScreenShot from pc to device
 - **1.5.8 NEW** Raw Video/Audio Stream Output
