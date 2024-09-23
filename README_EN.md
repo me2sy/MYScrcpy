@@ -27,7 +27,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - Preview screenshot history, with options for custom save formats and batch saving.
   - Support for magnifier mode.
   - Support for customizing the color, random color, and thickness of CrossLine for increased visibility.
-  - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/extensions/capture/img_1.jpg)
+  - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/capture/img_1.jpg)
 
 ### Develop
 - **1.6.0 NEW** Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
