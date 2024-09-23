@@ -4,12 +4,14 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-18 1.6.0 Me2sY  废弃，将于下一个版本移除
+
         2024-09-12 1.0.0 Me2sY
             创建，用于实现扩展
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.0.0'
+__version__ = '1.6.0'
 
 __all__ = [
     'ExtRunEnv', 'MYScrcpyExtension'
@@ -50,7 +52,6 @@ class MYScrcpyExtension(metaclass=ABCMeta):
         扩展基类
         通过继承该类，实现自定义扩展
     """
-
     @staticmethod
     def register(*args, **kwargs):
         """
@@ -77,6 +78,3 @@ class MYScrcpyExtension(metaclass=ABCMeta):
         :return:
         """
         ...
-
-
-

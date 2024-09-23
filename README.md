@@ -1,6 +1,4 @@
-# MYScrcpy V1.5.10
-
----
+# MYScrcpy V1.6.0
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -12,23 +10,38 @@
 
 ### :tv: 视频简介 [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
-![dpg Screenshot](/files/images/mys_1_3_4.jpg)
+![dpg Screenshot](https://github.com/me2sy/MYScrcpy/blob/main/files/images/mys_1_3_4.jpg)
 
 ## 功能特性
 
----
+### 插件
+- **1.6.0** Capture 截图助手 （告别苦苦手拉640x640训练图）
+  - 获取屏幕坐标、定位十字线
+  - 自定义截图框尺寸、原始或所见所截模式
+  - C键截图、X键锁定截图框位置 Q关闭功能
+  - 截取设备1：1实际图形，保持高清晰度
+  - 截图历史预览、自定义保存格式、批量保存
+  - 支持放大镜模式
+  - 支持自定义十字线颜色、随机颜色，粗细等，更加醒目
+  - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/extensions/capture/img_1.jpg)
+
 
 ### 开发
-- **1.5.10 NEW** 支持自行开发扩展插件 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)
-- **1.5.8 NEW** 支持获取视频、音频原格式流，方便二次开发
+- **1.6.0 NEW** 全新插件架构！支持配置文件注入等功能 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
+- **1.6.0 NEW** 升级KVManager ValueManager，自动注册，自动管理 
+- **1.6.0 NEW** 整合[uiautomator2](https://github.com/openatx/uiautomator2)
+- ~~支持自行开发扩展插件 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)~~
+- 支持获取视频、音频原格式流，方便二次开发
 - 开箱即用 `pip install mysc[full]`
 - 使用Session/Connection/Adapter/Args架构，一行代码获取图像
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
 - 按需最小化引用。支持**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
-- **1.5.9 NEW** 新增文件管理器，支持设备文件管理，下载、上传及预览 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/file_manager/Help_file_manager.md)
-- **1.5.8 NEW** 支持Windows系统下，文件传输功能
+- **1.6.0 NEW** 新增插件管理器，管理插件、自定义配置等
+- **1.6.0 NEW** 新增底部提示及日志栏，信息及时提醒，同时提供日志查看功能
+- 文件管理器，支持设备文件管理，下载、上传及预览 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/file_manager/Help_file_manager.md)
+- 支持Windows系统下，文件传输功能
   - 使用右键手势 下|上 快速拷贝
   - 也可使用 VAC -> Control -> CopyToDevice 使用
   - 先选中PC中文件或文件夹（支持多选），在MYScrcpy界面绘制拷贝手势，则拷贝选中文件/文件夹至设备 /sdcard/MYScrcpy/ 文件夹下
@@ -52,15 +65,21 @@
   - 拉动窗口，进行自由伸缩
   - 根据高度/宽度，自动调整窗口至视频比例
 - 支持虚拟摄像头
-  - **1.5.7 NEW** **命令行启动 mysc-t-vc** [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/Help_tools_vc_v1.md)
+  - 命令行启动 mysc-t-vc [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/Help_tools_vc_v1.md)
   - 随时开启，随时关闭，随时切换设备
   - 支持OBS虚拟摄像头/Unity Capture(windows)/v4l2loopback
 
 ### 音频
-- 支持**opus (1.5.3 NEW)**/flac/raw
+- 支持opus/flac/raw
 - 支持切换声音输出设备，可配合VB-Cables模拟麦克风输入
 
 ### 控制
+- **1.6.0 NEW** 优化鼠标控制器
+  - 支持手势切换功能空间 手势：DR
+  - 支持插件配置注入
+- **1.6.0 NEW** 新增键盘切换器
+  - 使用 F12 切换 UHID/ADB/Ctrl模式， F11 切换 控制空间
+  - 支持插件配置注入
 - 按键映射创建工具（TPEditor）,支持键盘，鼠标等多种控制映射方式，Windows/Linux 适用
 - 支持UHID鼠标，可以实现Android界面中鼠标与PC混用
 - 支持UHID-Keyboard，模拟外接键盘，直接输入中文（百度、搜狗输入法测试通过）
@@ -72,9 +91,19 @@
 - 特殊场景下，支持ctrl调节鼠标移动速度功能
 - 侧边栏多种功能键
 
-## 基本使用
+## 帮助与支持
 
----
+在使用中有任何问题、想法及建议，欢迎通过以下方式与我联系：
+
+#### QQ群：579618095
+![579618095](https://github.com/me2sy/MYScrcpy/blob/main/files/images/qq_group.jpg)
+
+#### 邮箱：Me2sY@outlook.com
+
+#### Blog: [CSDN](https://blog.csdn.net/weixin_43463913)
+
+
+## 基本使用
 
 ### 1.1 pypi直接安装使用（推荐）
 ```bash
@@ -228,24 +257,22 @@ python -m myscrcpy.gui.ng.main
 
 ## 程序截图
 
----
-
 ### 主界面
 ![dpg Screenshot](/files/images/myscrcpy_1_3_0_main.jpg)
 
 ### 右键手势功能
 ![right](/files/images/myscrcpy_1_4_2_g.jpg)
 
-### Nicegui Web 界面 **NEW 1.3.6**（DEMO）
+### Nicegui Web 界面（DEMO）
 ![Nicegui Demo](/files/images/Nicegui_DEMO.jpg)
 
 ### 按键映射编辑器
 ![Touch Proxy Editor](/files/images/edit_touch_proxy.jpg)
 
+### 插件管理器
+![img_1.png](/files/images/myscrcpy_1_6_0.png)
 
 ## 所思所想
-
----
 
 作为从 Scrcpy 1.X时代就开始使用的老玩家，感叹于Scrcpy的发展及神奇的功能的同时，也一直想做点什么。不过碍于有其他项目（~~懒~~）一直迟迟没有动手。 
 直到遇到了[Scrcpy Mask](https://github.com/AkiChase/scrcpy-mask) 这一优秀项目，感觉我也要做点什么了。
@@ -265,38 +292,42 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 ## 鸣谢
 
----
-
 感谢 [**Scrcpy**](https://github.com/Genymobile/scrcpy/) 项目及作者 [**rom1v**](https://github.com/rom1v)，在这一优秀项目基础上，才有了本项目。
 
 感谢使用到的各个包项目及作者们。有你们的付出，才有了如此好的软件开发环境。
 
 同时感谢各位使用者们，谢谢你们的支持与帮助，也希望MYScrcpy成为你们得心应手的好工具，好帮手。
 
+
 ## 声明
 
----
-
 本项目供日常学习（图形、声音、AI训练等）、Android测试、开发等使用。
+
 **请一定注意：**
 
 1.开启手机调试模式存在一定风险，可能会造成数据泄露等风险，使用前确保您了解并可以规避相关风险
 
 **2.本项目不可用于违法犯罪等使用**
 
-本人及本项目不对以上产生的相关后果负相关责任，请斟酌使用。
+**本人及本项目不对以上产生的相关后果负相关责任，请斟酌使用。**
+
 
 ## 更新日志
-- **1.5.10 NEW** 支持插件
-- **1.5.9 NEW** 新增文件管理器，支持设备文件管理，下载、上传及预览
-- **1.5.8 NEW** 支持文件/文件夹/截屏一键拷贝至设备
-- **1.5.8 NEW** 支持输出原始视频/音频流
-- **1.5.7 NEW** CLI启动虚拟摄像头
-- **1.5.5 NEW** 优化Nicegui界面，方便termux使用
-- **1.5.4 NEW** 降低CPU占用
-- **1.5.3 NEW** 更新 Readme 文件
-- **1.5.3 NEW** 支持Opus音频解析
-- **1.5.0 NEW** 现已上线**pypi**
+- **1.6.0 NEW** 接入[uiautomator2](https://github.com/openatx/uiautomator2)
+- **1.6.0 NEW** 键盘控制器、鼠标控制器
+- **1.6.0 NEW** 日志管理器
+- **1.6.0 NEW** 修复窗口调整时跳动缺陷，DPG崩溃缺陷
+- **1.6.0 NEW** 全新插件体系，插件注入，插件管理器等
+- 1.5.10 支持插件
+- 1.5.9 新增文件管理器，支持设备文件管理，下载、上传及预览
+- 1.5.8 支持文件/文件夹/截屏一键拷贝至设备
+- 1.5.8 支持输出原始视频/音频流
+- 1.5.7 CLI启动虚拟摄像头
+- 1.5.5 优化Nicegui界面，方便termux使用
+- 1.5.4 降低CPU占用
+- 1.5.3 更新 Readme 文件
+- 1.5.3 支持Opus音频解析
+- 1.5.0 现已上线 [**pypi**](https://pypi.org/project/mysc/)
 - 1.4.2 使用[moosegesture](https://github.com/asweigart/moosegesture)实现右键手势控制功能，支持模拟第二个点、画线后退、调整音量、播放媒体等功能
 - 1.4.1 改用SQLite进行配置管理
 - 1.4.0 久等了！全新Core/Session/Connection/Utils架构
@@ -329,9 +360,6 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 ## 开发计划
 
----
-
-- 接入[uiautomator2](https://github.com/openatx/uiautomator2)
 - APK管理器
 - 使用范例及教程
 - twisted / fastapi 接口

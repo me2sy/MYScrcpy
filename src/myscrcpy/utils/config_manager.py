@@ -2,16 +2,17 @@
 """
     配置管理工具
     ~~~~~~~~~~~~~~~~~~
-    
 
     Log:
+        2024-09-16 1.6.0 Me2sY  新增 query / set_many 方法
+
         2024-08-31 1.4.1 Me2sY  使用SQLite3 取代原 TinyDB，进行KeyValue管理
 
         2024-08-24 1.3.7 Me2sY  utils中抽离
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.1'
+__version__ = '1.6.0'
 
 __all__ = [
     'CfgHandler',
@@ -24,7 +25,7 @@ import json
 import pathlib
 import pickle
 import sqlite3
-from typing import Any, ClassVar, Tuple
+from typing import Any, ClassVar, Tuple, List, Iterable
 
 from myscrcpy.utils.params import Param
 
@@ -99,6 +100,28 @@ class KVManager:
             )
 
     @staticmethod
+    def _query(table_name: str, key_query: str) -> List[Any]:
+        """
+            查询
+        :param table_name:
+        :param key_query:
+        :return:
+        """
+        sql = f"SELECT * FROM {table_name} WHERE k like ?"
+
+        db = KVManager.get_connection(table_name)
+        cur = db.cursor()
+        cur.execute(sql, (key_query,))
+        values = cur.fetchall()
+        cur.close()
+        db.close()
+
+        if values is None:
+            return []
+        else:
+            return [KeyValue.loads(_) for _ in values]
+
+    @staticmethod
     def _get(table_name: str, key: str, default_value: Any = None) -> Any:
         """
             获取全局属性
@@ -136,6 +159,18 @@ class KVManager:
             db.execute(sql, KeyValue(key, value, info).dumps())
 
     @staticmethod
+    def _set_many(table_name: str, key_values: Iterable[KeyValue]) -> None:
+        """
+            设置多个属性
+        :param table_name:
+        :param key_values:
+        :return:
+        """
+        sql = f"INSERT OR REPLACE INTO {table_name} VALUES(?, ?, ?)"
+        with KVManager.get_connection(table_name) as db:
+            db.executemany(sql, [kv.dumps() for kv in key_values])
+
+    @staticmethod
     def _del(table_name: str, key: str) -> None:
         """
             删除键
@@ -154,14 +189,19 @@ class KVManager:
         :param table_name:
         """
         self.table_name = ('kvm_' + str(table_name)[:60]) if table_name else f"kvm_unknown"
-        # self.db = sqlite3.connect(Param.PATH_CONFIGS / f"{self.table_name}.db")
         self._run_check(self.table_name)
+
+    def query(self, key_query: str) -> List[KeyValue]:
+        return self.__class__._query(self.table_name, key_query)
 
     def get(self, key: str, default_value=None) -> Any:
         return self.__class__._get(self.table_name, key, default_value)
 
     def set(self, key: str, value: Any, info: str = ''):
         self.__class__._set(self.table_name, key, value, info)
+
+    def set_many(self, key_values: Iterable[KeyValue]) -> None:
+        self.__class__._set_many(self.table_name, key_values)
 
     def delete(self, key: str):
         self.__class__._del(self.table_name, key)

@@ -5,12 +5,14 @@
     连接控制
 
     Log:
+        2024-09-22 1.6.0 Me2sY  支持视频帧回调方法
+
         2024-08-29 1.4.0 Me2sY
             创建，支持连接监控，断线重连，加载配置连接等功能
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '1.6.0'
 
 __all__ = [
     'Session'
@@ -18,7 +20,9 @@ __all__ = [
 
 import threading
 import time
+from typing import Callable
 
+import av
 from adbutils import AdbDevice, AdbError
 from loguru import logger
 
@@ -39,13 +43,16 @@ class Session:
             audio_args: AudioArgs = None,
             control_args: ControlArgs = None,
             heartbeat: bool = True,
+            frame_update_callback: Callable = None,
             **kwargs
     ):
         self.adb_device = adb_device
 
         self.ca = None if control_args is None else ControlAdapter.connect(self.adb_device, control_args)
         self.aa = None if audio_args is None else AudioAdapter.connect(self.adb_device, audio_args)
-        self.va = None if video_args is None else VideoAdapter.connect(self.adb_device, video_args)
+        self.va = None if video_args is None else VideoAdapter.connect(
+            self.adb_device, video_args, frame_update_callback
+        )
 
         if self.ca is None and self.aa is None and self.va is None:
             raise RuntimeError(f"At Least One Adapter Required!")
@@ -63,10 +70,15 @@ class Session:
             ...
 
     @classmethod
-    def connect_by_configs(cls, adb_device: AdbDevice, **kwargs):
+    def connect_by_configs(
+            cls,
+            adb_device: AdbDevice,
+            frame_update_callback: Callable[[av.VideoFrame, int], None] = None,
+            **kwargs):
         """
 
         :param adb_device:
+        :param frame_update_callback:
         :param kwargs:
         :return:
         """
@@ -75,6 +87,7 @@ class Session:
             video_args=VideoArgs.load(**kwargs) if kwargs.get('video', False) else None,
             audio_args=AudioArgs.load(**kwargs) if kwargs.get('audio', False) else None,
             control_args=ControlArgs.load(**kwargs) if kwargs.get('control', False) else None,
+            frame_update_callback=frame_update_callback,
             **kwargs
         )
 

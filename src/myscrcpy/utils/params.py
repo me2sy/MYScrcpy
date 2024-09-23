@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-18 1.6.0 Me2sY  重构 Extensions 体系
+
         2024-09-12 1.5.10 Me2sY 新增 Extensions
 
         2024-09-10 1.5.9 Me2sY  新增文件管理器相关路径
@@ -14,7 +16,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.10'
+__version__ = '1.6.0'
 
 __all__ = [
     'project_path',
@@ -74,6 +76,9 @@ class Param:
 
     PATH_EXTENSIONS = pathlib.Path.home().joinpath(f".{PROJECT_NAME}").joinpath(f'extensions')
     PATH_EXTENSIONS.mkdir(parents=True, exist_ok=True)
+
+    PATH_EXTENSIONS_LOCAL = PROJECT_PATH.joinpath('extensions')
+    PATH_EXTENSIONS_LOCAL.mkdir(parents=True, exist_ok=True)
 
     # 设备基础位置
     PATH_DEV_BASE = pathlib.PurePosixPath('/storage/emulated/0/')

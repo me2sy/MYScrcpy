@@ -4,6 +4,12 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-18 1.6.0 Me2sY
+            1. 适配 插件 体系
+            2. 使用 keyboardHandler 对 按键进行管理 支持模式切换
+            3. 优化显示效果，修复窗口调节过程中抖动缺陷
+            4. 重构 MouseHandler 支持插件，修复DPG异常退出缺陷
+
         2024-09-12 1.5.10 Me2sY 新增 Extensions
 
         2024-09-10 1.5.9 Me2sY  新增文件管理器
@@ -72,9 +78,10 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.10'
+__version__ = '1.6.0'
 
 __all__ = ['start_dpg_adv']
+
 
 import pathlib
 import threading
@@ -83,6 +90,7 @@ from functools import partial
 import webbrowser
 from typing import Dict
 
+import av
 from adbutils import adb
 import dearpygui.dearpygui as dpg
 from loguru import logger
@@ -91,7 +99,7 @@ from myscrcpy.core import *
 from myscrcpy.gui.pg.window_control import PGControlWindow
 from myscrcpy.gui.dpg.window_mask import WindowTwin
 
-from myscrcpy.utils import Param, KeyMapper, kv_global, ADBKeyCode
+from myscrcpy.utils import Param, kv_global, ADBKeyCode, KVManager, KeyValue
 from myscrcpy.utils import Coordinate, ROTATION_VERTICAL, ROTATION_HORIZONTAL
 
 from myscrcpy.gui.dpg.components.component_cls import TempModal, Static
@@ -100,28 +108,28 @@ from myscrcpy.gui.dpg.components.vc import VideoController, CPMVC
 from myscrcpy.gui.dpg.components.pad import *
 from myscrcpy.gui.dpg.components.scrcpy_cfg import CPMScrcpyCfgController
 from myscrcpy.gui.dpg.mouse_handler import *
+from myscrcpy.gui.dpg.keyboard_handler import KeyboardHandler
 from myscrcpy.gui.gui_utils import *
 
-from importlib.machinery import SourceFileLoader
-from myscrcpy.extensions import MYScrcpyExtension, ExtRunEnv
-
+from myscrcpy.gui.dpg.dpg_extension import DPGExtensionManager, DPGExtManagerWindow, ValueManager, ViewportCoordManager
 
 inject_pg_key_mapper()
 inject_dpg_key_mapper()
 
 
-class WindowMain:
+class Window:
     """
         MYSDPG
         主界面
     """
 
-    WIDTH_CTRL = 248
+    WIDTH_CTRL = 256
     WIDTH_SWITCH = 38
     WIDTH_BOARD = 8
 
     HEIGHT_MENU = 19
     HEIGHT_BOARD = 8
+    HEIGHT_BOTTOM = 42
 
     N_RECENT_RECORDS = 10
 
@@ -130,33 +138,84 @@ class WindowMain:
         self.tag_window = dpg.generate_uuid()
         self.tag_cw_ctrl = dpg.generate_uuid()
         self.tag_hr_resize = dpg.generate_uuid()
-        self.tag_hr_hid = dpg.generate_uuid()
         self.tag_ext_pad = dpg.generate_uuid()
+        self.tag_ext_menu = dpg.generate_uuid()
 
-        self.device = None
-        self.session = None
+        self.device: AdvDevice = None
+        self.session: Session = None
 
-        self.extensions = []
+        self.kv = KVManager('dpg_main_window')
+        self.vm = ValueManager(self.kv, load_kvs=True)
+        self.ext_manager = DPGExtensionManager(self)
+
+        self.vcm = ViewportCoordManager()
+        self.vcm.register_resize_callback(self.vp_resize)
 
         self.video_controller = VideoController()
         self.video_controller.register_resize_callback(self._video_resize)
         self.video_controller.register_resize_callback(self._camera_resize)
 
-        self.is_paused = False
+        self.video_controller.register_resize_callback(
+            lambda t, old_c, new_c: self.ext_manager.device_rotation(new_c)
+        )
 
-        self.v_last_vp_width = dpg.get_viewport_width()
-        self.v_last_vp_height = dpg.get_viewport_height()
-        self.h_last_vp_width = dpg.get_viewport_width()
-        self.h_last_vp_height = dpg.get_viewport_height()
+        self.is_paused = True
 
-        self.mouse_handler = None
+        self.mouse_handler: MouseHandler = None
+        self.keyboard_handler: KeyboardHandler = None
 
         self.vcam_running = False
 
-    def close(self):
-        dpg.delete_item(self.tag_window)
-        if self.session:
-            self.session.disconnect()
+    def vp_resize(self, old_client_coord: Coordinate, new_client_coord: Coordinate):
+        """
+            Viewport Resize 回调
+        :param old_client_coord:
+        :param new_client_coord:
+        :return:
+        """
+
+        # 更新 CPM_VC 画面大小
+        cw_c = 1 if dpg.is_item_shown(self.tag_cw_ctrl) else 0
+
+        new_vc_coord = Coordinate(
+            new_client_coord.width - self.WIDTH_CTRL * cw_c - self.WIDTH_SWITCH - self.WIDTH_BOARD * (3 + cw_c),
+            new_client_coord.height - self.HEIGHT_MENU - self.HEIGHT_BOARD * 3 - self.HEIGHT_BOTTOM
+        )
+
+        self.cpm_vc.resize(new_vc_coord)
+
+        title = f"{Param.PROJECT_NAME} - {Param.AUTHOR}"
+        if self.device:
+            title += f" - {self.device.info.serial_no} - {new_vc_coord.width} X {new_vc_coord.height}"
+
+            if not dpg.is_item_hovered(self.tag_drag_video_s) and not dpg.is_item_clicked(self.tag_drag_video_s):
+                # 更新 Menu/Video/Resize相关控件
+                scale = min(
+                    round(new_vc_coord.width / self.video_controller.coord_frame.width, 3),
+                    round(new_vc_coord.height / self.video_controller.coord_frame.height, 3)
+                )
+                dpg.set_value(self.tag_drag_video_s, scale)
+
+            dpg.set_value(self.tag_drag_video_w, new_vc_coord.width)
+            dpg.set_value(self.tag_drag_video_h, new_vc_coord.height)
+
+            # 记录当前设备当前配置下窗口大小
+            win_pos_kv = KeyValue(
+                key=f"win_pos_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}",
+                value=dpg.get_viewport_pos()
+            )
+            win_coord = KeyValue(
+                key=f"draw_coord_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}",
+                value=new_vc_coord.d
+            )
+            self.device.kvm.set_many([win_pos_kv, win_coord])
+
+        else:
+            dpg.set_value(self.tag_drag_video_s, 1)
+            dpg.set_value(self.tag_drag_video_w, new_vc_coord.width)
+            dpg.set_value(self.tag_drag_video_h, new_vc_coord.height)
+
+        dpg.set_viewport_title(title)
 
     def _adb_devices(self):
         """
@@ -185,71 +244,74 @@ class WindowMain:
         if h > vph:
             dpg.set_viewport_height(h + 64)
 
-    def disconnect(self):
+    def disconnect(self, draw_default_frame: bool = True, loading_window=None):
         """
-            关闭Session连接
+            断联
+        :param draw_default_frame:
+        :param loading_window:
+        :return:
         """
+
+        _is_paused = self.is_paused
 
         self.is_paused = True
 
-        win_loading = TempModal.LoadingWindow()
+        win_loading = TempModal.LoadingWindow() if loading_window is None else loading_window
 
         # 2024-08-31 1.4.1 Me2sY  保存窗口位置
         win_loading.update_message(f"Saving Configs")
 
         if self.session and self.session.is_video_ready:
-            self.device.kvm.set(
-                f"win_pos_{self.session.va.coordinate.rotation}_{self.device.scrcpy_cfg}", value=dpg.get_viewport_pos()
+
+            rotation = self.session.va.coordinate.rotation
+
+            # 保存 窗口位置及大小
+            win_pos_kv = KeyValue(
+                key=f"win_pos_{rotation}_{self.device.scrcpy_cfg}",
+                value=dpg.get_viewport_pos()
             )
-
-        win_loading.update_message(f"Closing Session")
-
-        try:
-            self.session.disconnect()
-        except:
-            ...
-
-        self.session = None
+            win_coord = KeyValue(
+                key=f"draw_coord_{rotation}_{self.device.scrcpy_cfg}",
+                value=self.cpm_vc.coord_draw.d
+            )
+            self.device.kvm.set_many([win_pos_kv, win_coord])
 
         win_loading.update_message(f"Closing Handler")
 
         # 2024-09-01 1.4.2 Me2sY  关闭鼠标控制器
-        if self.mouse_handler:
-            try:
-                self.mouse_handler.close()
-            except:
-                ...
+        # 2024-09-23 1.6.0 Me2sY   关闭鼠标进程
+        self.mouse_handler and self.mouse_handler.device_disconnect()
 
-            self.mouse_handler = None
+        # 2024-09-18 1.6.0 Me2sY  关闭键盘控制器
+        self.keyboard_handler and self.keyboard_handler.device_disconnect()
 
-        try:
-            dpg.delete_item(self.tag_hr_hid)
-        except:
-            ...
+        # Extensions 断开设备连接
+        self.ext_manager.device_disconnect()
 
+        win_loading.update_message(f"Closing Session")
+
+        self.session and self.session.disconnect()
+
+        _device_serial = self.device.serial_no
+
+        self.session = None
         self.device = None
 
-        self.video_controller.load_frame(
-            VideoController.create_default_av_video_frame(Coordinate(400, 500), rgb_color=0)
-        )
-        # 避免下次连接不加载窗口位置
-        self.video_controller.coord_frame = Coordinate(0, 0)
+        if draw_default_frame:
+            self.video_controller.load_frame(
+                VideoController.create_default_av_video_frame(Coordinate(400, 500), rgb_color=0)
+            )
+            # 避免下次连接不加载窗口位置
+            self.video_controller.coord_frame = Coordinate(0, 0)
 
         dpg.configure_item(self.tag_menu_disconnect, enabled=False, show=False)
 
-        for _ in self.extensions:
-            try:
-                _.stop()
-            except:
-                pass
+        if loading_window is None:
+            win_loading.close()
 
-        self.extensions = []
-        self.cpm_vc.clear_drawlist()
-        dpg.delete_item(self.tag_ext_pad, children_only=True)
+        self.cpm_bottom.show_message(f"Device {_device_serial} Disconnected!")
 
-        win_loading.close()
-
-        self.is_paused = False
+        self.is_paused = _is_paused
 
     def video_fix(self, sender, app_data, user_data):
         """
@@ -298,13 +360,12 @@ class WindowMain:
 
         cw_c = 1 if dpg.is_item_shown(self.tag_cw_ctrl) else 0
 
-        fix_w = dpg.get_viewport_width() - dpg.get_viewport_client_width()
-        vp_w = coord.width + self.WIDTH_SWITCH + self.WIDTH_CTRL * cw_c + self.WIDTH_BOARD * (3 + cw_c) + fix_w
-        dpg.set_viewport_width(vp_w)
+        # 2024-09-18 1.6.0 使用 ViewportCoordManager 管理 避免调整抖动
 
-        fix_h = dpg.get_viewport_height() - dpg.get_viewport_client_height()
-        vp_h = coord.height + self.HEIGHT_BOARD * 3 + self.HEIGHT_MENU + fix_h
-        dpg.set_viewport_height(vp_h)
+        vp_w = coord.width + self.WIDTH_SWITCH + self.WIDTH_CTRL * cw_c + self.WIDTH_BOARD * (3 + cw_c)
+        vp_h = coord.height + self.HEIGHT_BOARD * 3 + self.HEIGHT_MENU + self.HEIGHT_BOTTOM
+
+        self.vcm.set_viewport_client_size(Coordinate(vp_w, vp_h))
 
         self.is_paused = _pause
 
@@ -410,7 +471,9 @@ class WindowMain:
                     self.load_recent_device(self.tag_menu_recent)
 
                 self.tag_menu_disconnect = dpg.add_menu_item(
-                    label='Disconnect', callback=self.disconnect, enabled=False, show=False
+                    label='Disconnect',
+                    callback=lambda s, a, u: self.disconnect(True),
+                    enabled=False, show=False
                 )
 
             # ADB 相关功能
@@ -423,7 +486,7 @@ class WindowMain:
                 def reboot():
                     def _f():
                         self.device.reboot()
-                        self.disconnect()
+                        self.disconnect(True)
 
                     if self.device:
                         TempModal.draw_confirm(
@@ -435,8 +498,6 @@ class WindowMain:
                             ),
                             width=220
                         )
-
-                # dpg.add_menu_item(label='APK Manager', callback=lambda: ...)
 
                 dpg.add_spacer(height=10)
 
@@ -482,8 +543,6 @@ class WindowMain:
                     dpg.add_menu_item(label='Disconnect', callback=self.disconnect_adapter, user_data='audio')
 
                 with dpg.menu(label='Ctrl'):
-                    self.tag_cb_uhid = dpg.add_checkbox(label='UHID', default_value=True)
-
                     # 2024-08-19 Me2sY  优化为可选项
                     def set_screen(sender, app_data, user_data):
                         if self.session.is_control_ready:
@@ -568,6 +627,10 @@ class WindowMain:
                 #     dpg.add_menu_item(label='UIAutomator2')
                 #     dpg.add_separator()
                 #     dpg.add_menu_item(label='Help')
+
+            # 2024-09-18 1.6.0 Me2sY 新增插件管理菜单
+            with dpg.menu(label='Exts', tag=self.tag_ext_menu):
+                dpg.add_menu_item(label='Manager', callback=lambda: DPGExtManagerWindow(self.ext_manager).draw())
 
     def copy_to_device(self, *args, **kwargs):
         """
@@ -699,8 +762,6 @@ class WindowMain:
                 dpg.hide_item(self.tag_cw_ctrl)
                 dpg.set_viewport_width(dpg.get_viewport_width() - self.WIDTH_CTRL - self.WIDTH_BOARD)
 
-            self._window_resize()
-
         CPMSwitchPad(
             parent_container=CPMSwitchPad.default_container(parent_tag)
         ).draw(Static.ICONS).update(
@@ -709,7 +770,8 @@ class WindowMain:
 
     def draw(self):
         """
-            绘制主窗口
+            初始化Window窗口
+        :return:
         """
         with dpg.window(tag=self.tag_window, no_scrollbar=True):
             # 1:1 Menu
@@ -723,7 +785,32 @@ class WindowMain:
                 self._draw_switch_pad(tag_g)
 
                 # 2:3 Video Component
-                self.cpm_vc = CPMVC(parent_container=CPMVC.default_container(tag_g)).draw()
+
+                with dpg.group() as tag_gv:
+                    # 2:3:1 VC
+                    self.cpm_vc = CPMVC(parent_container=CPMVC.default_container(tag_gv)).draw()
+
+                    # 2024-09-18 1.6.0 Me2sY 增加底部栏
+                    # 2:3:2 Bottom
+                    self.cpm_bottom = CPMBottomPad(parent_container=CPMBottomPad.default_container(tag_gv))
+                    self.cpm_bottom.draw()
+                    self.cpm_bottom.show_message(f"MYScrcpy Ready.")
+
+        # 注册 按键管理器
+        self.keyboard_handler = KeyboardHandler(
+            self.vm,
+            lambda mode: self.cpm_bottom.show_message(f"Ctrl Mode > {KeyboardHandler.Mode(mode).name}"),
+            lambda space: self.cpm_bottom.show_message(f"Ctrl Space > {space}")
+        )
+
+        # 注册 鼠标管理器
+        self.mouse_handler = MouseHandler(
+            self.vm, self.cpm_vc
+        )
+
+        # 增加插件管理器
+        self.ext_manager.load_extensions()
+        self.ext_manager.register_extensions()
 
     def _video_resize(self, tag_texture, old_coord: Coordinate, new_coord: Coordinate):
         """
@@ -733,21 +820,13 @@ class WindowMain:
         :param new_coord:
         :return:
         """
-
-        if self.device is not None:
-
-            if old_coord.width == 0:
-                ...
-            else:
-                if self.device:
-                    now_pos = dpg.get_viewport_pos()
-                    # 保存旋转前窗口位置
-                    self.device.kvm.set(f"win_pos_{old_coord.rotation}_{self.device.scrcpy_cfg}", value=now_pos)
-
-            if self.device:
-                new_pos = self.device.kvm.get(f"win_pos_{new_coord.rotation}_{self.device.scrcpy_cfg}", [])
-                if new_pos:
-                    dpg.set_viewport_pos(new_pos)
+        if self.device and old_coord.width > 0 and old_coord.rotation != new_coord.rotation:
+            now_pos = dpg.get_viewport_pos()
+            # 保存旋转前窗口位置
+            self.device.kvm.set(f"win_pos_{old_coord.rotation}_{self.device.scrcpy_cfg}", value=now_pos)
+            new_pos = self.device.kvm.get(f"win_pos_{new_coord.rotation}_{self.device.scrcpy_cfg}", [])
+            if new_pos:
+                dpg.set_viewport_pos(new_pos)
 
         self._init_video(tag_texture, new_coord)
 
@@ -767,64 +846,6 @@ class WindowMain:
 
         self.set_d2v(draw_coord)
 
-    def _window_resize(self):
-        """
-            窗口调整回调函数
-            2024-08-20 Me2sY 更新计算逻辑 解决Linux系统下 边框宽度计算问题
-        """
-
-        vpw = dpg.get_viewport_client_width()
-        vph = dpg.get_viewport_client_height()
-
-        # 更新 CPM_VC 画面大小
-        cw_c = 1 if dpg.is_item_shown(self.tag_cw_ctrl) else 0
-        new_vc_coord = Coordinate(
-            vpw - self.WIDTH_CTRL * cw_c - self.WIDTH_SWITCH - self.WIDTH_BOARD * (3 + cw_c),
-            vph - self.HEIGHT_MENU - self.HEIGHT_BOARD * 3
-        )
-
-        self.cpm_vc.update_frame(new_vc_coord)
-
-        title = f"{Param.PROJECT_NAME} - {Param.AUTHOR}"
-        if self.device:
-            title += f" - {self.device.info.serial_no} - {new_vc_coord.width} X {new_vc_coord.height}"
-
-            # 更新 Menu/Video/Resize相关控件
-            scale = min(
-                round(new_vc_coord.width / self.video_controller.coord_frame.width, 3),
-                round(new_vc_coord.height / self.video_controller.coord_frame.height, 3)
-            )
-            dpg.set_value(self.tag_drag_video_s, scale)
-            dpg.set_value(self.tag_drag_video_w, new_vc_coord.width)
-            dpg.set_value(self.tag_drag_video_h, new_vc_coord.height)
-
-            # 记录当前设备当前配置下窗口大小
-            self.device.kvm.set(f"draw_coord_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}", value=new_vc_coord.d)
-            self.device.kvm.set(
-                f"win_pos_{new_vc_coord.rotation}_{self.device.scrcpy_cfg}", value=dpg.get_viewport_pos()
-            )
-
-        else:
-            dpg.set_value(self.tag_drag_video_s, 1)
-            dpg.set_value(self.tag_drag_video_w, new_vc_coord.width)
-            dpg.set_value(self.tag_drag_video_h, new_vc_coord.height)
-
-        dpg.set_viewport_title(title)
-
-    def _init_resize_handler(self):
-        """
-            Resize 回调函数
-        :return:
-        """
-        try:
-            dpg.delete_item(self.tag_hr_resize)
-        except Exception:
-            ...
-
-        with dpg.item_handler_registry(tag=self.tag_hr_resize):
-            dpg.add_item_resize_handler(callback=self._window_resize)
-        dpg.bind_item_handler_registry(self.tag_window, self.tag_hr_resize)
-
     def send_key_event(self, keycode: int | ADBKeyCode, *args, **kwargs):
         """
             通过 ADB 发送 Key Event
@@ -835,63 +856,15 @@ class WindowMain:
             else:
                 self.device.adb_dev.keyevent(keycode.value)
 
-    def load_extensions(self):
+    def video_frame_callback(self, last_video_frame: av.VideoFrame, frame_n: int):
         """
-            加载Extensions
-            Extension 保存在 ~/.myscrcpy/extensions/
-            以 mysc_ext_NNN_XXX_... 命名的文件夹或py文件 注意：文件夹需定义__init__.py 并暴露 XXX类
-            其中 XXX为调用类名
+            由 VideoAdapter 进行回调
+
+        :param last_video_frame:
+        :param frame_n:
         :return:
         """
-
-        logger.info('-' * 100)
-
-        for _ in self.extensions:
-            try:
-                _.stop()
-            except:
-                pass
-
-        dpg.delete_item(self.tag_ext_pad, children_only=True)
-        self.cpm_vc.clear_drawlist()
-
-        logger.info(f"Loading Extensions")
-
-        # 创建运行环境
-        ext_run_env = ExtRunEnv(
-            window=self, vc=self.cpm_vc, tag_pad=self.tag_ext_pad, session=self.session, adv_device=self.device
-        )
-
-        for ext in Param.PATH_EXTENSIONS.glob('mysc_ext_*'):
-
-            logger.debug(f"Loading {ext}")
-
-            try:
-                # 判断插件为 单py 还是 module
-                if ext.is_file() and ext.suffix == '.py':
-                    run_path = ext
-
-                elif ext.is_dir():
-                    run_path = ext / '__init__.py'
-
-                else:
-                    raise FileNotFoundError('No __init__.py Or Run File found!')
-
-                # 加载Extensions
-                ext_name = ext.name.split('_')[3]
-                _ = SourceFileLoader(ext_name, run_path.__str__()).load_module()
-                extension = _.__getattribute__(ext_name).register()
-
-                # 判断类为 MYScrcpyExtension
-                if issubclass(extension.__class__, MYScrcpyExtension):
-                    self.extensions.append(extension)
-                    extension.run(ext_run_env)
-                else:
-                    raise NotImplementedError('Class Must Implement MYScrcpyExtension!')
-                logger.success(f"Extension {ext_name} loaded")
-
-            except Exception as e:
-                logger.warning(f"Load Extension {ext.name} Error => {e}")
+        self.video_controller.load_frame(last_video_frame)
 
     def setup_session(self, device: AdvDevice, connect_configs: Dict):
         """
@@ -902,17 +875,16 @@ class WindowMain:
 
         # 2024-08-21 Me2sY 避免重复加载
         self.is_paused = True
+
+        # 2024-09-22 1.6.0 Me2sY  重连不刷新界面
+        if self.session or self.device:
+            self.disconnect(draw_default_frame=False, loading_window=win_loading)
+
         self.device = device
-        self.cpm_file_pad.update(lambda: ..., self.device)
 
-        try:
-            self.session.disconnect()
-        except Exception:
-            ...
-
-        self.session = Session.connect_by_configs(self.device.adb_dev, **connect_configs)
-
-        self.device.sessions.add(self.session)
+        self.session = Session.connect_by_configs(
+            self.device.adb_dev, **connect_configs, frame_update_callback=self.video_frame_callback
+        )
 
         # 最近连接记录
         records = kv_global.get('recent_connected', [])
@@ -929,17 +901,17 @@ class WindowMain:
         win_loading.update_message('Preparing Video Interface...')
 
         # 准备视频
-
         if self.session.is_video_ready:
-            # 2024-09-05
-            # frame = self.session.va.get_frame()
             frame = self.session.va.get_video_frame()
             self.cpm_vc.draw_layer(self.cpm_vc.tag_layer_1, clear=True)
-
         else:
-            frame = VideoController.create_default_av_video_frame(
-                coordinate=self.device.get_window_size(), rgb_color=80
+
+            # 2024-09-22 1.6.0 若无Video 控制窗口大小
+            control_coord = self.device.get_window_size().get_max_coordinate(
+                800, 800
             )
+
+            frame = VideoController.create_default_av_video_frame(coordinate=control_coord, rgb_color=80)
             msg = 'No Video.'
             if self.session.is_control_ready:
                 if self.device.info.is_uhid_supported:
@@ -954,132 +926,36 @@ class WindowMain:
 
         # 更新界面，如果未连接则显示默认界面
         self.video_controller.load_frame(frame)
+
         if not self.session.is_video_ready:
             self.video_controller.coord_frame = Coordinate(0, 0)
             dpg.set_viewport_resizable(False)
-
         else:
             dpg.set_viewport_resizable(True)
-            self._init_resize_handler()
-
-        # TODO 2024-08-08 Me2sY  ADB Shell功能
-        # TODO 2024-08-08 Me2sY  uiautomator2
 
         win_loading.update_message('Preparing Control Functions...')
         if self.session.is_control_ready:
-            self._init_mouse_control()
-            self._init_uhid_keyboard_control()
+            self.mouse_handler.device_connect(self.device, self.session)
+
+        # 初始化 Keyboard Handler
+        self.keyboard_handler.device_connect(self.device, self.session)
+
+        win_loading.update_message('Preparing Extensions...')
+
+        # 初始化插件
+        self.ext_manager.device_connected(self.device, self.session)
 
         dpg.configure_item(self.tag_menu_disconnect, enabled=True, show=True)
         self.load_recent_device(self.tag_menu_recent)
 
+        # 加载文件管理面板
+        self.cpm_file_pad.update(lambda: ..., self.device)
+
         self.is_paused = False
 
-        self.load_extensions()
+        self.cpm_bottom.show_message(f"Device {self.device.serial_no} Connected!")
 
         win_loading.close()
-
-    def _init_uhid_keyboard_control(self):
-        """
-            初始化 UHID 键盘控制
-        """
-        if self.session.is_control_ready:
-            dpg.configure_item(
-                self.tag_cb_uhid,
-                label='UHID Keyboard' if self.device.info.is_uhid_supported else 'UHID NOT SUPPORTED',
-                enabled=self.device.info.is_uhid_supported,
-                default_value=self.device.info.is_uhid_supported
-            )
-            if not self.device.info.is_uhid_supported:
-                return
-
-        def _send(modifiers, key_scan_codes):
-            self.session.ca.f_uhid_keyboard_input(
-                modifiers=modifiers, key_scan_codes=key_scan_codes
-            )
-
-        self.key_watcher = KeyboardWatcher(
-            uhid_keyboard_send_method=_send, active=self.device.info.is_uhid_supported
-        )
-
-        def press(sender, app_data):
-            if dpg.is_item_focused(self.cpm_vc.tag_dl) and dpg.get_value(self.tag_cb_uhid):
-                try:
-                    self.key_watcher.key_pressed(KeyMapper.dpg2uk(app_data))
-                except:
-                    pass
-
-        def release(sender, app_data):
-            if dpg.is_item_focused(self.cpm_vc.tag_dl) and dpg.get_value(self.tag_cb_uhid):
-                try:
-                    self.key_watcher.key_release(KeyMapper.dpg2uk(app_data))
-                except:
-                    pass
-
-        with dpg.handler_registry(tag=self.tag_hr_hid):
-            dpg.add_key_press_handler(callback=press)
-            dpg.add_key_release_handler(callback=release)
-
-        self.session.ca.f_uhid_keyboard_create()
-
-    def _init_mouse_control(self):
-        """
-            初始化鼠标控制
-        :return:
-        """
-
-        # 2024-09-01 1.4.2 Me2sY 使用MouseHandler，支持手势功能
-
-        self.mouse_handler = MouseHandler(
-            self.session,
-            # 定义手势对应功能
-            {
-                'L': GesAction('Back', partial(self.send_key_event, ADBKeyCode.BACK)),
-                'U': GesAction('Home', partial(self.send_key_event, ADBKeyCode.HOME)),
-
-                'UL': GesAction('Apps', partial(self.send_key_event, ADBKeyCode.APP_SWITCH)),
-
-                'D|U': GesAction('CopyToDevice', self.copy_to_device),
-
-                'DR': GesAction('ScreenShot', partial(self.send_key_event, ADBKeyCode.KB_PRINTSCREEN)),
-
-                'D': GesAction('Play/Pause', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_PLAY_PAUSE)),
-                'D|L': GesAction('Media Prev', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_PREV_TRACK)),
-                'D|R': GesAction('Media Next', partial(self.send_key_event, ADBKeyCode.KB_MEDIA_NEXT_TRACK)),
-
-                'R': GesAction('Volume Mute', partial(self.send_key_event, ADBKeyCode.KB_VOLUME_MUTE)),
-                'R|U': GesAction('Volume Up', partial(self.send_key_event, ADBKeyCode.KB_VOLUME_UP)),
-                'R|D': GesAction('Volume Down', partial(self.send_key_event, ADBKeyCode.KB_VOLUME_DOWN)),
-
-            }
-        )
-
-        user_data = MouseHandlerUserData(
-            active=self.cpm_vc.is_hovered,
-            spr=self.cpm_vc.spr,
-            draw_coord=self.cpm_vc.get_coord_draw,
-            layer_track=self.cpm_vc.tag_layer_track,
-            layer_msg=self.cpm_vc.tag_layer_msg,
-            layer_sec_point=self.cpm_vc.tag_layer_sec_point
-        )
-
-        with dpg.handler_registry(tag=self.mouse_handler.tag_hr):
-            dpg.add_mouse_click_handler(
-                callback=self.mouse_handler.click_event_handler, tag=self.mouse_handler.tag_mouse_click,
-                user_data=user_data
-            )
-            dpg.add_mouse_release_handler(
-                callback=self.mouse_handler.release_event_handler, tag=self.mouse_handler.tag_mouse_release,
-                user_data=user_data
-            )
-            dpg.add_mouse_move_handler(
-                callback=self.mouse_handler.move_event_handler, tag=self.mouse_handler.tag_mouse_move,
-                user_data=user_data
-            )
-            dpg.add_mouse_wheel_handler(
-                callback=self.mouse_handler.wheel_event_handler, tag=self.mouse_handler.tag_wheel,
-                user_data=user_data
-            )
 
     def update(self):
         """
@@ -1100,8 +976,8 @@ class WindowMain:
         try:
             # 2024-09-05 1.5.4 Me2sY Use av.VideoFrame
             self.video_controller.load_frame(self.session.va.get_video_frame())
-        except:
-            ...
+        except Exception as e:
+            logger.error(f"Load Frame Error => {e}")
 
     def open_virtual_camera(self, sender=None, app_data=None, user_data=None):
         """
@@ -1143,7 +1019,7 @@ class WindowMain:
                 with pyvirtualcam.Camera(
                         **self.video_controller.coord_frame.d, fps=self.session.va.conn.args.fps, backend=backend
                 ) as cam:
-                    logger.success(f"Virtual Camera Running")
+                    self.cpm_bottom.show_message('Virtual Camera Running')
                     self.vcam_running = True
                     try:
                         while self.session.va.is_running and self.vcam_running:
@@ -1158,10 +1034,17 @@ class WindowMain:
                         logger.warning(f"Virtual Camera Error: {e}")
                         return
 
-                    logger.warning(f"Virtual Camera Stopped")
+                    self.cpm_bottom.show_message('Virtual Camera Stop')
             except Exception as e:
                 logger.warning(f"Virtual Camera Error: {e}")
                 return
+
+    def loop_call(self):
+        """
+            循环调用
+        :return:
+        """
+        threading.Thread(target=self.ext_manager.loop_call).start()
 
 
 def start_dpg_adv():
@@ -1187,44 +1070,29 @@ def start_dpg_adv():
         title=f"{Param.PROJECT_NAME} - {Param.AUTHOR}",
         width=500, height=600,
         **kv_global.get('viewport_pos', {'x_pos': 400, 'y_pos': 400}),
-        min_width=248, min_height=350,
+        min_width=300, min_height=420,
         large_icon=Param.PATH_STATICS_ICON.__str__(),
         small_icon=Param.PATH_STATICS_ICON.__str__()
     )
 
     logger.info('Start ADB Server. Please Wait...')
 
-    wd = WindowMain()
+    wd = Window()
     wd.draw()
     dpg.set_primary_window(wd.tag_window, True)
     dpg.setup_dearpygui()
-
-    def fix_vp_size():
-        """
-            Viewport 缩小至指定值后，会卡住界面
-            修复此缺陷
-        """
-        vpw = dpg.get_viewport_width()
-        vph = dpg.get_viewport_height()
-
-        if vpw < dpg.get_viewport_min_width() + 3:
-            dpg.set_viewport_width(dpg.get_viewport_min_width() + 5)
-            return
-
-        if vph < dpg.get_viewport_min_height() + 3:
-            dpg.set_viewport_height(dpg.get_viewport_min_height() + 5)
-            return
-
-    dpg.set_viewport_resize_callback(fix_vp_size)
-
     dpg.show_viewport()
 
     logger.success('ADB Server Ready. Viewport And Windows Ready.')
     logger.success(f"MYScrcpy {Param.VERSION} Ready To Move!\n {'-' * 100}")
 
-    while dpg.is_dearpygui_running():
-        dpg.render_dearpygui_frame()
-        wd.update()
+    # while dpg.is_dearpygui_running():
+    #     dpg.render_dearpygui_frame()
+    #     wd.loop_call()
+
+    dpg.start_dearpygui()
+
+    logger.warning('Viewport Closed.')
 
     x, y = dpg.get_viewport_pos()
 

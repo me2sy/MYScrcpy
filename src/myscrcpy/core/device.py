@@ -2,9 +2,12 @@
 """
     设备控制器
     ~~~~~~~~~~~~~~~~~~
-    
 
     Log:
+        2024.09.18 1.6.0 Me2sY  适配 插件 体系
+
+        2024-09-13 1.5.11 Me2sY 新引入 uiautomator2，在dump/info/screenshot方面使用jsonrpc,速度很快
+
         2024-09-10 1.5.9 Me2sY  新增文件管理器，支持拷贝、上传、删除等功能
 
         2024-08-31 1.4.1 Me2sY  改用新KVManager
@@ -15,7 +18,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.9'
+__version__ = '1.6.0'
 
 __all__ = [
     'DeviceInfo', 'PackageInfo',
@@ -34,6 +37,7 @@ from adbutils import AdbDevice, AdbError, AppInfo, adb, FileInfo
 from loguru import logger
 
 from myscrcpy.utils import KVManager, kv_global, Coordinate, ROTATION_HORIZONTAL, ROTATION_VERTICAL, Param
+import uiautomator2
 
 
 class DeviceInfo(NamedTuple):
@@ -343,15 +347,43 @@ class AdvDevice:
         # 2024-09-10 1.5.9 Me2sY 新增文件管理器
         self.file_manager = FileManager(adb_device)
 
+        # 2024-09-13 1.5.11 Me2sY 引入 uiautomator2
+        self.u2d = uiautomator2.connect(self.adb_dev.serial)
+
+        # u2使用jsonrpc获取设备信息延迟低，极少出现卡加载情况
+        info = self.u2d.info
+        if info['displayRotation'] % 2 == 0:
+            self.coord_device_v = Coordinate(width=info['displayWidth'], height=info['displayHeight'])
+        else:
+            self.coord_device_v = Coordinate(width=info['displayHeight'], height=info['displayWidth'])
+
+        self.coord_device_h = self.coord_device_v.rotate()
+
+    def coord_device(self, rotation: int) -> Coordinate:
+        """
+            获取设备实际尺寸
+        :param rotation:
+        :return:
+        """
+        if rotation % 2 == 0:
+            return self.coord_device_v
+        else:
+            return self.coord_device_h
+
+    @property
+    def coordinate(self) -> Coordinate:
+        """
+            直接获取
+            在当前device rotation 已知情况下，建议使用 coord_device(rotation) 获取
+        :return:
+        """
+        return self.coord_device(self.u2d.info['displayRotation'] % 2)
+
     def __repr__(self):
         return f"AdvDevice > {self.info}"
 
     def stop(self):
-        for sess in self.sessions:
-            try:
-                sess.stop()
-            except:
-                ...
+        ...
 
     @property
     def adb_dev(self) -> AdbDevice:
@@ -482,25 +514,20 @@ class AdvDevice:
         """
             Rewrite adb.shell.window_size
             去除Rotation，降低延迟
+
+            2024-09-18 1.6.0 Me2sY  改用 uiautomator2.info
         :return:
         """
-        output = self.adb_dev.shell("wm size")
-        o = re.search(r"Override size: (\d+)x(\d+)", output)
-        if o:
-            w, h = o.group(1), o.group(2)
-            return Coordinate(int(w), int(h))
-        m = re.search(r"Physical size: (\d+)x(\d+)", output)
-        if m:
-            w, h = m.group(1), m.group(2)
-            return Coordinate(int(w), int(h))
-        raise AdbError("wm size output unexpected", output)
+        info = self.u2d.info
+        return Coordinate(info['displayWidth'], info['displayHeight'])
+
 
     def get_rotation(self) -> int:
         """
             获取当前设备方向
         :return:
         """
-        return ROTATION_HORIZONTAL if self.adb_dev.rotation() % 2 == 1 else ROTATION_VERTICAL
+        return ROTATION_HORIZONTAL if self.u2d.info['displayRotation'] % 2 == 1 else ROTATION_VERTICAL
 
 
 class DeviceFactory:

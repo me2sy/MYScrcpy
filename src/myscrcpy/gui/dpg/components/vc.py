@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-23 1.6.0 Me2sY  优化部分方法
+
         2024-09-12 1.5.10 Me2sY 支持Extensions
 
         2024-09-08 1.5.7 Me2sY  更新图像解析算法
@@ -22,13 +24,14 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.10'
+__version__ = '1.6.0'
 
 __all__ = [
     'VideoController', 'CPMVC'
 ]
 
 import threading
+from typing import Callable
 
 import av
 import dearpygui.dearpygui as dpg
@@ -42,15 +45,16 @@ from myscrcpy.gui.dpg.components.component_cls import *
 
 class VideoController:
     """
-        视频控制器
+        视频控制器 控制 Raw Texture
         解析视频流，并写入至 raw_texture
         视频旋转时发起旋转信号
     """
 
-    def __init__(
-            self,
-            default_rgb_color: int = 0
-    ):
+    def __init__(self, default_rgb_color: int = 0):
+        """
+            RawTexture 控制器
+        :param default_rgb_color:
+        """
         self.tag_texture = dpg.generate_uuid()
 
         self.default_rgb_color = default_rgb_color
@@ -58,13 +62,15 @@ class VideoController:
         self.coord_frame = Coordinate(0, 0)
 
         self.resize_callbacks = set()
-        self.rotation_callbacks = set()
 
     @staticmethod
     def create_default_frame(coordinate, rgb_color: int = 0) -> np.ndarray:
         """
             创建初始化页面
             RGB 3D uint8 0...255
+        :param coordinate:
+        :param rgb_color: 0..255
+        :return: RGB uint8 0..255
         """
         return np.full((coordinate.height, coordinate.width, 3), rgb_color, dtype=np.uint8)
 
@@ -74,7 +80,7 @@ class VideoController:
             创建 av.VideoFrame
             2024-09-05 1.5.4 适配新版本
         :param coordinate:
-        :param rgb_color:
+        :param rgb_color: 0..255
         :return:
         """
         return av.VideoFrame.from_ndarray(
@@ -88,7 +94,6 @@ class VideoController:
         :param frame:
         :return:
         """
-
         # 2024-09-05 1.5.4 Me2sY
         # Issue #6
         # 经查 DPG 绘图使用 rgb float32 0..1 1D
@@ -105,38 +110,20 @@ class VideoController:
         # 2024-09-07 1.5.7 Me2sY 时间相差不多，读取安全性高
         return frame.to_ndarray(format='rgb24').ravel() / np.float32(255)
 
-    def _init_texture(
-            self,
-            frame_coord: Coordinate,
-            default_value: np.ndarray | None = None
-    ):
+    def _init_texture(self, coord_frame: Coordinate):
         """
             初始化 Texture
+        :param coord_frame: 尺寸
         :return:
         """
-        try:
+
+        if dpg.does_item_exist(self.tag_texture):
             dpg.delete_item(self.tag_texture)
-        except SystemError:
-            pass
 
         with dpg.texture_registry(show=False):
-            # 2024-09-05 Me2sY dynamic 效果并不太好
-            # 需要使用 float_rgba 增加计算量
-            #
-            # dpg.add_dynamic_texture(
-            #     tag=self.tag_texture, **frame_coord.d,
-            #     default_value=default_value if default_value is not None else self.create_default_frame(
-            #         frame_coord, self.default_rgb_color
-            #     )
-            # )
+            dpg.add_raw_texture(**coord_frame.d, tag=self.tag_texture, format=dpg.mvFormat_Float_rgb, default_value=[])
 
-            dpg.add_raw_texture(
-                tag=self.tag_texture, **frame_coord.d, format=dpg.mvFormat_Float_rgb,
-                default_value=default_value if default_value is not None else (
-                        self.create_default_frame(
-                            frame_coord, self.default_rgb_color
-                        ).astype(np.float32).ravel() / 255.0)
-            )
+        self.coord_frame = coord_frame
 
     def load_frame(self, frame: av.VideoFrame):
         """
@@ -144,43 +131,40 @@ class VideoController:
         """
         # 2024-09-05 1.5.4 Me2sY
         # 改用 av.VideoFrame
-        # h, w, d = frame.shape
-        # _c = Coordinate(width=w, height=h)
 
         _c = Coordinate(width=frame.width, height=frame.height)
 
         if _c != self.coord_frame:
-
-            # float32 容器 用于快速转换
-            # 较 .astype 单帧节约 2ms
-            self.u2f = np.empty(_c.width * _c.height * 3, dtype=np.float32)
-            self._init_texture(_c, self.to_raw_texture_value(frame))
-            if self.coord_frame.rotation != _c.rotation:
-                self._frame_rotation(self.coord_frame, _c)
-
-            self._frame_resize(self.coord_frame, _c)
-
-            self.coord_frame = _c
+            # 尺寸变化
+            # 旋转 或 重连
+            _old = self.coord_frame
+            self._init_texture(_c)
+            self._callback_frame_resize(_old, _c)
 
         # 2024-09-06 1.5.4 Me2sY 零星加载失败情况
+
         try:
             dpg.set_value(self.tag_texture, self.to_raw_texture_value(frame))
-        except:
-            ...
+        except Exception as e:
+            logger.error(f"VC load_frame error -> {e}")
 
-    def _frame_rotation(self, old_coord: Coordinate, new_coord: Coordinate):
-        for _ in self.rotation_callbacks:
-            threading.Thread(target=_, args=(self.tag_texture, old_coord, new_coord)).start()
+    def _callback_frame_resize(self, old_coord: Coordinate, new_coord: Coordinate):
+        """
+            frame resize callback
+        :param old_coord:
+        :param new_coord:
+        :return:
+        """
+        for callback in self.resize_callbacks:
+            threading.Thread(target=callback, args=(self.tag_texture, old_coord, new_coord)).start()
 
-    def _frame_resize(self, old_coord: Coordinate, new_coord: Coordinate):
-        for _ in self.resize_callbacks:
-            threading.Thread(target=_, args=(self.tag_texture, old_coord, new_coord)).start()
-
-    def register_resize_callback(self, callback):
+    def register_resize_callback(self, callback: Callable[[str | int, Coordinate, Coordinate], None]):
+        """
+            注册 Resize Callback
+        :param callback:
+        :return:
+        """
         self.resize_callbacks.add(callback)
-
-    def register_rotation_callback(self, callback):
-        self.rotation_callbacks.add(callback)
 
     def reset(self):
         self.coord_frame = Coordinate(0, 0)
@@ -217,7 +201,7 @@ class CPMVC(Component):
 
     def setup_inner(self, *args, **kwargs):
         self.tags = set()
-        self._coord_draw = Coordinate(1, 1)
+        self._coord_draw = Coordinate(0, 0)
         self.tag_dl = dpg.add_drawlist(**self._coord_draw.d)
         self.tag_layer_0 = dpg.add_draw_layer(parent=self.tag_dl)
         self.tag_layer_1 = dpg.add_draw_layer(parent=self.tag_dl)
@@ -241,10 +225,8 @@ class CPMVC(Component):
         :return:
         """
         for _ in self.tags:
-            try:
+            if dpg.does_item_exist(_):
                 dpg.delete_item(_)
-            except:
-                ...
 
     def draw_layer(self, layer_tag, *args, clear: bool = True, **kwargs):
         """
@@ -255,6 +237,7 @@ class CPMVC(Component):
 
         if clear:
             dpg.delete_item(layer_tag, children_only=True)
+            return
 
         for _ in args:
             _(parent=layer_tag)
@@ -268,10 +251,8 @@ class CPMVC(Component):
             初始化 Image
         """
 
-        try:
+        if dpg.does_item_exist(self.tag_layer_0):
             dpg.delete_item(self.tag_layer_0, children_only=True)
-        except:
-            pass
 
         # 限制初始画面大小，避免手机竖屏导致的窗口高度过高
         if auto_fix:
@@ -279,30 +260,32 @@ class CPMVC(Component):
 
         self.tag_image = dpg.draw_image(texture_tag=texture, pmin=(0, 0), pmax=coord, parent=self.tag_layer_0)
 
-        return self.update_frame(coord)
+        return self.resize(coord)
 
-    def update_frame(self, coord: Coordinate, texture_tag: int | str | None = None) -> Coordinate:
+    def resize(self, coord: Coordinate, texture_tag: int | str | None = None) -> Coordinate:
         """
-            根据Texture更新组件配置
+            Resize coord and texture
+        :param coord:
+        :param texture_tag:
+        :return:
         """
 
         if not hasattr(self, 'tag_image') or coord == self._coord_draw:
             return coord
+        else:
+            self._coord_draw = coord
 
-        # try:
-        if 1:
+        try:
             update_cfg = {}
             if texture_tag:
                 update_cfg['texture_tag'] = texture_tag
             dpg.configure_item(self.tag_image, pmax=coord, **update_cfg)
-        # except Exception as e:
-        #     logger.error(f"Update Image Error => {e}")
+        except Exception as e:
+            logger.error(f"Update Image Error => {e}")
 
         try:
             dpg.configure_item(self.tag_dl, **coord.d)
-        except:
-            pass
-
-        self._coord_draw = coord
+        except Exception as e:
+            logger.error(f"Resize drawlist Error -> {e}")
 
         return coord

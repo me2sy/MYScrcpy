@@ -2,9 +2,10 @@
 """
     面板组件
     ~~~~~~~~~~~~~~~~~~
-    
 
     Log:
+        2024-09-23 1.6.0 Me2sY  新增底部状态及日志栏
+
         2024-09-10 1.5.9 Me2sY  新增文件管理器
 
         2024-08-29 1.4.0 Me2sY
@@ -21,20 +22,23 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.9'
+__version__ = '1.6.0'
 
 __all__ = [
     'CPMPad',
     'CPMNumPad', 'CPMControlPad',
-    'CPMSwitchPad', 'CPMFilePad'
+    'CPMSwitchPad', 'CPMFilePad',
+    'CPMBottomPad'
 ]
 
+import datetime
 import pathlib
 import stat
 import threading
 import time
 from typing import Callable
 import webbrowser
+from dataclasses import dataclass, field
 
 from loguru import logger
 import dearpygui.dearpygui as dpg
@@ -271,10 +275,11 @@ class CPMFilePad(CPMPad):
 
         dpg.add_separator()
 
-        dpg.add_table(
-            tag=self.tag_table,
-            delay_search=True,
-        )
+        with dpg.table(tag=self.tag_table, delay_search=True):
+            dpg.add_table_column(label='cb', parent=self.tag_table, init_width_or_weight=0.1)
+            dpg.add_table_column(label='path', parent=self.tag_table)
+
+
 
     def update(self, callback: Callable, adv_device: AdvDevice, *args, **kwargs):
         """
@@ -294,10 +299,8 @@ class CPMFilePad(CPMPad):
             更新路径显示窗口
         :return:
         """
-
         self.all_cb = set()
         self.selected(None, None, None)
-
 
         # 显示当前路径
         path_cur = self.fm.path_cur.__str__()
@@ -313,9 +316,7 @@ class CPMFilePad(CPMPad):
         fs = self.fm.ls()
 
         # 清空并绘制表格
-        dpg.delete_item(self.tag_table, children_only=True)
-        dpg.add_table_column(label='cb', parent=self.tag_table, init_width_or_weight=0.1)
-        dpg.add_table_column(label='path', parent=self.tag_table)
+        dpg.delete_item(self.tag_table, children_only=True, slot=1)
 
         for ind, _ in enumerate(fs):
 
@@ -328,7 +329,7 @@ class CPMFilePad(CPMPad):
                     label=str(ind + 1), default_value=False, user_data=(abs_path, ind),
                     callback=lambda s, a, u: self.selected(s, a, u) or self.highlight(s, a, u)
                 )
-                with dpg.popup(tag_sel, no_move=True):
+                with dpg.popup(tag_sel):
                     dpg.add_text(default_value=abs_path.__str__())
                     dpg.add_separator()
 
@@ -528,3 +529,99 @@ class CPMFilePad(CPMPad):
                 logger.error(f"File Download Failed")
                 return
         webbrowser.open(path_save.__str__())
+
+
+@dataclass
+class Message:
+    """
+        信息
+    """
+
+    payload: str
+    dt: datetime.datetime = field(default_factory=datetime.datetime.now)
+    msg_from: str = None
+    msg_to: str = None
+    print_console: bool = True
+
+
+class CPMBottomPad(CPMPad):
+    """
+        底部栏
+    """
+
+    def show_message(self, msg: str | Message, with_datetime: bool = True, print_console: bool = True):
+        """
+            展示信息
+        :param msg:
+        :param with_datetime:
+        :param print_console:
+        :return:
+        """
+        msg = Message(msg) if type(msg) is str else msg
+        show_msg = f"{datetime.datetime.now().strftime('%m-%d %H:%M:%S ') if with_datetime else ''}{msg.payload}"
+        dpg.set_value(self.tag_msg, show_msg if len(show_msg) <= 50 else (show_msg[:50] + '...'))
+        dpg.set_value(self.tag_msg_all, show_msg)
+        self.logs.insert(0, msg)
+
+        if msg.print_console and print_console:
+            logger.info(f"Message: {msg}")
+    def clear(self):
+        """
+            清空
+        :return:
+        """
+        self.logs.clear()
+        self.tag_msg = ''
+        self.tag_msg_all = ''
+
+    def draw_win_logs(self):
+        """
+            绘制日志窗口
+        :return:
+        """
+
+        def clear_logs():
+            """
+                清空日志
+            :return:
+            """
+            self.logs.clear()
+            dpg.delete_item(tag_win)
+
+        with dpg.window(width=400, label='Logs') as tag_win:
+            with dpg.group(horizontal=True):
+                dpg.add_input_text(
+                    label='Filter', callback=lambda s, a: dpg.set_value(tag_filter, a), width=-35
+                )
+
+            dpg.add_separator()
+            with dpg.child_window(height=300, autosize_x=True, horizontal_scrollbar=True) as tag_win_logs:
+                with dpg.filter_set() as tag_filter:
+                    for index, _ in enumerate(self.logs):
+                        with dpg.group(horizontal=True, filter_key=f"{_.dt} {_.payload}") as tag_g:
+                            dpg.add_selectable(
+                                label=f"{str(index).rjust(4, '0')} {_.dt.strftime('%H:%M:%S')} > {_.payload}"
+                            )
+                        with dpg.tooltip(tag_g):
+                            dpg.add_text(f"{str(index).rjust(4, '0')} | {_.dt} >> {_.payload}")
+
+            dpg.add_separator()
+
+            with dpg.group(horizontal=True):
+                dpg.add_button(label='Clear & Close', callback=clear_logs, width=-70, height=30)
+                dpg.add_button(label='Close', callback=lambda: dpg.delete_item(tag_win), width=-1, height=30)
+
+    def setup_inner(self, *args, **kwargs):
+
+        self.logs = []
+
+        with dpg.child_window(no_scrollbar=True, height=40):
+
+            with dpg.group(horizontal=True):
+
+                self.tag_show_logs = dpg.add_button(label='Logs', callback=self.draw_win_logs)
+
+                self.tag_msg = dpg.add_text()
+
+                with dpg.tooltip(dpg.last_item()):
+                    self.tag_msg_all = dpg.add_text()

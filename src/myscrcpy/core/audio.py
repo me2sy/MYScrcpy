@@ -5,6 +5,8 @@
     音频相关类
 
     Log:
+        2024-09-18 1.6.0 Me2sY  适配插件体系，支持输出 last_pcm
+
         2024-09-09 1.5.8 Me2sY  新增raw_stream
 
         2024-09-05 1.5.4 Me2sY 优化pyaudio引入，适配termux
@@ -23,7 +25,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.8'
+__version__ = '1.6.0'
 
 __all__ = [
     'AudioArgs', 'AudioAdapter'
@@ -91,6 +93,9 @@ class Player:
         self.format = self.FORMAT
         self.frames_per_buffer = self.FRAMES_PER_BUFFER
         self.output = True
+
+        # 2024-09-15 1.6.0 获取最近 Raw PCM
+        self.last_raw_pcm = None
 
     def __del__(self):
         self.stop()
@@ -161,6 +166,7 @@ class Player:
         :return:
         """
         if self.is_ready:
+            self.last_raw_pcm = raw_pcm_bytes
             self.stream.write(raw_pcm_bytes)
 
 
@@ -649,6 +655,13 @@ class AudioAdapter(ScrcpyAdapter):
 
         logger.error(f"Raw Audio Stream Start Failed!")
         return None
+
+    def last_pcm(self) -> bytes:
+        """
+            获取最后一帧 PCM 数据
+        :return:
+        """
+        return self.player.last_raw_pcm
 
 
 if __name__ == '__main__':

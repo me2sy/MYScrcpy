@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.5.10"
+version = "1.6.0"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -22,7 +22,7 @@ classifiers = [
 
 dependencies = [
     # Base
-    "loguru", "adbutils", "click",
+    "loguru", "adbutils", "click", "uiautomator2",
 
     # Video
     "av==12.3.0",

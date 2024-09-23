@@ -1,6 +1,4 @@
-# MYScrcpy V1.5.10
-
----
+# MYScrcpy V1.6.0
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -20,19 +18,33 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 
 ## Features
 
----
+### Extensions
+- **1.6.0** Capture (For AI train 640x640 or whatever size you need)
+  - CrossLine/Rect
+  - Customizable screenshot frame size, with options for original or "what you see is what you get" (WYSIWYG) capture modes.
+  - Use the 'C' key for taking screenshots, 'X' key to lock the screenshot frame position, and 'Q' to close the feature.
+  - Capture the device's 1:1 actual graphics, ensuring high-resolution output.
+  - Preview screenshot history, with options for custom save formats and batch saving.
+  - Support for magnifier mode.
+  - Support for customizing the color, random color, and thickness of CrossLine for increased visibility.
+  - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/extensions/capture/img_1.jpg)
 
 ### Develop
-- **1.5.10 NEW** Extension Support! [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)
-- **1.5.8 NEW** Supports output the original format streams of video and audio to facilitate your development work
+- **1.6.0 NEW** Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
+- **1.6.0 NEW** Upgrade KVManager and ValueManager, with automatic registration and management.
+- ~~Extension Support! [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)~~
+- Supports output the original format streams of video and audio to facilitate your development work
 - `pip install mysc[all]` and ready to go
 - Session/Connection/Adapter/Args Framework, One Line And get A Image or Numpy.ndarray RGB
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
 - Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
-- **1.5.9 NEW** File Manager with upload, download, delete and more [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/file_manager/Help_file_manager.md)
-- **1.5.8 NEW** Supports file transfer on Windows systems
+- **1.6.0 NEW** Added a bottom prompt and log bar, providing timely reminders and log viewing capabilities.
+- **1.6.0 NEW** Introducing a new plugin manager for managing plugins and custom configurations.
+- **1.6.0 NEW** Support [uiautomator2](https://github.com/openatx/uiautomator2)
+- File Manager with upload, download, delete and more [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/file_manager/Help_file_manager.md)
+- Supports file transfer on Windows systems
   - Use the right-click gesture Down|Up to quickly copy
   - Alternatively, use VAC -> Control -> CopyToDevice
   - Select files or folders on the PC (supports multi-selection), then draw the copy gesture on the MYScrcpy interface to copy the selected files/folders to the device's /sdcard/MYScrcpy/ folder
@@ -57,15 +69,20 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - Pull the window for free scaling
   - Automatically scale the window to video based on height/width
 - Support for virtual cameras
-  - **1.5.7 NEW** **CLI start ```mysc-t-vc```** [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/Help_tools_vc_v1.md)
+  - **CLI start ```mysc-t-vc```** [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/Help_tools_vc_v1.md)
   - On, off, switch devices at any time
   - Support OBS Virtual Camera /Unity Capture(windows)/v4l2loopback(Linux)
 
 ### Audio
-- Supports **opus (1.5.3 NEW)**/flac/raw
+- Supports opus/flac/raw
 - Support switching sound output devices, with VB-Cables to simulate microphone input
 
 ### Control
+- **1.6.0 NEW** Optimize the mouse controller
+  - Support gesture switching feature space, gesture: DR
+  - Support extension configuration injection
+- **1.6.0 NEW** Added a new keyboard switcher
+  - Use F12 switch mode(UHID/ADB/Ctrl), F11 switch control space
 - TouchProxyEditor, supports keyboard, mouse and other control mapping methods, Windows/Linux applicable
 - Support UHID-Mouse, can realize the Android interface mouse and PC mixed use
 - Support UHID-Keyboard, simulate external Keyboard, directly input Chinese (Baidu, Sogou input method test passed)
@@ -77,9 +94,18 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 - Support ctrl to adjust the speed of mouse movement in special scenarios
 - Sidebar multiple function keys
 
-## Basic Usage
+## Contact & Help
 
----
+**If you have any questions, ideas, or suggestions while using this product, please feel free to contact me through the following methods:**
+
+#### QQ Group: 579618095
+![579618095](https://github.com/me2sy/MYScrcpy/blob/main/files/images/qq_group.jpg)
+
+#### Email: Me2sY@outlook.com
+
+#### Blog: [CSDN](https://blog.csdn.net/weixin_43463913)
+
+## Basic Usage
 
 ### 1.1 Pypi (Recommend)
 ```bash
@@ -228,24 +254,22 @@ python -m myscrcpy.gui.ng.main
 
 ## Screenshots
 
----
-
 ### Main interface
 ![dpg Screenshot](/files/images/myscrcpy_1_3_0_main.jpg)
 
 ### Right-Click Gesture Control Feature
 ![dpg_gesture](/files/images/myscrcpy_1_4_2_g.jpg)
 
-### Nicegui Web Interface **NEW 1.3.6**（DEMO）
+### Nicegui Web Interface（DEMO）
 ![Nicegui Demo](/files/images/Nicegui_DEMO.jpg)
 
 ### Key mapping editor (TPEditor)
 ![Touch Proxy Editor](/files/images/edit_touch_proxy.jpg)
 
+### Extension Manager
+![img_1.png](/files/images/myscrcpy_1_6_0.png)
 
 ## Thoughts
-
----
 
 As a long-time user of Scrcpy since the 1.X era, I am amazed by its development and magical features. I've always wanted to do something, but due to other projects (laziness), I never got started.
 
@@ -266,8 +290,6 @@ Finally, I deeply appreciate the support from my beloved during the development.
 
 ## Acknowledgements
 
----
-
 Thanks to [**Scrcpy**](https://github.com/Genymobile/scrcpy/) Project and Author [**@rom1v**](https://github.com/rom1v)
 There is not MYScrcpy without Scrcpy.
 
@@ -277,8 +299,6 @@ Thanks to all the users for your support and assistance. Hope that MYScrcpy can 
 
 
 ## DECLARE
-
----
 
 This project is intended for educational purposes (graphics, sound, AI training, etc.) , Android testing or just for fun.
 
@@ -290,18 +310,21 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
-
----
-- **1.5.10 NEW** Extensions Support
-- **1.5.9 NEW** File Manager with upload, download, delete and more
-- **1.5.8 NEW** Support Copy Files or Dirs or ScreenShot from pc to device
-- **1.5.8 NEW** Raw Video/Audio Stream Output
-- **1.5.7 NEW** CLI Virtual Camera
-- **1.5.5 NEW** Update Nicegui Gui for termux
-- **1.5.4 NEW** Reduce CPU usage
-- **1.5.3 NEW** Update Readme
-- **1.5.3 NEW** OPUS available
-- **1.5.0 NEW** **pypi** support. Use `pip install mysc` or with gui: `pip install mysc[gui]`. then run `mysc-gui` or `mysc-cli` (with console)
+- **1.6.0 NEW** Supports [uiautomator2](https://github.com/openatx/uiautomator2)
+- **1.6.0 NEW** New Keyboard Controller, New Mouse Controller
+- **1.6.0 NEW** Log Manager
+- **1.6.0 NEW** Fixed the defect of window flickering during adjustment, and the DPG crash defect.
+- **1.6.0 NEW** Brand-new plugin architecture, featuring plugin injection and a plugin manager
+- 1.5.10 Extensions Support
+- 1.5.9 File Manager with upload, download, delete and more
+- 1.5.8 Support Copy Files or Dirs or ScreenShot from pc to device
+- 1.5.8 Raw Video/Audio Stream Output
+- 1.5.7 CLI Virtual Camera
+- 1.5.5 Update Nicegui Gui for termux
+- 1.5.4 Reduce CPU usage
+- 1.5.3 Update Readme
+- 1.5.3 OPUS available
+- 1.5.0 **pypi** support. Use `pip install mysc` or with gui: `pip install mysc[gui]`. then run `mysc-gui` or `mysc-cli` (with console)
 - 1.4.2 With [moosegesture](https://github.com/asweigart/moosegesture), Right-click gesture control functionality available, supporting features such as simulating a second touch point, line-based undo, volume adjustment, media playback, and more
 - 1.4.1 Managing Configuration with SQLite
 - 1.4.0 Introducing the brand-new Core/Session/Connection/Utils architecture
@@ -332,9 +355,6 @@ The author and this project are not responsible for any related consequences res
 
 ## Development Plan
 
----
-
-- [uiautomator2](https://github.com/openatx/uiautomator2)
 - apk_manager
 - Using examples and tutorials
 - twisted/fastapi interface

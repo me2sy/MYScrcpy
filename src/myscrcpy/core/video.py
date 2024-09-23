@@ -5,6 +5,8 @@
     视频相关类
 
     Log:
+        2024-09-23 1.6.0 Me2sY  新增更新 Callback 方法
+
         2024-09-09 1.5.8 Me2sY  新增raw_stream
 
         2024-08-28 1.4.0 Me2sY  优化调整功能结构
@@ -13,7 +15,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.8'
+__version__ = '1.6.0'
 
 __all__ = [
     'CameraArgs', 'VideoArgs',
@@ -25,7 +27,7 @@ import struct
 import threading
 import time
 from dataclasses import dataclass
-from typing import ClassVar, Tuple
+from typing import ClassVar, Tuple, Callable
 
 from PIL.Image import Image
 from adbutils import AdbDevice
@@ -168,7 +170,7 @@ class VideoAdapter(ScrcpyAdapter):
         VideoArgs.CODEC_H265: 'hevc',     # FFmpeg h265 codec name is hevc
     }
 
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, frame_update_callback: Callable = None):
         """
             实现视频解码，转换为 np.ndarray/av.VideoFrame/PIL.Image
 
@@ -178,6 +180,8 @@ class VideoAdapter(ScrcpyAdapter):
 
         self.frame_n = 0
         self._last_frame = None
+
+        self.frame_update_callback: Callable = frame_update_callback
 
     def start(self, adb_device: AdbDevice, *args, **kwargs) -> bool:
         """
@@ -264,12 +268,16 @@ class VideoAdapter(ScrcpyAdapter):
                     for _frame in code_context.decode(packet):
                         self._last_frame = _frame
                         self.frame_n += 1
+                        if self.frame_update_callback:
+                            threading.Thread(
+                                target=self.frame_update_callback, args=[self._last_frame, self.frame_n]
+                            ).start()
+
             except OSError:
                 self.is_running = False
             except Exception as e:
                 logger.info(f"Exception while reading frame {self.frame_n} | {e}")
                 continue
-
         try:
             code_context.close()
         except ValueError:
@@ -313,15 +321,18 @@ class VideoAdapter(ScrcpyAdapter):
         return Coordinate(self._last_frame.width, self._last_frame.height)
 
     @classmethod
-    def connect(cls, adb_device: AdbDevice, video_args: VideoArgs, **kwargs) -> 'VideoAdapter':
+    def connect(
+            cls, adb_device: AdbDevice, video_args: VideoArgs, frame_update_callback: Callable = None, **kwargs
+    ) -> 'VideoAdapter':
         """
             根据 VideoArgs 快速创建连接
         :param adb_device:
         :param video_args:
+        :param frame_update_callback:
         :param kwargs:
         :return:
         """
-        _ = cls(Connection(video_args))
+        _ = cls(Connection(video_args), frame_update_callback)
         if _.start(adb_device):
             return _
         else:

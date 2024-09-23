@@ -72,6 +72,14 @@ class KeyboardWatcher:
         self.uhid_keyboard_send_method = uhid_keyboard_send_method
         self.active = active
 
+    def clear(self):
+        """
+            清空按键状态
+        :return:
+        """
+        self.pressed = list()
+        self.modifiers = 0
+
     def key_pressed(self, unified_key: UnifiedKey):
         """
             获取按键并存储状态

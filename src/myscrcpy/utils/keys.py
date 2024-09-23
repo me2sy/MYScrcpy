@@ -5,11 +5,13 @@
     按键定义及转换
 
     Log:
+        2024-09-18 1.6.0 Me2sY  修正 ADB 部分功能键映射
+
         2024-08-24 1.3.7 Me2sY  从utils中分离，重构结构及功能
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.7'
+__version__ = '1.6.0'
 
 __all__ = [
     'ADBKeyCode', 'UHIDKeyCode', 'UHID_MOUSE_REPORT_DESC', 'UHID_KEYBOARD_REPORT_DESC',
@@ -19,8 +21,8 @@ __all__ = [
 
 from dataclasses import dataclass
 from functools import cache, partial
-from typing import NamedTuple, Mapping
-from enum import unique, IntEnum
+from typing import NamedTuple, Mapping, Dict
+from enum import IntEnum, unique
 
 
 @unique
@@ -695,6 +697,18 @@ class UnifiedKeys(NamedTuple):
 
         return cls.UK_UNKNOWN
 
+    @classmethod
+    def get_keyboard_keys(cls) -> Dict[str, UnifiedKey]:
+        """
+            获取按键表
+        :return:
+        """
+        keys = {}
+        for k, _ in cls.__dict__.items():
+            if k.startswith('UK_KB'):
+                keys[_.name] = _
+        return keys
+
 
 class KeyMapper:
     """
@@ -769,6 +783,11 @@ def register_adb_code():
         uk = UnifiedKeys.filter_name(key.name)
         if uk:
             register_dict[key.value] = uk
+
+    # ADB 修正
+    register_dict[ADBKeyCode.KB_CONTROL_L] = UnifiedKeys.UK_KB_CONTROL
+    register_dict[ADBKeyCode.KB_SHIFT_L] = UnifiedKeys.UK_KB_SHIFT
+    register_dict[ADBKeyCode.KB_ALT_L] = UnifiedKeys.UK_KB_ALT
 
     KeyMapper.register('adb', register_dict)
 

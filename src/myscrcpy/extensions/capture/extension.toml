@@ -1,0 +1,89 @@
+# Extension Desc File With Toml Style
+# Toml Details : https://toml.io/en/v1.0.0
+# File Format Version 1.0.0
+
+
+# Info about your extension
+# Will Show in Extension Manager
+[info]
+# Your extension name
+ext_name = "Capture"
+
+# Use N.N.N Format
+version = "0.1.0"
+
+author = "Me2sY"
+email = "Me2sY@outlook.com"
+web = "https://github.com/me2sy/MYScrcpy"
+contact = "Q:579618095"
+desc = """A Extension to Capture Image"""
+
+
+# Defined Required Here
+# Not Check For Now
+# Only show information for reader
+[required]
+mysc_version = ">= 1.6.0"
+dependencies = []
+
+
+# Defined Settings In this Dict
+# Auto Loaded when class Called
+[settings]
+Enabled = true
+color.cross = [255, 0, 0, 255]
+color.random = true
+Thickness = 1
+
+# screen_shot
+ss.show_rect = true
+ss.show_cross = true
+ss.cut_raw = true
+ss.lock_rect = false
+ss.width = 320
+ss.height = 320
+ss.mode = "cut"
+
+Scale = 2.0
+
+
+# Extension - keys
+# Auto Register to keyboard handler
+# Rewrite callback_key_xxx function in DPGExtension to defined your own function
+# Struct:
+# [keys.XXX]              keys.XXX  XXX is the key name
+# * space = 1/2/3         myscrcpy 1.6.x support 3 space for extensions. 0 is for proxy
+# * uk_name = ""          myscrcpy.utils.keys.UnifiedKey.name, bind function to this key
+# * desc = ""             function desc
+
+[keys.switch]
+space = 1
+uk_name = "KB_Q"
+desc = "On/Off"
+
+[keys.screenshot]
+space = 1
+uk_name = "KB_C"
+desc = "Take a ScreenShot"
+
+[keys.lock_rect]
+space = 1
+uk_name = "KB_X"
+desc = "Lock Rect"
+
+
+# Extension - Mouse gestures
+# Auto Register to mouse handler gesAction
+# Notice that only ges >= 2 is effective. Level1 is for system use
+# Visit Moosegesture https://github.com/asweigart/moosegesture
+# Rewrite callback_mg_xxx function in DPGExtension to defined your own function
+# Struct:
+# [mouse_ga.XXX]            mouse.XXX  XXX is the key name
+# * space = 0/1/2           MYScrcpy 1.6.x support 3 space for extensions, 0 is for mysc system use so NOT Recommended!
+# * gestures = ""           gesAction Command use | to split. Directions: U/D/L/R/UL/UR/DL/DR
+# * desc                    function desc
+
+[mouse_ga.switch]
+space = 1
+gestures = "D|L"    # Means Mouse go Down -> Left. Use | to split gestures
+desc = "On/Off"

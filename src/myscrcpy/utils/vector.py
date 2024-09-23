@@ -2,9 +2,10 @@
 """
     Vector
     ~~~~~~~~~~~~~~~~~~
-    
 
     Log:
+        2024-09-23 1.6.0 Me2sY  新增 pixel_n 方法，计算像素点
+
         2024-09-08 1.5.7 Me2sY  新增 fit_scrcpy_video 方法，适配Scrcpy Control
 
         2024-09-01 1.4.2 Me2sY  新增 部分方法
@@ -15,7 +16,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.7'
+__version__ = '1.6.0'
 
 __all__ = [
     'ROTATION_VERTICAL', 'ROTATION_HORIZONTAL',
@@ -222,3 +223,11 @@ class Coordinate(NamedTuple):
         :return:
         """
         return Coordinate(self.width & ~7, self.height & ~7)
+
+    def pixel_n(self, wide: int = 3) -> int:
+        """
+            计算 坐标点数量
+        :param wide: 位宽
+        :return:
+        """
+        return self.width * self.height * wide
