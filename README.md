@@ -23,7 +23,7 @@
   - 截图历史预览、自定义保存格式、批量保存
   - 支持放大镜模式
   - 支持自定义十字线颜色、随机颜色，粗细等，更加醒目
-  - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/capture/img_1.jpg)
+  - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/capture/img.jpg)
 
 
 ### 开发
