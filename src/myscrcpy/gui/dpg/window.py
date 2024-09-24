@@ -4,6 +4,12 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-24 1.6.1 Me2sY
+            1. 修复 Linux 下 Viewport 调整缺陷
+            2. 修复 窗口坐标 缺陷
+            3. 修复 最近加载菜单 重复加载 缺陷
+            4. 修复 暂停功能
+
         2024-09-18 1.6.0 Me2sY
             1. 适配 插件 体系
             2. 使用 keyboardHandler 对 按键进行管理 支持模式切换
@@ -78,7 +84,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.1'
 
 __all__ = ['start_dpg_adv']
 
@@ -182,7 +188,9 @@ class Window:
             new_client_coord.height - self.HEIGHT_MENU - self.HEIGHT_BOARD * 3 - self.HEIGHT_BOTTOM
         )
 
-        self.cpm_vc.resize(new_vc_coord)
+        # 1.6.1 Me2sY 增加判断
+        if new_vc_coord != self.cpm_vc.coord_draw:
+            self.cpm_vc.resize(new_vc_coord)
 
         title = f"{Param.PROJECT_NAME} - {Param.AUTHOR}"
         if self.device:
@@ -369,9 +377,11 @@ class Window:
 
         self.is_paused = _pause
 
-    def load_recent_device(self, parent_tag):
+    def draw_menu_recent_device(self, parent_tag):
         """
             最近连接配置功能
+            2024-09-24 1.6.1 Me2sY
+            新增菜单栏中过滤当前连接功能
         """
 
         dpg.delete_item(parent_tag, children_only=True)
@@ -381,6 +391,11 @@ class Window:
                 快速连接
             """
             serial, _cfg_name = user_data
+
+            # 同配置则不连接
+            if self.device and self.device.adb_dev.serial == serial and self.device.scrcpy_cfg == _cfg_name:
+                return
+
             device = AdvDevice.from_adb_direct(serial)
 
             device.scrcpy_cfg = _cfg_name
@@ -400,6 +415,9 @@ class Window:
         recent_connected = kv_global.get('recent_connected', [])
         for adb_serial, cfg_name in recent_connected:
             try:
+                if self.device and self.device.adb_dev.serial == adb_serial and self.device.scrcpy_cfg == cfg_name:
+                    continue
+
                 msg = adb_serial[:15] + '/' + cfg_name[:5]
 
                 if adb_serial in devices:
@@ -468,7 +486,7 @@ class Window:
 
             with dpg.menu(label='Device'):
                 with dpg.menu(label='Recent') as self.tag_menu_recent:
-                    self.load_recent_device(self.tag_menu_recent)
+                    self.draw_menu_recent_device(self.tag_menu_recent)
 
                 self.tag_menu_disconnect = dpg.add_menu_item(
                     label='Disconnect',
@@ -820,13 +838,22 @@ class Window:
         :param new_coord:
         :return:
         """
-        if self.device and old_coord.width > 0 and old_coord.rotation != new_coord.rotation:
-            now_pos = dpg.get_viewport_pos()
-            # 保存旋转前窗口位置
-            self.device.kvm.set(f"win_pos_{old_coord.rotation}_{self.device.scrcpy_cfg}", value=now_pos)
-            new_pos = self.device.kvm.get(f"win_pos_{new_coord.rotation}_{self.device.scrcpy_cfg}", [])
-            if new_pos:
-                dpg.set_viewport_pos(new_pos)
+
+        # 设备连接
+        if self.device:
+            if old_coord.width == 0:        # 初次连接，只连接，不保存
+                new_pos = self.device.kvm.get(f"win_pos_{new_coord.rotation}_{self.device.scrcpy_cfg}", [])
+                if new_pos:
+                    dpg.set_viewport_pos(new_pos)
+
+            else:
+                if old_coord.rotation != new_coord.rotation:    # 旋转
+                    self.device.kvm.set(
+                        f"win_pos_{old_coord.rotation}_{self.device.scrcpy_cfg}", value=dpg.get_viewport_pos())
+
+                    new_pos = self.device.kvm.get(f"win_pos_{new_coord.rotation}_{self.device.scrcpy_cfg}", [])
+                    if new_pos:
+                        dpg.set_viewport_pos(new_pos)
 
         self._init_video(tag_texture, new_coord)
 
@@ -864,7 +891,25 @@ class Window:
         :param frame_n:
         :return:
         """
-        self.video_controller.load_frame(last_video_frame)
+        if not self.is_paused:
+            self.video_controller.load_frame(last_video_frame)
+
+    def update_recent_connect_records(self):
+        """
+            更新最近连接记录
+        :return:
+        """
+
+        records = kv_global.get('recent_connected', [])
+        record = [self.device.adb_dev.serial, self.device.scrcpy_cfg]
+
+        try:
+            records.remove(record)
+        except ValueError:
+            pass
+
+        records.insert(0, record)
+        kv_global.set('recent_connected', records[:self.N_RECENT_RECORDS])
 
     def setup_session(self, device: AdvDevice, connect_configs: Dict):
         """
@@ -880,23 +925,13 @@ class Window:
         if self.session or self.device:
             self.disconnect(draw_default_frame=False, loading_window=win_loading)
 
+        win_loading.update_message(f"Session Connecting...")
+
         self.device = device
 
         self.session = Session.connect_by_configs(
             self.device.adb_dev, **connect_configs, frame_update_callback=self.video_frame_callback
         )
-
-        # 最近连接记录
-        records = kv_global.get('recent_connected', [])
-        record = [self.device.adb_dev.serial, self.device.scrcpy_cfg]
-
-        try:
-            records.remove(record)
-        except ValueError:
-            pass
-
-        records.insert(0, record)
-        kv_global.set('recent_connected', records[:self.N_RECENT_RECORDS])
 
         win_loading.update_message('Preparing Video Interface...')
 
@@ -920,8 +955,7 @@ class Window:
                     msg += 'UHID Not Support!'
 
             self.cpm_vc.draw_layer(
-                self.cpm_vc.tag_layer_1,
-                partial(dpg.draw_text, pos=(10, 10), text=f"{msg}", size=18)
+                self.cpm_vc.tag_layer_1, partial(dpg.draw_text, pos=(10, 10), text=f"{msg}", size=18)
             )
 
         # 更新界面，如果未连接则显示默认界面
@@ -945,39 +979,27 @@ class Window:
         # 初始化插件
         self.ext_manager.device_connected(self.device, self.session)
 
+        # 更新最近连接目录
+        self.update_recent_connect_records()
         dpg.configure_item(self.tag_menu_disconnect, enabled=True, show=True)
-        self.load_recent_device(self.tag_menu_recent)
+        self.draw_menu_recent_device(self.tag_menu_recent)
 
         # 加载文件管理面板
         self.cpm_file_pad.update(lambda: ..., self.device)
+
+        # 初始化 Scale
+        if self.session.is_video_ready:
+            dpg.set_value(
+                self.tag_drag_video_s, dpg.get_item_width(self.cpm_vc.tag_dl) / self.session.va.coordinate.width
+            )
+        else:
+            dpg.set_value(self.tag_drag_video_s, 1)
 
         self.is_paused = False
 
         self.cpm_bottom.show_message(f"Device {self.device.serial_no} Connected!")
 
         win_loading.close()
-
-    def update(self):
-        """
-            更新视频显示
-        """
-        if self.is_paused:
-            return
-
-        if self.device is None:
-            return
-
-        if self.session is None:
-            return
-
-        if self.session.va is None:
-            return
-
-        try:
-            # 2024-09-05 1.5.4 Me2sY Use av.VideoFrame
-            self.video_controller.load_frame(self.session.va.get_video_frame())
-        except Exception as e:
-            logger.error(f"Load Frame Error => {e}")
 
     def open_virtual_camera(self, sender=None, app_data=None, user_data=None):
         """
@@ -1066,11 +1088,25 @@ def start_dpg_adv():
     dpg.bind_font(def_font)
     logger.success('Font Loaded!')
 
+    # 2024-09-24 1.6.1 Me2sY 修复 Linux 下 Viewport过大导致的显示错误
+    max_width = 10000
+    max_height = 10000
+
+    if dpg.get_platform() == dpg.mvPlatform_Linux:
+        import subprocess
+        r = subprocess.run(r"xrandr | grep \* | cut -d ' ' -f4", shell=True, capture_output=True)
+        try:
+            w, h = [int(_) for _ in r.stdout.decode().replace('\n', '').split('x')]
+            max_width = round(w * 0.95)
+            max_height = round(h * 0.9)
+        except Exception as e:
+            logger.warning(f"Get Windows Size Error. Scale MAY Wrong!")
+
     dpg.create_viewport(
         title=f"{Param.PROJECT_NAME} - {Param.AUTHOR}",
         width=500, height=600,
         **kv_global.get('viewport_pos', {'x_pos': 400, 'y_pos': 400}),
-        min_width=300, min_height=420,
+        min_width=300, min_height=420, max_width=max_width, max_height=max_height,
         large_icon=Param.PATH_STATICS_ICON.__str__(),
         small_icon=Param.PATH_STATICS_ICON.__str__()
     )

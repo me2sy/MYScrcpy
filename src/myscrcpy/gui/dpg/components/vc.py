@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-24 1.6.1 Me2sY  优化部分方法
+
         2024-09-23 1.6.0 Me2sY  优化部分方法
 
         2024-09-12 1.5.10 Me2sY 支持Extensions
@@ -24,7 +26,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.1'
 
 __all__ = [
     'VideoController', 'CPMVC'
@@ -156,7 +158,9 @@ class VideoController:
         :return:
         """
         for callback in self.resize_callbacks:
-            threading.Thread(target=callback, args=(self.tag_texture, old_coord, new_coord)).start()
+            # 2024-09-24 1.6.1 Me2sY
+            # threading.Thread(target=callback, args=(self.tag_texture, old_coord, new_coord)).start()
+            callback(self.tag_texture, old_coord, new_coord)
 
     def register_resize_callback(self, callback: Callable[[str | int, Coordinate, Coordinate], None]):
         """

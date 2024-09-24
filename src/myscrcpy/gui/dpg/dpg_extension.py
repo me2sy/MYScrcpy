@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-24 1.6.1 Me2sY 修复 Linux 下 Viewport 过大导致界面错误
+
         2024-09-19 1.6.0 Me2sY
             1. 创建，DPG专用插件
             2. 新增 VmDPGItem 及 具体对象类，用于创建受 ValueManager 管理的 dpg item
@@ -11,7 +13,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.1'
 
 __all__ = [
     'ValueObj', 'ValueManager',
@@ -1005,9 +1007,13 @@ class ViewportCoordManager:
         """
             设置 Viewport Client Size
         :param new_coord:
-        :param send_resize_callback: Send Resize Callback
         :return:
         """
+        # 2024-09-24 1.6.1 Me2sY 修复Linux下 Viewport过大导致界面错误
+        if new_coord.width > dpg.get_viewport_max_width() or new_coord.height > dpg.get_viewport_max_height():
+            logger.warning(f"Too Large Viewport Size {new_coord}")
+            return
+
         if new_coord == self.vpc_coord:
             return
 

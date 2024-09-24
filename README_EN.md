@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.0
+# MYScrcpy V1.6.1
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -30,6 +30,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/capture/img.jpg)
 
 ### Develop
+- **1.6.1 NEW** Function Description [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
 - **1.6.0 NEW** Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
 - **1.6.0 NEW** Upgrade KVManager and ValueManager, with automatic registration and management.
 - ~~Extension Support! [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)~~
@@ -310,6 +311,7 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 1.6.1 Fix Bugs
 - **1.6.0 NEW** Supports [uiautomator2](https://github.com/openatx/uiautomator2)
 - **1.6.0 NEW** New Keyboard Controller, New Mouse Controller
 - **1.6.0 NEW** Log Manager

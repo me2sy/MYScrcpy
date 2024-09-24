@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.6.0"
+version = "1.6.1"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]

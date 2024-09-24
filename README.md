@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.0
+# MYScrcpy V1.6.1
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -27,6 +27,7 @@
 
 
 ### 开发
+- **1.6.1 NEW** 功能说明 [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
 - **1.6.0 NEW** 全新插件架构！支持配置文件注入等功能 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
 - **1.6.0 NEW** 升级KVManager ValueManager，自动注册，自动管理 
 - **1.6.0 NEW** 整合[uiautomator2](https://github.com/openatx/uiautomator2)
@@ -313,6 +314,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 
 ## 更新日志
+- 1.6.1 修复缺陷
 - **1.6.0 NEW** 接入[uiautomator2](https://github.com/openatx/uiautomator2)
 - **1.6.0 NEW** 键盘控制器、鼠标控制器
 - **1.6.0 NEW** 日志管理器
