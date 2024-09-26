@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.6.1"
+version = "1.6.2"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -65,7 +65,7 @@ tools = [
 
 full = [
     "dearpygui", "pygame",
-    "pyperclip", "moosegesture", "pyvirtualcam",
+    "pyperclip", "moosegesture", "pyvirtualcam", "opencv-python",
     "nicegui",
     "pyflac", "pyogg", "opuslib"
 ]

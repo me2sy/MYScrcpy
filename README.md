@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.1
+# MYScrcpy V1.6.2
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -10,12 +10,23 @@
 
 ### :tv: 视频简介 [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
-![dpg Screenshot](https://github.com/me2sy/MYScrcpy/blob/main/files/images/mys_1_3_4.jpg)
+![dpg Screenshot](files/images/mys_1_3_4.jpg)
 
 ## 功能特性
 
 ### 插件
-- **1.6.0** Capture 截图助手 （告别苦苦手拉640x640训练图）
+- **1.6.2 NEW** Virtualcam 虚拟摄像头
+  - 原有虚拟摄像头功能插件化
+  - 根据当前运行平台自动选择backend（OBS/unitycapture/v4l2loopback）
+  - 支持原尺寸/自定义尺寸输出，自定义背景填充颜色
+  - 支持输出预览
+  - 横竖屏自动切换
+  - 目前支持 (Edges/Gray/Cartoon) 图像转换效果
+    - > 需安装 opencv-python
+  - I键开启/关闭 O键暂停/继续 P键按下暂停
+  - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
+
+- **1.6.0 Capture V0.1.0 截图助手** （告别苦苦手拉640x640训练图）
   - 获取屏幕坐标、定位十字线
   - 自定义截图框尺寸、原始或所见所截模式
   - C键截图、X键锁定截图框位置 Q关闭功能
@@ -23,7 +34,7 @@
   - 截图历史预览、自定义保存格式、批量保存
   - 支持放大镜模式
   - 支持自定义十字线颜色、随机颜色，粗细等，更加醒目
-  - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/capture/img.jpg)
+  - ![Capture](files/doc/help/extensions/capture/img.jpg)
 
 
 ### 开发
@@ -31,17 +42,16 @@
 - **1.6.0 NEW** 全新插件架构！支持配置文件注入等功能 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
 - **1.6.0 NEW** 升级KVManager ValueManager，自动注册，自动管理 
 - **1.6.0 NEW** 整合[uiautomator2](https://github.com/openatx/uiautomator2)
-- ~~支持自行开发扩展插件 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)~~
 - 支持获取视频、音频原格式流，方便二次开发
 - 开箱即用 `pip install mysc[full]`
 - 使用Session/Connection/Adapter/Args架构，一行代码获取图像
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
-- 按需最小化引用。支持**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
+- 按需最小化引用。支持**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
 - **1.6.0 NEW** 新增插件管理器，管理插件、自定义配置等
 - **1.6.0 NEW** 新增底部提示及日志栏，信息及时提醒，同时提供日志查看功能
-- 文件管理器，支持设备文件管理，下载、上传及预览 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/file_manager/Help_file_manager.md)
+- 文件管理器，支持设备文件管理，下载、上传及预览 [**帮助文档**](files/doc/help/file_manager/Help_file_manager.md)
 - 支持Windows系统下，文件传输功能
   - 使用右键手势 下|上 快速拷贝
   - 也可使用 VAC -> Control -> CopyToDevice 使用
@@ -66,7 +76,7 @@
   - 拉动窗口，进行自由伸缩
   - 根据高度/宽度，自动调整窗口至视频比例
 - 支持虚拟摄像头
-  - 命令行启动 mysc-t-vc [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/Help_tools_vc_v1.md)
+  - 命令行启动 mysc-t-vc [**帮助文档**](files/doc/help/Help_tools_vc_v1.md)
   - 随时开启，随时关闭，随时切换设备
   - 支持OBS虚拟摄像头/Unity Capture(windows)/v4l2loopback
 
@@ -97,7 +107,7 @@
 在使用中有任何问题、想法及建议，欢迎通过以下方式与我联系：
 
 #### QQ群：579618095
-![579618095](https://github.com/me2sy/MYScrcpy/blob/main/files/images/qq_group.jpg)
+![579618095](files/images/qq_group.jpg)
 
 #### 邮箱：Me2sY@outlook.com
 
@@ -168,9 +178,11 @@ pip install pyogg opuslib
    Nicegui Web UI (DEMO)
    5. **core/***
    Session、Connection、视频流、音频流、控制流、设备控制器等核心包
-   6. **~/.myscrcpy/***
+   6. **extensions/**
+   官方插件
+   7. **~/.myscrcpy/***
    本地化配置文件，包括运行类文件*.db 按键映射文件 tps/*.json
-   7. **tools/***
+   8. **tools/***
    工具类，多用于生成CLI
 
 ### 3. 程序引用使用，便于自行开发
@@ -314,6 +326,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 
 ## 更新日志
+- **1.6.2 NEW** VirtualCam 插件化
 - 1.6.1 修复缺陷
 - **1.6.0 NEW** 接入[uiautomator2](https://github.com/openatx/uiautomator2)
 - **1.6.0 NEW** 键盘控制器、鼠标控制器

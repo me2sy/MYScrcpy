@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-26 1.6.2 Me2sY  新增部分方法
+
         2024-09-23 1.6.0 Me2sY  新增 pixel_n 方法，计算像素点
 
         2024-09-08 1.5.7 Me2sY  新增 fit_scrcpy_video 方法，适配Scrcpy Control
@@ -16,7 +18,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.2'
 
 __all__ = [
     'ROTATION_VERTICAL', 'ROTATION_HORIZONTAL',
@@ -24,8 +26,7 @@ __all__ = [
     'Coordinate'
 ]
 
-from typing import NamedTuple
-
+from typing import NamedTuple, Tuple
 
 ROTATION_VERTICAL = 0
 ROTATION_HORIZONTAL = 1
@@ -133,6 +134,10 @@ class Coordinate(NamedTuple):
         else:
             raise ValueError(f"Scale value {scale} is not valid")
 
+    @staticmethod
+    def from_np_shape(shape: Tuple[int, int, int]) -> 'Coordinate':
+        return Coordinate(shape[1], shape[0])
+
     def to_point(self, scale_point: ScalePoint | ScalePointR) -> Point:
         return Point(round(scale_point.x * self.width), round(scale_point.y * self.height))
 
@@ -164,6 +169,10 @@ class Coordinate(NamedTuple):
     @property
     def d(self) -> dict:
         return self._asdict()
+
+    @property
+    def t(self) -> tuple[int, int]:
+        return self.width, self.height
 
     def w2h(self, width: float) -> float:
         return width / self.width * self.height

@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-26 1.6.2 Me2sY 完善回调方法，优化部分方法
+
         2024-09-24 1.6.1 Me2sY 修复 Linux 下 Viewport 过大导致界面错误
 
         2024-09-19 1.6.0 Me2sY
@@ -13,7 +15,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.1'
+__version__ = '1.6.2'
 
 __all__ = [
     'ValueObj', 'ValueManager',
@@ -35,11 +37,13 @@ import threading
 from typing import Any, Callable, Iterable, NamedTuple
 
 import dearpygui.dearpygui as dpg
+from av import VideoFrame
 from loguru import logger
 
 from myscrcpy.core.extension import Extension, ExtInfo, RegisteredExtension, ExtensionManager
 from myscrcpy.utils import KeyValue, KVManager, UnifiedKeys, Action, UnifiedKey, Coordinate
 from myscrcpy.gui.dpg.mouse_handler import GesAction
+
 
 @dataclass
 class ValueObj:
@@ -342,6 +346,7 @@ class DPGExtension(Extension, metaclass=ABCMeta):
         self.tag_menu = None
 
         self.required_loop = False
+        self.required_video_frame = False
 
     def __del__(self):
         try:
@@ -487,6 +492,15 @@ class DPGExtension(Extension, metaclass=ABCMeta):
         """
         self.window.cpm_bottom.show_message(message)
 
+    def video_frame_update_callback(self, video_frame: VideoFrame, frame_n: int):
+        """
+            视频更新回调
+        :param video_frame:
+        :param frame_n:
+        :return:
+        """
+        ...
+
 
 class DPGExtensionManager(ExtensionManager):
     """
@@ -514,6 +528,7 @@ class DPGExtensionManager(ExtensionManager):
                 except Exception as e:
                     logger.error(f"Register Extension {module} Error")
                     logger.exception(e)
+
     def register_extension(self, registered_ext: RegisteredExtension) -> Extension:
         """
             注册 DPG 插件
@@ -542,7 +557,20 @@ class DPGExtensionManager(ExtensionManager):
         """
         for registered_ext in self.extensions.values():
             if registered_ext.is_activated and registered_ext.ext_obj.required_loop:
-                threading.Thread(target=registered_ext.loop).start()
+                threading.Thread(target=registered_ext.ext_obj.loop).start()
+
+    def video_frame_update_callback(self, video_frame: VideoFrame, frame_n: int):
+        """
+            视频帧更新回调
+        :param video_frame:
+        :param frame_n:
+        :return:
+        """
+        for registered_ext in self.extensions.values():
+            if registered_ext.is_activated and registered_ext.ext_obj.required_video_frame:
+                threading.Thread(
+                    target=registered_ext.ext_obj.video_frame_update_callback, args=(video_frame, frame_n)
+                ).start()
 
 
 class DPGExtManagerWindow:
@@ -742,6 +770,11 @@ class VmDPGItem(metaclass=ABCMeta):
 
         self.kwargs.update(kwargs)
 
+    def __call__(self, *args, callback: Callable | bool = None, **kwargs) -> Any:
+        if len(args) > 0:
+            self.set_value(args[0], callback=callback)
+        return self.get_value()
+
     def callback(self, sender, app_data, user_data):
         """
             save and call real callback function
@@ -935,8 +968,8 @@ class ViewportCoordManager:
         self.vp_coord: Coordinate = Coordinate(-1, -1)
         self.vpc_coord: Coordinate = Coordinate(-1, -1)
 
-        self.fix_w = None
-        self.fix_h = None
+        self.fix_w = -1
+        self.fix_h = -1
 
         self.stable_coord = None
 
@@ -951,9 +984,10 @@ class ViewportCoordManager:
         :param app_data:
         :return:
         """
+
         self.tag_vp = sender
 
-        if self.fix_w is None:
+        if self.fix_w == -1:
             self.fix_w = dpg.get_viewport_width() - dpg.get_viewport_client_width()
             self.fix_h = dpg.get_viewport_height() - dpg.get_viewport_client_height()
 
@@ -961,12 +995,6 @@ class ViewportCoordManager:
             return
 
         vpc_coord = Coordinate(app_data[2], app_data[3])
-
-        if self.stable_coord:
-            if vpc_coord != self.stable_coord:
-                return
-            else:
-                self.stable_coord = None
 
         if vpc_coord != self.vpc_coord:
             _old = self.vpc_coord
@@ -980,12 +1008,12 @@ class ViewportCoordManager:
             修复此缺陷
         """
         fix = False
-        if vp_coord.width < dpg.get_viewport_min_width() + 3:
+        if vp_coord.width < dpg.get_viewport_min_width() + 8:
             dpg.set_viewport_width(
                 vp_coord.width + 16
             )
             fix = True
-        if vp_coord.height < dpg.get_viewport_min_height() + 3:
+        if vp_coord.height < dpg.get_viewport_min_height() + 8:
             dpg.set_viewport_height(
                 vp_coord.height + 16
             )
@@ -1017,9 +1045,10 @@ class ViewportCoordManager:
         if new_coord == self.vpc_coord:
             return
 
-        self.stable_coord = new_coord
-
-        dpg.configure_viewport(self.tag_vp, width=new_coord.width + self.fix_w, height=new_coord.height + self.fix_h)
+        dpg.configure_viewport(
+            self.tag_vp, width=new_coord.width + self.fix_w, height=new_coord.height + self.fix_h,
+            user_data=True
+        )
 
     def register_resize_callback(self, callback: Callable[[Coordinate, Coordinate], None]):
         """

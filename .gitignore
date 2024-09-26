@@ -1,11 +1,11 @@
-
 /dist
 dist/myscrcpy-1.0.0-py3-none-any.whl
 *.pyc
 /.idea
 *.spec
 /src/mysc.egg-info
-/src/myscrcpy.egg-info
 /src/myscrcpy/test_zone
 /notebooks
 /local
+/.stfolder
+.stignore

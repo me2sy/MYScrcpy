@@ -1,0 +1,46 @@
+# Extension Desc File With Toml Style
+# Toml Details : https://toml.io/en/v1.0.0
+# File Format Version 1.0.0
+
+# Virtual Camera
+
+[info]
+ext_name = "Virtual_Camera"
+version = "0.1.0"
+author = "Me2sY"
+email = "Me2sY@outlook.com"
+web = "https://github.com/me2sy/MYScrcpy"
+contact = "Q:579618095"
+desc = """A Extension to Make Virtual Camera"""
+
+
+[required]
+mysc_version = ">= 1.6.0"
+dependencies = ['pyvirtualcam', 'opencv-python']
+
+
+[settings]
+Backend = 'auto'
+Pause = false
+Raw = true
+Fps = 30
+size.width = 800
+size.height = 600
+trans.mode = 'raw'
+color.bg = [0, 0, 0]
+
+
+[keys.switch]
+space = 1
+uk_name = "KB_I"
+desc = "Start/Stop Virtual Camera"
+
+[keys.switch_pause]
+space = 1
+uk_name = "KB_O"
+desc = "Switch Pause / Play"
+
+[keys.pause]
+space = 1
+uk_name = "KB_P"
+desc = "Press Pause/ Release Play"

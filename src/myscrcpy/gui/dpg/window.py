@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-26 1.6.2 Me2sY
+            1. VirtualCamera 插件化
+            2. 修复部分缺陷
+
         2024-09-24 1.6.1 Me2sY
             1. 修复 Linux 下 Viewport 调整缺陷
             2. 修复 窗口坐标 缺陷
@@ -84,7 +88,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.1'
+__version__ = '1.6.2'
 
 __all__ = ['start_dpg_adv']
 
@@ -159,7 +163,6 @@ class Window:
 
         self.video_controller = VideoController()
         self.video_controller.register_resize_callback(self._video_resize)
-        self.video_controller.register_resize_callback(self._camera_resize)
 
         self.video_controller.register_resize_callback(
             lambda t, old_c, new_c: self.ext_manager.device_rotation(new_c)
@@ -169,8 +172,6 @@ class Window:
 
         self.mouse_handler: MouseHandler = None
         self.keyboard_handler: KeyboardHandler = None
-
-        self.vcam_running = False
 
     def vp_resize(self, old_client_coord: Coordinate, new_client_coord: Coordinate):
         """
@@ -193,7 +194,7 @@ class Window:
             self.cpm_vc.resize(new_vc_coord)
 
         title = f"{Param.PROJECT_NAME} - {Param.AUTHOR}"
-        if self.device:
+        if self.device and self.session.is_video_ready:
             title += f" - {self.device.info.serial_no} - {new_vc_coord.width} X {new_vc_coord.height}"
 
             if not dpg.is_item_hovered(self.tag_drag_video_s) and not dpg.is_item_clicked(self.tag_drag_video_s):
@@ -525,16 +526,17 @@ class Window:
             with dpg.menu(label=' VAC '):
                 with dpg.menu(label='Video'):
                     self.tag_drag_video_s = dpg.add_drag_float(
-                        label='Scale', default_value=1.0, min_value=0.1, max_value=2.0, width=90,
-                        speed=0.001, callback=self.video_scale, clamped=True
+                        label='Scale', default_value=1.0, width=90,speed=0.001,
+                        min_value=0.1, max_value=2.0, callback=self.video_scale, clamped=True
                     )
                     with dpg.group(horizontal=True):
-                        drag_cfg = dict(
-                            min_value=100, max_value=9999, width=50, clamped=True, speed=1,
-                            callback=self.video_set_scale
+                        drag_cfg = dict(width=50, clamped=True, speed=1, callback=self.video_set_scale)
+                        self.tag_drag_video_w = dpg.add_drag_int(
+                            label='x', **drag_cfg, min_value=300, max_value=dpg.get_viewport_max_width()
                         )
-                        self.tag_drag_video_w = dpg.add_drag_int(label='x', **drag_cfg)
-                        self.tag_drag_video_h = dpg.add_drag_int(**drag_cfg)
+                        self.tag_drag_video_h = dpg.add_drag_int(
+                            **drag_cfg, min_value=350, max_value=dpg.get_viewport_max_height()
+                        )
                     dpg.add_separator()
                     dpg.add_menu_item(label='fix_W(>)', callback=self.video_fix, user_data=ROTATION_VERTICAL)
                     dpg.add_menu_item(label='fix_H(V)', callback=self.video_fix, user_data=ROTATION_HORIZONTAL)
@@ -589,32 +591,6 @@ class Window:
             with dpg.menu(label='Tools'):
                 dpg.add_menu_item(label='TPEditor', callback=self.open_win_tpeditor)
                 dpg.add_menu_item(label='GameMode', callback=self.open_pyg)
-                dpg.add_separator()
-
-                # 2024-08-19 Me2sY 可选来源
-                with dpg.menu(label='VirtualCam'):
-                    # Auto
-                    dpg.add_menu_item(label='Auto', user_data=None, callback=self.open_virtual_camera)
-
-                    dpg.add_separator()
-
-                    # WIN / macOS
-                    dpg.add_menu_item(label='OBS(WIN/macOS)', user_data='obs', callback=self.open_virtual_camera)
-
-                    # Win
-                    dpg.add_menu_item(
-                        label='unitycapture(WIN)', user_data='unitycapture', callback=self.open_virtual_camera
-                    )
-
-                    # Linux
-                    dpg.add_menu_item(
-                        label='v4l2loopback(Linux)', user_data='v4l2loopback', callback=self.open_virtual_camera
-                    )
-
-                    dpg.add_separator()
-
-                    dpg.add_menu_item(label='StopVCam', callback=lambda: setattr(self, 'vcam_running', False))
-
                 dpg.add_separator()
 
                 about_msg = (f"A Scrcpy client implemented in Python. \n"
@@ -894,6 +870,8 @@ class Window:
         if not self.is_paused:
             self.video_controller.load_frame(last_video_frame)
 
+        threading.Thread(target=self.ext_manager.video_frame_update_callback, args=[last_video_frame, frame_n]).start()
+
     def update_recent_connect_records(self):
         """
             更新最近连接记录
@@ -1001,66 +979,6 @@ class Window:
 
         win_loading.close()
 
-    def open_virtual_camera(self, sender=None, app_data=None, user_data=None):
-        """
-            开启虚拟摄像头
-        :param sender:
-        :param app_data:
-        :param user_data:
-        :return:
-        """
-        threading.Thread(target=self._virtual_camera, args=(user_data,)).start()
-
-    def _camera_resize(self, tag_texture, old_coord, new_coord):
-        """
-            旋转时重启摄像头
-        :param tag_texture:
-        :param old_coord:
-        :param new_coord:
-        :return:
-        """
-        if self.vcam_running and self.session is not None and self.session.is_video_ready:
-            self.vcam_running = False
-            time.sleep(0.5)
-            self.open_virtual_camera()
-
-    def _virtual_camera(self, backend: str = None):
-        """
-            启动虚拟摄像头
-        :param backend: 虚拟摄像头服务
-        :return:
-        """
-        try:
-            import pyvirtualcam
-        except ImportError:
-            logger.warning('pyvirtualcam is not installed')
-            return False
-
-        if self.session and self.session.is_video_ready:
-            try:
-                with pyvirtualcam.Camera(
-                        **self.video_controller.coord_frame.d, fps=self.session.va.conn.args.fps, backend=backend
-                ) as cam:
-                    self.cpm_bottom.show_message('Virtual Camera Running')
-                    self.vcam_running = True
-                    try:
-                        while self.session.va.is_running and self.vcam_running:
-                            if not self.is_paused:
-                                cam.send(self.session.va.get_frame())
-                            cam.sleep_until_next_frame()
-
-                        # 2024-08-19 Me2sY  画面置黑
-                        cam.send(VideoController.create_default_frame(self.video_controller.coord_frame, 0))
-
-                    except Exception as e:
-                        logger.warning(f"Virtual Camera Error: {e}")
-                        return
-
-                    self.cpm_bottom.show_message('Virtual Camera Stop')
-            except Exception as e:
-                logger.warning(f"Virtual Camera Error: {e}")
-                return
-
     def loop_call(self):
         """
             循环调用
@@ -1122,11 +1040,16 @@ def start_dpg_adv():
     logger.success('ADB Server Ready. Viewport And Windows Ready.')
     logger.success(f"MYScrcpy {Param.VERSION} Ready To Move!\n {'-' * 100}")
 
-    # while dpg.is_dearpygui_running():
-    #     dpg.render_dearpygui_frame()
-    #     wd.loop_call()
+    try:
+        while dpg.is_dearpygui_running():
+            dpg.render_dearpygui_frame()
+            # wd.loop_call()
+    except KeyboardInterrupt:
+        logger.warning(f"MYScrcpy is closing by user")
+    except Exception as e:
+        logger.warning(f"MYScrcpy Closing by Error: {e}")
 
-    dpg.start_dearpygui()
+    # dpg.start_dearpygui()
 
     logger.warning('Viewport Closed.')
 

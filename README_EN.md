@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.1
+# MYScrcpy V1.6.2
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -19,6 +19,16 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 ## Features
 
 ### Extensions
+- **1.6.2** VirtualCamera
+  - Automatically select the backend based on the current operating platform（OBS/unitycapture/v4l2loopback）
+  - Supports output original size or custom size, custom background fill color.
+  - Support output preview
+  - Automatically switch between landscape and portrait mode
+  - Support (Edges/Gray/Cartoon) Convert
+    - > opencv-python Required
+  - I start/stop | O pause/continued P | press then pause
+  - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
+
 - **1.6.0** Capture (For AI train 640x640 or whatever size you need)
   - CrossLine/Rect
   - Customizable screenshot frame size, with options for original or "what you see is what you get" (WYSIWYG) capture modes.
@@ -27,24 +37,23 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - Preview screenshot history, with options for custom save formats and batch saving.
   - Support for magnifier mode.
   - Support for customizing the color, random color, and thickness of CrossLine for increased visibility.
-  - ![Capture](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/capture/img.jpg)
+  - ![Capture](files/doc/help/extensions/capture/img.jpg)
 
 ### Develop
 - **1.6.1 NEW** Function Description [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
-- **1.6.0 NEW** Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
+- **1.6.0 NEW** Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](files/doc/help/extensions/Help_extensions_v1_6.md)
 - **1.6.0 NEW** Upgrade KVManager and ValueManager, with automatic registration and management.
-- ~~Extension Support! [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1.md)~~
 - Supports output the original format streams of video and audio to facilitate your development work
 - `pip install mysc[all]` and ready to go
 - Session/Connection/Adapter/Args Framework, One Line And get A Image or Numpy.ndarray RGB
   - `Session(adb_device, video_args=VideoArgs(1200)).va.get_image()`
-- Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/MYScrcpy_with_Termux.md)
+- Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
 - **1.6.0 NEW** Added a bottom prompt and log bar, providing timely reminders and log viewing capabilities.
 - **1.6.0 NEW** Introducing a new plugin manager for managing plugins and custom configurations.
 - **1.6.0 NEW** Support [uiautomator2](https://github.com/openatx/uiautomator2)
-- File Manager with upload, download, delete and more [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/file_manager/Help_file_manager.md)
+- File Manager with upload, download, delete and more [**HowTo**](files/doc/help/file_manager/Help_file_manager.md)
 - Supports file transfer on Windows systems
   - Use the right-click gesture Down|Up to quickly copy
   - Alternatively, use VAC -> Control -> CopyToDevice
@@ -70,7 +79,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - Pull the window for free scaling
   - Automatically scale the window to video based on height/width
 - Support for virtual cameras
-  - **CLI start ```mysc-t-vc```** [**HowTo**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/Help_tools_vc_v1.md)
+  - **CLI start ```mysc-t-vc```** [**HowTo**](files/doc/help/Help_tools_vc_v1.md)
   - On, off, switch devices at any time
   - Support OBS Virtual Camera /Unity Capture(windows)/v4l2loopback(Linux)
 
@@ -100,7 +109,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 **If you have any questions, ideas, or suggestions while using this product, please feel free to contact me through the following methods:**
 
 #### QQ Group: 579618095
-![579618095](https://github.com/me2sy/MYScrcpy/blob/main/files/images/qq_group.jpg)
+![579618095](files/images/qq_group.jpg)
 
 #### Email: Me2sY@outlook.com
 
@@ -311,6 +320,7 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 1.6.2 New VirtualCam Extension
 - 1.6.1 Fix Bugs
 - **1.6.0 NEW** Supports [uiautomator2](https://github.com/openatx/uiautomator2)
 - **1.6.0 NEW** New Keyboard Controller, New Mouse Controller
