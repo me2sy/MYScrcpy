@@ -4,11 +4,15 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
-         2024-09-17 0.1.0 Me2sY 创建，适配 1.6.0 框架体系
+        2024-09-27 0.1.1 Me2sY
+            1.新增 Camera 截图模式
+            2.新增 Select 选择截图模式
+
+        2024-09-17 0.1.0 Me2sY 创建，适配 1.6.0 框架体系
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 __all__ = [
     'Capture'
@@ -18,11 +22,11 @@ import random
 
 import dearpygui.dearpygui as dpg
 
-from myscrcpy.core import AdvDevice, Session
+from myscrcpy.core import AdvDevice, Session, VideoArgs
 from myscrcpy.gui.dpg.dpg_extension import *
 from myscrcpy.utils import Coordinate, ScalePoint, Point, Action, UnifiedKey, Param
 
-from .cpm import CPMPreview, CPMImages
+from .cpm import CPMPreview, CPMImages, CPMSelect
 
 
 class Capture(DPGExtension):
@@ -58,6 +62,7 @@ class Capture(DPGExtension):
 
         self.adv_device = None
         self.session = None
+        self.is_camera = False
 
         self.path_save = Param.PATH_TEMP
         self.img_drawing = None
@@ -103,6 +108,7 @@ class Capture(DPGExtension):
 
         self.adv_device = adv_device
         self.session = session
+        self.is_camera = self.session.va.conn.args.video_source == VideoArgs.SOURCE_CAMERA
 
         dpg.configure_item(self.tag_handler_io, show=True)
 
@@ -113,6 +119,9 @@ class Capture(DPGExtension):
         self.draw_scale()
         dpg.configure_item(self.tag_layer_scale, show=self.vdi_enabled.get_value())
 
+        self.is_select = False
+        self.select : CPMSelect | None = None
+
     def device_disconnect(self):
         """
             设备断联
@@ -120,6 +129,7 @@ class Capture(DPGExtension):
         """
         self.adv_device = None
         self.session = None
+        self.is_camera = False
 
         if dpg.does_item_exist(self.tag_handler_io):
             dpg.configure_item(self.tag_handler_io, show=False)
@@ -128,6 +138,10 @@ class Capture(DPGExtension):
             dpg.delete_item(self.tag_handler_resize)
 
         dpg.configure_item(self.tag_layer_scale, show=False)
+        self.is_select = False
+        if self.select:
+            self.select.clear()
+            self.select = None
 
     def device_rotation(self, video_coord: Coordinate):
         """
@@ -155,7 +169,7 @@ class Capture(DPGExtension):
         if dpg.does_item_exist(self.tag_layer_crossline):
             dpg.delete_item(self.tag_layer_crossline, children_only=True)
 
-        if self.session is None:
+        if self.session is None or self.is_select:
             return
 
         tag_dl = self.window.cpm_vc.tag_dl
@@ -220,8 +234,12 @@ class Capture(DPGExtension):
             rec_h = self.vdi_ss_height.get_value()
 
             if self.vdi_cut_raw.get_value():
-                ws = rec_w / self.coord_dev.width
-                hs = rec_h / self.coord_dev.height
+                if self.is_camera:
+                    ws = rec_w / self.coord_video.width
+                    hs = rec_h / self.coord_video.height
+                else:
+                    ws = rec_w / self.coord_dev.width
+                    hs = rec_h / self.coord_dev.height
                 pmin = self.coord_dl.to_point(self.lock_mouse_sp + ScalePoint(-ws, -hs))
                 pmax = self.coord_dl.to_point(self.lock_mouse_sp + ScalePoint(ws, hs))
 
@@ -266,7 +284,10 @@ class Capture(DPGExtension):
 
             if self.vdi_cut_raw.get_value():
 
-                raw_s = ScalePoint(cw / self.coord_dev.width, ch / self.coord_dev.height)
+                if self.is_camera:
+                    raw_s = ScalePoint(cw / self.coord_video.width, ch / self.coord_video.height)
+                else:
+                    raw_s = ScalePoint(cw / self.coord_dev.width, ch / self.coord_dev.height)
 
                 min_p = self.coord_video.to_point(self.lock_mouse_sp - raw_s)
                 max_p = self.coord_video.to_point(self.lock_mouse_sp + raw_s)
@@ -410,23 +431,43 @@ class Capture(DPGExtension):
         if action == Action.DOWN:
             status = self.vdi_enabled.switch(callback=True)
             self.show_message(f"Capture > {'Enabled' if status else 'Disabled'}")
+            if not status and self.is_select:
+                self.is_select = False
+                if self.select:
+                    self.select.clear()
+                    self.select = None
+                self.release_mouse_control()
 
     def screen_shot(self):
         """
             截图
         :return:
         """
+
+        if self.is_select:
+            return
+
         w = self.vdi_ss_width.get_value()
         h = self.vdi_ss_height.get_value()
 
-        self.cut_img_raw = self.adv_device.u2d.screenshot()
+        # 2024-09-27 0.1.1 Me2sY  获取摄像头数据
+        if self.is_camera:
+            self.cut_img_raw = self.session.va.get_image()
+        else:
+            self.cut_img_raw = self.adv_device.u2d.screenshot()
+
         coord_cut = Coordinate(self.cut_img_raw.width, self.cut_img_raw.height)
 
         if self.vdi_cut_raw.get_value():
 
-            mouse_p = coord_cut.to_point(self.lock_mouse_sp)
-
-            img = self.cut_img_raw.crop([mouse_p.x - w, mouse_p.y - h, mouse_p.x + w, mouse_p.y + h])
+            if self.is_camera:
+                sp = ScalePoint(w / coord_cut.width, h / coord_cut.height)
+                ulp = self.lock_mouse_sp - sp
+                drp = self.lock_mouse_sp + sp
+                img = self.cut_img_raw.crop([*coord_cut.to_point(ulp), *coord_cut.to_point(drp)])
+            else:
+                mouse_p = coord_cut.to_point(self.lock_mouse_sp)
+                img = self.cut_img_raw.crop([mouse_p.x - w, mouse_p.y - h, mouse_p.x + w, mouse_p.y + h])
 
         else:
 
@@ -479,3 +520,75 @@ class Capture(DPGExtension):
         """
         status = self.vdi_enabled.switch(callback=True)
         self.show_message(f"Capture > {'Enabled' if status else 'Disabled'}")
+
+    def callback_key_select(self, key: UnifiedKey, action: Action):
+        """
+            切换框选截图模式
+        :param key:
+        :param action:
+        :return:
+        """
+        if not self.vdi_enabled():
+            return
+
+        if action == Action.DOWN:
+            if self.is_select:  # 关闭 select 模式
+                self.is_select = False
+                self.release_mouse_control()
+                if self.select:
+                    self.select.clear()
+            else:
+                self.is_select = self.get_mouse_control()
+            self.show_message(f"Capture > Select Mode {'Enabled' if self.is_select else 'Disabled'}")
+
+    def callback_mouse_handler(self, action: Action, sender: str | int, app_data):
+        """
+            左键框选截图
+        :param action:
+        :param sender:
+        :param app_data:
+        :return:
+        """
+        if not self.vdi_enabled():
+            return
+
+        if action == Action.DOWN and dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
+            self.select = CPMSelect(self.register_layer(), self.window.is_paused)
+            self.window.is_paused = True
+
+        elif action == Action.MOVE and dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
+            self.select.draw()
+
+        elif action == Action.RELEASE and app_data == dpg.mvMouseButton_Left:  # 释放并截图
+            self.select_screen_shot(*self.select.get_scale_points())
+            self.select.clear()
+            self.window.is_paused = self.select.window_pause
+
+    def select_screen_shot(self, sp_start: ScalePoint, sp_end: ScalePoint):
+        """
+            Select 模式 截图
+        :param sp_start:
+        :param sp_end:
+        :return:
+        """
+        if self.is_camera:
+            cut_img_raw = self.session.va.get_image()
+        else:
+            cut_img_raw = self.adv_device.u2d.screenshot()
+
+        raw_coord = Coordinate(cut_img_raw.width, cut_img_raw.height)
+
+        s_start = raw_coord.to_point(sp_start)
+        s_end = raw_coord.to_point(sp_end)
+        ul, dr = Point.to_uldr(s_start, s_end)
+        cp = dr - ul
+        if cp.x == 0 or cp.y == 0:
+            return
+
+        image_item = self.cpm_images.add_image(
+            cut_img_raw.crop([
+                *ul, *dr
+            ])
+        )
+
+        self.show_message(f"Capture > Image {image_item.name} Captured!")

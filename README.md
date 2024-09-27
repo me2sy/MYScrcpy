@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.2
+# MYScrcpy V1.6.3
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -15,7 +15,7 @@
 ## 功能特性
 
 ### 插件
-- **1.6.2 NEW** Virtualcam 虚拟摄像头
+#### Virtualcam V0.1.0 虚拟摄像头
   - 原有虚拟摄像头功能插件化
   - 根据当前运行平台自动选择backend（OBS/unitycapture/v4l2loopback）
   - 支持原尺寸/自定义尺寸输出，自定义背景填充颜色
@@ -26,7 +26,9 @@
   - I键开启/关闭 O键暂停/继续 P键按下暂停
   - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
 
-- **1.6.0 Capture V0.1.0 截图助手** （告别苦苦手拉640x640训练图）
+#### Capture V0.1.1 截图助手 （告别苦苦手拉640x640训练图）
+  - **0.1.1 NEW** 支持摄像头模式截图
+  - **0.1.1 NEW** V键开启拉选模式，手动拉取指定区域
   - 获取屏幕坐标、定位十字线
   - 自定义截图框尺寸、原始或所见所截模式
   - C键截图、X键锁定截图框位置 Q关闭功能
@@ -38,10 +40,11 @@
 
 
 ### 开发
-- **1.6.1 NEW** 功能说明 [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
-- **1.6.0 NEW** 全新插件架构！支持配置文件注入等功能 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
-- **1.6.0 NEW** 升级KVManager ValueManager，自动注册，自动管理 
-- **1.6.0 NEW** 整合[uiautomator2](https://github.com/openatx/uiautomator2)
+- **1.6.3 NEW** 新增鼠标抢夺模式，允许插件获取鼠标控制权，实现更多功能
+- 功能说明 [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
+- 全新插件架构！支持配置文件注入等功能 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
+- 升级KVManager ValueManager，自动注册，自动管理 
+- 整合[uiautomator2](https://github.com/openatx/uiautomator2)
 - 支持获取视频、音频原格式流，方便二次开发
 - 开箱即用 `pip install mysc[full]`
 - 使用Session/Connection/Adapter/Args架构，一行代码获取图像
@@ -49,8 +52,8 @@
 - 按需最小化引用。支持**Termux**上安装部署服务，支持局域网WEB浏览，[**安装部署教程**](files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
-- **1.6.0 NEW** 新增插件管理器，管理插件、自定义配置等
-- **1.6.0 NEW** 新增底部提示及日志栏，信息及时提醒，同时提供日志查看功能
+- 新增插件管理器，管理插件、自定义配置等
+- 新增底部提示及日志栏，信息及时提醒，同时提供日志查看功能
 - 文件管理器，支持设备文件管理，下载、上传及预览 [**帮助文档**](files/doc/help/file_manager/Help_file_manager.md)
 - 支持Windows系统下，文件传输功能
   - 使用右键手势 下|上 快速拷贝
@@ -85,10 +88,11 @@
 - 支持切换声音输出设备，可配合VB-Cables模拟麦克风输入
 
 ### 控制
-- **1.6.0 NEW** 优化鼠标控制器
+- 优化鼠标控制器
   - 支持手势切换功能空间 手势：DR
   - 支持插件配置注入
-- **1.6.0 NEW** 新增键盘切换器
+  - 支持独占模式
+- 新增键盘切换器
   - 使用 F12 切换 UHID/ADB/Ctrl模式， F11 切换 控制空间
   - 支持插件配置注入
 - 按键映射创建工具（TPEditor）,支持键盘，鼠标等多种控制映射方式，Windows/Linux 适用
@@ -326,13 +330,18 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 
 ## 更新日志
-- **1.6.2 NEW** VirtualCam 插件化
+- 1.6.3 
+  - 插件功能升级
+  - 鼠标支持独占模式
+  - 修复部分缺陷
+- 1.6.2 VirtualCam 插件化
 - 1.6.1 修复缺陷
-- **1.6.0 NEW** 接入[uiautomator2](https://github.com/openatx/uiautomator2)
-- **1.6.0 NEW** 键盘控制器、鼠标控制器
-- **1.6.0 NEW** 日志管理器
-- **1.6.0 NEW** 修复窗口调整时跳动缺陷，DPG崩溃缺陷
-- **1.6.0 NEW** 全新插件体系，插件注入，插件管理器等
+- 1.6.0
+  - 接入[uiautomator2](https://github.com/openatx/uiautomator2)
+  - 键盘控制器、鼠标控制器
+  - 日志管理器
+  - 修复窗口调整时跳动缺陷，DPG崩溃缺陷
+  - 全新插件体系，插件注入，插件管理器等
 - 1.5.10 支持插件
 - 1.5.9 新增文件管理器，支持设备文件管理，下载、上传及预览
 - 1.5.8 支持文件/文件夹/截屏一键拷贝至设备
@@ -345,12 +354,13 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 - 1.5.0 现已上线 [**pypi**](https://pypi.org/project/mysc/)
 - 1.4.2 使用[moosegesture](https://github.com/asweigart/moosegesture)实现右键手势控制功能，支持模拟第二个点、画线后退、调整音量、播放媒体等功能
 - 1.4.1 改用SQLite进行配置管理
-- 1.4.0 久等了！全新Core/Session/Connection/Utils架构
-- 1.4.0 新增窗口位置记忆功能，记录旋转前位置
-- 1.4.0 支持心跳检测，自动断线重连
-- 1.4.0 现已支持设备->PC 剪贴板
-- 1.4.0 优化按键映射方式，Linux适用
-- 1.4.0 更多控制按钮
+- 1.4.0 
+  - 久等了！全新Core/Session/Connection/Utils架构
+  - 新增窗口位置记忆功能，记录旋转前位置
+  - 支持心跳检测，自动断线重连
+  - 现已支持设备->PC 剪贴板
+  - 优化按键映射方式，Linux适用
+  - 更多控制按钮
 - 1.3.6 新增网页端设备浏览页面DEMO(Nicegui),支持鼠标输入，UHID键盘输入、ADB输入及摇杆模拟鼠标输入
 - 1.3.3 新增选择音频输出设备功能，可配合VB-Cables模拟麦克风输入
 - 1.3.2 新增[pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),支持OBS虚拟摄像头

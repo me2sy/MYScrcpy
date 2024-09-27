@@ -4,16 +4,19 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-27 0.1.1 Me2sY  新增 CPMSelect
+
         2024-09-20 0.1.0 Me2sY  创建，预览窗口
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 __all__ = [
-    'CPMPreview', 'CPMImages'
+    'CPMPreview', 'CPMImages', 'CPMSelect'
 ]
 
+import random
 from collections import OrderedDict
 from dataclasses import dataclass, field
 import datetime
@@ -26,7 +29,7 @@ import dearpygui.dearpygui as dpg
 import numpy as np
 from PIL import Image
 
-from myscrcpy.utils import Coordinate, Param
+from myscrcpy.utils import Coordinate, Param, ScalePoint
 from myscrcpy.gui.dpg.components.component_cls import TempModal
 
 
@@ -357,3 +360,54 @@ class CPMImages:
                 label='Close', width=-1, height=35,
                 callback=lambda: dpg.delete_item(tag_win) or dpg.delete_item(tag_pic)
             )
+
+
+class CPMSelect:
+    """
+        框选处理器
+    """
+    def __init__(self, tag_draw_layer: int | str, windows_pause: bool):
+        self.window_pause = windows_pause
+        self.tag_draw_layer = tag_draw_layer
+        self.start_point = dpg.get_drawing_mouse_pos()
+
+    def __del__(self):
+        dpg.delete_item(self.tag_draw_layer)
+
+    def clear(self):
+        """
+            清理界面
+        :return:
+        """
+        dpg.does_item_exist(self.tag_draw_layer) and dpg.delete_item(self.tag_draw_layer, children_only=True)
+
+    def draw(self):
+        """
+            绘制截取框
+        :return:
+        """
+        self.clear()
+        mouse_pos = dpg.get_drawing_mouse_pos()
+        color = [random.randrange(0, 255) for _ in range(3)]
+        dpg.draw_rectangle(
+            pmin=self.start_point,
+            pmax=mouse_pos,
+            color=color, parent=self.tag_draw_layer
+        )
+        msg = f"W:{abs(mouse_pos[0] - self.start_point[0])} | H:{abs(mouse_pos[1] - self.start_point[1])}"
+        dpg.draw_text(
+            ((self.start_point[0] + mouse_pos[0]) // 2, (self.start_point[1] + mouse_pos[1]) // 2),
+            msg, color=color, parent=self.tag_draw_layer, size=28
+        )
+
+    def get_scale_points(self) -> tuple[ScalePoint, ScalePoint]:
+        """
+            获取截取坐标
+        :return:
+        """
+        dl_coord = Coordinate(*dpg.get_item_rect_size(dpg.get_item_parent(self.tag_draw_layer)))
+
+        sp_start = dl_coord.to_scale_point(*self.start_point)
+        sp_end = dl_coord.to_scale_point(*dpg.get_drawing_mouse_pos())
+
+        return sp_start, sp_end

@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-27 1.6.3 Me2sY
+            1. 新增 required handler，支持插件独占回调事件
+            2. 新增 TouchPoint
+
         2024-09-23 1.6.0 Me2sY
             1. 解决 DPG 卡死问题，MouseMoveHandler delete 后 导致 DPG 卡死
             2. 升级结构，适配 Extensions
@@ -14,10 +18,10 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.3'
 
 __all__ = [
-    'GesAction',
+    'GesAction', 'TouchPoint',
     'MouseHandler'
 ]
 
@@ -26,7 +30,7 @@ import random
 import time
 from enum import IntEnum
 from functools import partial
-from typing import Callable, Tuple, Dict, List
+from typing import Callable, Tuple, Dict, List, Any
 
 import dearpygui.dearpygui as dpg
 from loguru import logger
@@ -288,6 +292,63 @@ class DrawHandler:
         self.ges_action_proxy[space][action.gestures] = action
 
 
+class TouchPoint:
+    """
+        Touch点对象
+        独立的 Touch ID, 实现触摸模拟功能
+    """
+
+    def __init__(self, touch_id, touch_spr_function: Callable):
+        self.touch_id = touch_id
+        self.touch_spr_function = touch_spr_function
+        self.sprs = []
+        self.is_down: bool = False
+
+    def down(self, spr: ScalePointR):
+        """
+            触摸按下
+        :param spr:
+        :return:
+        """
+        self.touch_spr_function(Action.DOWN.value, spr, touch_id=self.touch_id)
+        self.is_down = True
+        self.sprs.append(spr)
+
+    def move_to(self, spr: ScalePointR):
+        """
+            移动至
+        :param spr:
+        :return:
+        """
+        if not self.is_down:
+            return
+
+        self.touch_spr_function(Action.MOVE.value, spr, touch_id=self.touch_id)
+        self.sprs.append(spr)
+
+    def move_rel(self, spr: ScalePointR):
+        """
+            相对移动
+        :param spr:
+        :return:
+        """
+        if not self.is_down:
+            return
+
+        _spr = self.sprs[-1] + spr
+        self.touch_spr_function(Action.MOVE.value, _spr, touch_id=self.touch_id)
+        self.sprs.append(_spr)
+
+    def release(self):
+        """
+            触摸释放
+        :return:
+        """
+        self.touch_spr_function(Action.RELEASE.value, self.sprs[-1], touch_id=self.touch_id)
+        self.is_down = False
+        self.sprs = []
+
+
 class MouseHandler:
     """
         鼠标事件处理器
@@ -325,11 +386,67 @@ class MouseHandler:
 
         self.tag_hr = dpg.generate_uuid()
 
+        self.touch_points = {}
+
+        self.is_control_required = False
+        self.controller = None
+        self.control_callback: Callable[[Action, int|str, Any], None] = None
+
         with dpg.handler_registry(tag=self.tag_hr):
-            dpg.add_mouse_click_handler(callback=self.click_event_handler)
-            dpg.add_mouse_release_handler(callback=self.release_event_handler)
-            dpg.add_mouse_wheel_handler(callback=self.wheel_event_handler)
-            dpg.add_mouse_move_handler(callback=self.move_event_handler)
+            dpg.add_mouse_click_handler(callback=self.click_event_handler, user_data=Action.DOWN)
+            dpg.add_mouse_release_handler(callback=self.release_event_handler, user_data=Action.RELEASE)
+            dpg.add_mouse_wheel_handler(callback=self.wheel_event_handler, user_data=Action.ROLL)
+            dpg.add_mouse_move_handler(callback=self.move_event_handler, user_data=Action.MOVE)
+
+    def get_random_touch_id(self) -> int:
+        """
+            获取随机Touch ID
+        :return:
+        """
+        while True:
+            _touch_id = random.randrange(0x413 + 150, 0x413 + 300)
+            if _touch_id not in self.touch_points:
+                return _touch_id
+
+    def register_touch_point(self, module_name, touch_id: int | None = None) -> TouchPoint | None:
+        """
+            注册并获取 touch point
+        :param module_name:
+        :param touch_id:
+        :return:
+        """
+        if self.session and self.session.is_control_ready:
+            if touch_id is None:
+                touch_id = self.get_random_touch_id()
+            else:
+                if touch_id in self.touch_points:
+                    logger.warning(f"Touch Id {touch_id} already registered by {self.touch_points[touch_id][0]}")
+                    return None
+
+            self.touch_points[touch_id] = (module_name, TouchPoint(touch_id, self.session.ca.f_touch_spr))
+
+    def required_control(self, controller: str, control_callback: Callable[[Action, int|str, Any], None]) -> bool:
+        """
+            请求独占控制
+        :return:
+        """
+        if self.is_control_required:
+            return False
+
+        self.is_control_required = True
+        self.controller = controller
+        self.control_callback = control_callback
+        return True
+
+    def release_control(self):
+        """
+            释放请求
+        :return:
+        """
+        self.is_control_required = False
+        self.controller = None
+        self.control_callback = None
+        dpg.delete_item(self.cpm_vc.tag_layer_mouse, children_only=True)
 
     def device_disconnect(self):
         """
@@ -338,6 +455,7 @@ class MouseHandler:
         """
         self.adv_device = None
         self.session = None
+        self.release_control()
 
     def register_ges_action(self, space: int, action: GesAction):
         """
@@ -416,7 +534,7 @@ class MouseHandler:
             self.handler_draw.register_ges_action(DrawHandler.SPACE_MYSC, ga)
 
     @staticmethod
-    def safe_run(func):
+    def after_control_required(func):
         """
             Safe Run With Status Check and Try/Except
         :param func:
@@ -424,9 +542,14 @@ class MouseHandler:
         """
         def wrapper(self, sender, app_data, user_data, *args, **kwargs):
             try:
-                if self.session is None or not self.session.is_control_ready or not dpg.is_item_hovered(
-                        self.cpm_vc.tag_dl
-                ):
+                if self.session is None or not self.cpm_vc.is_hovered():
+                    return False
+
+                if self.is_control_required:
+                    self.cpm_vc.draw_mouse(self.controller)
+                    return self.control_callback(user_data, sender, app_data)
+
+                if not self.session.is_control_ready:
                     return False
 
                 return func(self, sender, app_data, user_data, *args, **kwargs)
@@ -436,7 +559,7 @@ class MouseHandler:
                 logger.exception(e)
         return wrapper
 
-    @safe_run
+    @after_control_required
     def move_event_handler(self, sender, app_data, user_data, *args, **kwargs):
         """
             移动事件处理器
@@ -454,7 +577,7 @@ class MouseHandler:
         if dpg.is_mouse_button_down(dpg.mvMouseButton_Right):
             self.handler_draw.move()
 
-    @safe_run
+    @after_control_required
     def click_event_handler(self, sender, app_data, user_data, *args, **kwargs):
         """
             单击(按下)事件处理器
@@ -475,7 +598,7 @@ class MouseHandler:
         if app_data == dpg.mvMouseButton_Right:
             self.handler_draw.click()
 
-    @safe_run
+    @after_control_required
     def release_event_handler(self, sender, app_data, user_data, *args, **kwargs):
         """
             释放按键处理器
@@ -495,7 +618,7 @@ class MouseHandler:
         if app_data == dpg.mvMouseButton_Right:
             self.handler_draw.release()
 
-    @safe_run
+    @after_control_required
     def wheel_event_handler(self, sender, app_data, user_data, *args, **kwargs):
         """
             滚轮事件处理器，Wheel为上下滚动，Ctrl + Wheel为缩放操作

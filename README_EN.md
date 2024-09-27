@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.2
+# MYScrcpy V1.6.3
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -19,7 +19,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 ## Features
 
 ### Extensions
-- **1.6.2** VirtualCamera
+#### VirtualCamera V0.1.0
   - Automatically select the backend based on the current operating platform（OBS/unitycapture/v4l2loopback）
   - Supports output original size or custom size, custom background fill color.
   - Support output preview
@@ -29,7 +29,9 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - I start/stop | O pause/continued P | press then pause
   - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
 
-- **1.6.0** Capture (For AI train 640x640 or whatever size you need)
+#### Capture V0.1.1 (For AI train 640x640 or whatever size you need)
+  - **0.1.1 Support Camera Stream Capture**
+  - **0.1.1 Support Select Mode, use 'V' key**
   - CrossLine/Rect
   - Customizable screenshot frame size, with options for original or "what you see is what you get" (WYSIWYG) capture modes.
   - Use the 'C' key for taking screenshots, 'X' key to lock the screenshot frame position, and 'Q' to close the feature.
@@ -40,9 +42,10 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - ![Capture](files/doc/help/extensions/capture/img.jpg)
 
 ### Develop
-- **1.6.1 NEW** Function Description [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
-- **1.6.0 NEW** Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](files/doc/help/extensions/Help_extensions_v1_6.md)
-- **1.6.0 NEW** Upgrade KVManager and ValueManager, with automatic registration and management.
+- **1.6.3 NEW** Allow Extension to get mouse callback
+- Function Description [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
+- Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](files/doc/help/extensions/Help_extensions_v1_6.md)
+- Upgrade KVManager and ValueManager, with automatic registration and management.
 - Supports output the original format streams of video and audio to facilitate your development work
 - `pip install mysc[all]` and ready to go
 - Session/Connection/Adapter/Args Framework, One Line And get A Image or Numpy.ndarray RGB
@@ -170,13 +173,14 @@ pip install pyogg opuslib
 ```
 
 ### 2.Project Structure:
-   1. **utils** Defines basic tool classes and various parameters
-   2. **gui/dpg** DearPyGui interface implementation including video rendering, mouse events, UHID mouse and keyboard input, mapping editor, etc.
-   3. **gui/pg** Pygame interface implementation including video rendering, mouse events, keyboard control, etc.
-   4. **gui/ng** _(DEMO) Nicegui Web UI，Video and Control support
-   5. **core/** Session, Connection, Video stream, audio stream, control stream, device controller, etc.
-   6. **~/.myscrcpy/** Localization configuration file, including running config file *.db, keypress mapping file tps/*.json
-   7. **tools/*** CLI Tools
+1. **utils** Defines basic tool classes and various parameters
+2. **gui/dpg** DearPyGui interface implementation including video rendering, mouse events, UHID mouse and keyboard input, mapping editor, etc.
+3. **gui/pg** Pygame interface implementation including video rendering, mouse events, keyboard control, etc.
+4. **gui/ng** _(DEMO) Nicegui Web UI，Video and Control support
+5. **core/** Session, Connection, Video stream, audio stream, control stream, device controller, etc.
+6. **extension/** Official Extensions
+7. **~/.myscrcpy/** Localization configuration file, including running config file *.db, keypress mapping file tps/*.json
+8. **tools/*** CLI Tools
 
 
 ### 3.For developer
@@ -320,13 +324,18 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 1.6.3
+  - update capture extension
+  - support extension mouse register and callback
+  - fix bugs
 - 1.6.2 New VirtualCam Extension
 - 1.6.1 Fix Bugs
-- **1.6.0 NEW** Supports [uiautomator2](https://github.com/openatx/uiautomator2)
-- **1.6.0 NEW** New Keyboard Controller, New Mouse Controller
-- **1.6.0 NEW** Log Manager
-- **1.6.0 NEW** Fixed the defect of window flickering during adjustment, and the DPG crash defect.
-- **1.6.0 NEW** Brand-new plugin architecture, featuring plugin injection and a plugin manager
+- 1.6.0
+  - Supports [uiautomator2](https://github.com/openatx/uiautomator2)
+  - New Keyboard Controller, New Mouse Controller
+  - Log Manager
+  - Fixed the defect of window flickering during adjustment, and the DPG crash defect.
+  - Brand-new plugin architecture, featuring plugin injection and a plugin manager
 - 1.5.10 Extensions Support
 - 1.5.9 File Manager with upload, download, delete and more
 - 1.5.8 Support Copy Files or Dirs or ScreenShot from pc to device
@@ -339,12 +348,13 @@ The author and this project are not responsible for any related consequences res
 - 1.5.0 **pypi** support. Use `pip install mysc` or with gui: `pip install mysc[gui]`. then run `mysc-gui` or `mysc-cli` (with console)
 - 1.4.2 With [moosegesture](https://github.com/asweigart/moosegesture), Right-click gesture control functionality available, supporting features such as simulating a second touch point, line-based undo, volume adjustment, media playback, and more
 - 1.4.1 Managing Configuration with SQLite
-- 1.4.0 Introducing the brand-new Core/Session/Connection/Utils architecture
-- 1.4.0 Record the position of window before rotation
-- 1.4.0 Support for heartbeat detection with automatic reconnection upon disconnection
-- 1.4.0 Device-to-PC clipboard supported
-- 1.4.0 Optimize the key mapping strategy for Linux compatibility
-- 1.4.0 Provide more control buttons
+- 1.4.0 
+  - Introducing the brand-new Core/Session/Connection/Utils architecture
+  - Record the position of window before rotation
+  - Support for heartbeat detection with automatic reconnection upon disconnection
+  - Device-to-PC clipboard supported
+  - Optimize the key mapping strategy for Linux compatibility
+  - Provide more control buttons
 - 1.3.6 Web Interface (DEMO) by Nicegui with video and UHID keyboard/mouse
 - 1.3.3 Support select audio output devices, With VB-Cables you can simulate microphone input
 - 1.3.2 Append [pyvirtualcam](https://github.com/letmaik/pyvirtualcam?tab=readme-ov-file),support OBS virtual camera.

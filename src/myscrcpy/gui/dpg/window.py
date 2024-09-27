@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-27 1.6.3 Me2sY 修复部分缺陷
+
         2024-09-26 1.6.2 Me2sY
             1. VirtualCamera 插件化
             2. 修复部分缺陷
@@ -88,14 +90,13 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.2'
+__version__ = '1.6.3'
 
 __all__ = ['start_dpg_adv']
 
 
 import pathlib
 import threading
-import time
 from functools import partial
 import webbrowser
 from typing import Dict
@@ -314,6 +315,8 @@ class Window:
             self.video_controller.coord_frame = Coordinate(0, 0)
 
         dpg.configure_item(self.tag_menu_disconnect, enabled=False, show=False)
+
+        self.draw_menu_recent_device(self.tag_menu_recent)
 
         if loading_window is None:
             win_loading.close()
@@ -946,8 +949,8 @@ class Window:
             dpg.set_viewport_resizable(True)
 
         win_loading.update_message('Preparing Control Functions...')
-        if self.session.is_control_ready:
-            self.mouse_handler.device_connect(self.device, self.session)
+        # if self.session.is_control_ready:
+        self.mouse_handler.device_connect(self.device, self.session)
 
         # 初始化 Keyboard Handler
         self.keyboard_handler.device_connect(self.device, self.session)

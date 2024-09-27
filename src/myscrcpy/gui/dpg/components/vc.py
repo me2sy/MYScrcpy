@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-27 1.6.3 Me2sY  新增 Mouse Controller 及 鼠标指示器
+
         2024-09-24 1.6.1 Me2sY  优化部分方法
 
         2024-09-23 1.6.0 Me2sY  优化部分方法
@@ -26,7 +28,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.1'
+__version__ = '1.6.3'
 
 __all__ = [
     'VideoController', 'CPMVC'
@@ -34,14 +36,14 @@ __all__ = [
 
 import threading
 from typing import Callable
+import random
 
 import av
 import dearpygui.dearpygui as dpg
 from loguru import logger
 import numpy as np
 
-
-from myscrcpy.utils import Coordinate, ScalePoint, ScalePointR
+from myscrcpy.utils import Coordinate, ScalePoint, ScalePointR, Point
 from myscrcpy.gui.dpg.components.component_cls import *
 
 
@@ -210,9 +212,24 @@ class CPMVC(Component):
         self.tag_layer_0 = dpg.add_draw_layer(parent=self.tag_dl)
         self.tag_layer_1 = dpg.add_draw_layer(parent=self.tag_dl)
         self.tag_layer_2 = dpg.add_draw_layer(parent=self.tag_dl)
+        self.tag_layer_mouse = dpg.add_draw_layer(parent=self.tag_dl)
         self.tag_layer_track = dpg.add_draw_layer(parent=self.tag_dl)
         self.tag_layer_msg = dpg.add_draw_layer(parent=self.tag_dl)
         self.tag_layer_sec_point = dpg.add_draw_layer(parent=self.tag_dl)
+
+    def draw_mouse(self, info: str = '', mouse_sp: ScalePoint = None):
+        dpg.delete_item(self.tag_layer_mouse, children_only=True)
+        if mouse_sp is None:
+            mouse_sp = self.scale_point
+
+        color = [random.randint(0, 255) for _ in range(3)]
+
+        if info:
+            dpg.draw_text(
+                self.coord_draw.to_point(mouse_sp + ScalePoint(0.01, 0.01)),
+                text=f" > {info} Activated<",
+                parent=self.tag_layer_mouse, size=24, color=color
+            )
 
     def register_layer(self) -> int | str:
         """

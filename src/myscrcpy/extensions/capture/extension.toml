@@ -10,7 +10,7 @@
 ext_name = "Capture"
 
 # Use N.N.N Format
-version = "0.1.0"
+version = "0.1.1"
 
 author = "Me2sY"
 email = "Me2sY@outlook.com"
@@ -71,6 +71,10 @@ space = 1
 uk_name = "KB_X"
 desc = "Lock Rect"
 
+[keys.select]
+space = 1
+uk_name = "KB_V"
+desc = "Select And Shot"
 
 # Extension - Mouse gestures
 # Auto Register to mouse handler gesAction

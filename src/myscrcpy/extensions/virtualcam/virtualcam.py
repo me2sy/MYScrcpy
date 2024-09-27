@@ -94,7 +94,7 @@ class VirtualCam(DPGExtension):
     def stop(self):
         ...
 
-    def video_frame_update_callback(self, frame: av.VideoFrame, frame_n: int):
+    def callback_video_frame_update(self, frame: av.VideoFrame, frame_n: int):
         """
             Video Frame 回写驱动Camera画面更新
         :param frame:
@@ -174,7 +174,7 @@ class VirtualCam(DPGExtension):
                 time.sleep(1)
 
             self.camera = pyvirtualcam.Camera(**self.coord.d, fps=self.vdi_fps(), backend=_backend)
-            self.video_frame_update_callback(frame, -1)
+            self.callback_video_frame_update(frame, -1)
             self.show_message(f"Virtual Camera Recoding {self.coord.width}x{self.coord.height}")
         except Exception as e:
             logger.warning(f"Create Virtual Camera Error: {e}")
@@ -271,7 +271,7 @@ class VirtualCam(DPGExtension):
                 dpg.add_separator()
                 dpg.add_button(label='Close', width=-1, height=35, callback=stop)
 
-            self.video_frame_update_callback(self.session.va.get_video_frame(), -1)
+            self.callback_video_frame_update(self.session.va.get_video_frame(), -1)
 
     def pause(self, sender, app_data, user_data):
         """

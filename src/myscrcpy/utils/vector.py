@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-27 1.6.3 Me2sY  新增部分方法
+
         2024-09-26 1.6.2 Me2sY  新增部分方法
 
         2024-09-23 1.6.0 Me2sY  新增 pixel_n 方法，计算像素点
@@ -18,7 +20,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.2'
+__version__ = '1.6.3'
 
 __all__ = [
     'ROTATION_VERTICAL', 'ROTATION_HORIZONTAL',
@@ -49,6 +51,19 @@ class Point(NamedTuple):
     def d(self) -> dict:
         return self._asdict()
 
+    @staticmethod
+    def to_uldr(point_0: 'Point', point_1: 'Point') -> tuple['Point', 'Point']:
+        """
+            Return UpLeft DownRight Points
+        :param point_0:
+        :param point_1:
+        :return:
+        """
+        return (
+            Point(min(point_0.x, point_1.x), min(point_0.y, point_1.y)),
+            Point(max(point_0.x, point_1.x), max(point_0.y, point_1.y)),
+        )
+
 
 class ScalePoint(NamedTuple):
     """
@@ -65,6 +80,19 @@ class ScalePoint(NamedTuple):
 
     def __mul__(self, scale: float) -> 'ScalePoint':
         return ScalePoint(self.x * scale, self.y * scale)
+
+    @staticmethod
+    def to_uldr(scale_point_0: 'ScalePoint', scale_point_1: 'ScalePoint') -> tuple['ScalePoint', 'ScalePoint']:
+        """
+            Return UpLeft DownRight Points
+        :param scale_point_0:
+        :param scale_point_1:
+        :return:
+        """
+        return (
+            ScalePoint(min(scale_point_0.x, scale_point_1.x), min(scale_point_0.y, scale_point_1.y)),
+            ScalePoint(max(scale_point_0.x, scale_point_1.x), max(scale_point_0.y, scale_point_1.y))
+        )
 
 
 class ScalePointR(NamedTuple):

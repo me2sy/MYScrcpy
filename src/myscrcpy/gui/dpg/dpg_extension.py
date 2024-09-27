@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-27 1.6.3 Me2sY  新增鼠标独自模式
+
         2024-09-26 1.6.2 Me2sY 完善回调方法，优化部分方法
 
         2024-09-24 1.6.1 Me2sY 修复 Linux 下 Viewport 过大导致界面错误
@@ -15,7 +17,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.2'
+__version__ = '1.6.3'
 
 __all__ = [
     'ValueObj', 'ValueManager',
@@ -41,8 +43,8 @@ from av import VideoFrame
 from loguru import logger
 
 from myscrcpy.core.extension import Extension, ExtInfo, RegisteredExtension, ExtensionManager
-from myscrcpy.utils import KeyValue, KVManager, UnifiedKeys, Action, UnifiedKey, Coordinate
-from myscrcpy.gui.dpg.mouse_handler import GesAction
+from myscrcpy.utils import KeyValue, KVManager, UnifiedKeys, Action, Coordinate
+from myscrcpy.gui.dpg.mouse_handler import GesAction, TouchPoint
 
 
 @dataclass
@@ -347,6 +349,7 @@ class DPGExtension(Extension, metaclass=ABCMeta):
 
         self.required_loop = False
         self.required_video_frame = False
+        self.required_mouse_control = False
 
     def __del__(self):
         try:
@@ -476,6 +479,14 @@ class DPGExtension(Extension, metaclass=ABCMeta):
         """
         return self.window.cpm_vc.register_layer()
 
+    def register_touch_point(self, touch_id: int | None = None) -> TouchPoint | None:
+        """
+            向 Mouse Handler 注册获取 Touch Point
+        :param touch_id:
+        :return:
+        """
+        return self.window.mouse_handler.register_touch_point(self.ext_info.ext_name, touch_id)
+
     def loop(self):
         """
            When DPG Loop, Make A Threading then Call This Function
@@ -492,7 +503,7 @@ class DPGExtension(Extension, metaclass=ABCMeta):
         """
         self.window.cpm_bottom.show_message(message)
 
-    def video_frame_update_callback(self, video_frame: VideoFrame, frame_n: int):
+    def callback_video_frame_update(self, video_frame: VideoFrame, frame_n: int):
         """
             视频更新回调
         :param video_frame:
@@ -500,6 +511,31 @@ class DPGExtension(Extension, metaclass=ABCMeta):
         :return:
         """
         ...
+
+    def get_mouse_control(self) -> bool:
+        """
+            请求占用鼠标控制信号
+        :return:
+        """
+        self.required_mouse_control = self.window.mouse_handler.required_control(self.ext_info.ext_name, self.callback_mouse_handler)
+        return self.required_mouse_control
+
+    def release_mouse_control(self):
+        """
+            释放鼠标控制信号占用
+        :return:
+        """
+        self.window.mouse_handler.release_control()
+
+    def callback_mouse_handler(self, action: Action, sender: str | int, app_data):
+        """
+            get_mouse_control() 请求占用 mouse handler 后，Mouse信号回调函数, 重新该函数以实现相应功能
+            使用后需要调用 release_mouse_control 进行释放
+        :param action:
+        :param sender:
+        :param app_data:
+        :return:
+        """
 
 
 class DPGExtensionManager(ExtensionManager):
@@ -569,7 +605,7 @@ class DPGExtensionManager(ExtensionManager):
         for registered_ext in self.extensions.values():
             if registered_ext.is_activated and registered_ext.ext_obj.required_video_frame:
                 threading.Thread(
-                    target=registered_ext.ext_obj.video_frame_update_callback, args=(video_frame, frame_n)
+                    target=registered_ext.ext_obj.callback_video_frame_update, args=(video_frame, frame_n)
                 ).start()
 
 
