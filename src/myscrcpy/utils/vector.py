@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-29 1.6.4 Me2sY  新增__abs__方法
+
         2024-09-27 1.6.3 Me2sY  新增部分方法
 
         2024-09-26 1.6.2 Me2sY  新增部分方法
@@ -20,7 +22,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.3'
+__version__ = '1.6.4'
 
 __all__ = [
     'ROTATION_VERTICAL', 'ROTATION_HORIZONTAL',
@@ -46,6 +48,9 @@ class Point(NamedTuple):
 
     def __sub__(self, other: 'Point') -> 'Point':
         return Point(self.x - other.x, self.y - other.y)
+
+    def __abs__(self) -> 'Point':
+        return Point(abs(self.x), abs(self.y))
 
     @property
     def d(self) -> dict:
@@ -80,6 +85,9 @@ class ScalePoint(NamedTuple):
 
     def __mul__(self, scale: float) -> 'ScalePoint':
         return ScalePoint(self.x * scale, self.y * scale)
+
+    def __abs__(self) -> 'ScalePoint':
+        return ScalePoint(abs(self.x), abs(self.y))
 
     @staticmethod
     def to_uldr(scale_point_0: 'ScalePoint', scale_point_1: 'ScalePoint') -> tuple['ScalePoint', 'ScalePoint']:
@@ -139,6 +147,8 @@ class ScalePointR(NamedTuple):
     def __mul__(self, scale: float) -> 'ScalePointR':
         return ScalePointR(self.x * scale, self.y * scale, self.r)
 
+    def __abs__(self) -> 'ScalePointR':
+        return ScalePointR(abs(self.x), abs(self.y), self.r)
 
 class Coordinate(NamedTuple):
     """

@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-29 1.6.4 Me2sY  新增 Action 分类
+
         2024-09-18 1.6.0 Me2sY  重构 Extensions 体系
 
         2024-09-12 1.5.10 Me2sY 新增 Extensions
@@ -16,7 +18,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.3'
+__version__ = '1.6.4'
 
 __all__ = [
     'project_path',
@@ -114,3 +116,7 @@ class Action(IntEnum):
     RELEASE = 1
     MOVE = 2
     ROLL = 3
+    DRAG = 4
+    DB_CLICK = 5
+
+    PRESSED = 6

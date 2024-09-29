@@ -6,7 +6,7 @@
 
 [info]
 ext_name = "Virtual_Camera"
-version = "0.1.0"
+version = "0.1.1"
 author = "Me2sY"
 email = "Me2sY@outlook.com"
 web = "https://github.com/me2sy/MYScrcpy"
@@ -44,3 +44,4 @@ desc = "Switch Pause / Play"
 space = 1
 uk_name = "KB_P"
 desc = "Press Pause/ Release Play"
+

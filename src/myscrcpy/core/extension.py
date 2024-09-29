@@ -4,11 +4,12 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
-         2024-09-15 1.6.0 Me2sY  创建，插件核心类
+        2024-09-29 1.6.4 Me2sY  增加加载指定路径插件功能
+        2024-09-15 1.6.0 Me2sY  创建，插件核心类
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.4'
 
 __all__ = [
     'ExtInfo',
@@ -184,7 +185,6 @@ class ExtLoader:
 
         if not cfg_path.exists():
             msg = f"{ExtLoader.CFG_FILE_NAME} Not Found in {local_path}"
-            logger.error(msg)
             raise FileNotFoundError(msg)
 
         # 加载 toml
@@ -308,42 +308,56 @@ class ExtensionManager:
     def __iter__(self):
         return iter(self.extensions.items())
 
-    def load_extensions(self, load_local: bool = True, load_zip: bool = True):
+    def _load_file_extensions(self, ext_path: pathlib.Path):
+        """
+            加载文件插件
+        :param ext_path:
+        :return:
+        """
+        if not ext_path.is_dir():
+            return
+
+        if ext_path.is_dir():
+            if ext_path.name.startswith('_'):
+                return
+
+            if ext_path.name.startswith('.'):
+                return
+
+        logger.info(f'Loading Local {ext_path}')
+        try:
+            ext_info = ExtLoader.load_local_info(ext_path)
+
+            if ext_info.ext_module in self.extensions:
+                raise FileExistsError(f"Extension {ext_info.ext_module} already loaded")
+
+            ext_module, ext_cls = ExtLoader.load_local_extension(ext_info)
+
+            logger.debug(f"Load => {ext_module} {ext_cls} | {type(ext_cls)}")
+
+            self.extensions[ext_info.ext_module] = RegisteredExtension(
+                ext_info=ext_info, ext_module=ext_module, ext_cls=ext_cls
+            )
+
+            logger.success(f'{ext_info.ext_module} | {ext_cls} Loaded')
+        except Exception as e:
+            logger.error(e)
+
+    def load_extensions(
+            self, load_local: bool = True, load_zip: bool = True,
+            dev_extensions_base_path: pathlib.Path | None = None
+    ):
         """
             加载 插件
         :return:
         """
         if load_local:
             for ext_local in Param.PATH_EXTENSIONS_LOCAL.iterdir():
-                if not ext_local.is_dir():
-                    continue
+                self._load_file_extensions(ext_local)
 
-                if ext_local.is_dir():
-                    if ext_local.name.startswith('_'):
-                        continue
-
-                    if ext_local.name.startswith('.'):
-                        continue
-
-                logger.info(f'Loading Local {ext_local}')
-                try:
-                    ext_info = ExtLoader.load_local_info(ext_local)
-
-                    if ext_info.ext_module in self.extensions:
-                        raise FileExistsError(f"Extension {ext_info.ext_module} already loaded")
-
-                    ext_module, ext_cls = ExtLoader.load_local_extension(ext_info)
-
-                    logger.debug(f"Load => {ext_module} {ext_cls} | {type(ext_cls)}")
-
-                    self.extensions[ext_info.ext_module] = RegisteredExtension(
-                        ext_info=ext_info, ext_module=ext_module, ext_cls=ext_cls
-                    )
-
-                    logger.success(f'{ext_info.ext_module} | {ext_cls} Loaded')
-                except Exception as e:
-                    logger.error(e)
-                    continue
+        if dev_extensions_base_path:
+            for ext_dev in dev_extensions_base_path.iterdir():
+                self._load_file_extensions(ext_dev)
 
         if load_zip:
             for ext_zip in Param.PATH_EXTENSIONS.glob('*.zip'):

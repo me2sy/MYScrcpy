@@ -16,20 +16,20 @@ __all__ = [
     'CPMPreview', 'CPMImages', 'CPMSelect'
 ]
 
-import random
 from collections import OrderedDict
 from dataclasses import dataclass, field
 import datetime
-from loguru import logger
 from pathlib import Path, PurePath
+import random
 import threading
 import uuid
 
 import dearpygui.dearpygui as dpg
+from loguru import logger
 import numpy as np
 from PIL import Image
 
-from myscrcpy.utils import Coordinate, Param, ScalePoint
+from myscrcpy.utils import Coordinate, Param, ScalePoint, Point
 from myscrcpy.gui.dpg.components.component_cls import TempModal
 
 
@@ -369,7 +369,8 @@ class CPMSelect:
     def __init__(self, tag_draw_layer: int | str, windows_pause: bool):
         self.window_pause = windows_pause
         self.tag_draw_layer = tag_draw_layer
-        self.start_point = dpg.get_drawing_mouse_pos()
+        self.start_point = Point(*dpg.get_drawing_mouse_pos())
+        self.end_point = Point(*dpg.get_drawing_mouse_pos())
 
     def __del__(self):
         dpg.delete_item(self.tag_draw_layer)
@@ -381,22 +382,19 @@ class CPMSelect:
         """
         dpg.does_item_exist(self.tag_draw_layer) and dpg.delete_item(self.tag_draw_layer, children_only=True)
 
-    def draw(self):
-        """
-            绘制截取框
-        :return:
-        """
+    def draw(self, end_point: Point = None):
         self.clear()
-        mouse_pos = dpg.get_drawing_mouse_pos()
+        self.end_point = Point(*dpg.get_drawing_mouse_pos()) if end_point is None else end_point
         color = [random.randrange(0, 255) for _ in range(3)]
         dpg.draw_rectangle(
             pmin=self.start_point,
-            pmax=mouse_pos,
+            pmax=self.end_point,
             color=color, parent=self.tag_draw_layer
         )
-        msg = f"W:{abs(mouse_pos[0] - self.start_point[0])} | H:{abs(mouse_pos[1] - self.start_point[1])}"
+        _p = abs(self.end_point - self.start_point)
+        msg = f"W:{_p.x} | H:{_p.y}"
         dpg.draw_text(
-            ((self.start_point[0] + mouse_pos[0]) // 2, (self.start_point[1] + mouse_pos[1]) // 2),
+            ((self.start_point[0] + self.end_point[0]) // 2, (self.start_point[1] + self.end_point[1]) // 2),
             msg, color=color, parent=self.tag_draw_layer, size=28
         )
 
@@ -406,8 +404,19 @@ class CPMSelect:
         :return:
         """
         dl_coord = Coordinate(*dpg.get_item_rect_size(dpg.get_item_parent(self.tag_draw_layer)))
+        return dl_coord.to_scale_point(*self.start_point), dl_coord.to_scale_point(*self.end_point)
 
-        sp_start = dl_coord.to_scale_point(*self.start_point)
-        sp_end = dl_coord.to_scale_point(*dpg.get_drawing_mouse_pos())
+    def adjust(self, start_point_rel: Point = None, end_point_rel: Point = None):
+        """
+            调整框位置及大小
+        :param start_point_rel: 相对位置变化
+        :param end_point_rel: 相对位置变化
+        :return:
+        """
 
-        return sp_start, sp_end
+        if start_point_rel:
+            self.start_point += start_point_rel
+        if end_point_rel:
+            self.end_point += end_point_rel
+
+        (start_point_rel or end_point_rel) and self.draw(self.end_point)

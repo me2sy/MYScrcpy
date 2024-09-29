@@ -4,13 +4,15 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-28 1.6.4 Me2sY  统一回调函数及传参
+
         2024-09-19 1.6.0 Me2sY
             1. 创建，统一处理按键事件
             2. 预留 Space 0 作为 Proxy 层
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.4'
 
 __all__ = [
     'KeyboardHandler'
@@ -24,7 +26,7 @@ import dearpygui.dearpygui as dpg
 from loguru import logger
 
 from myscrcpy.core import AdvDevice, Session, KeyboardWatcher
-from myscrcpy.gui.dpg.dpg_extension import ValueManager
+from myscrcpy.gui.dpg.dpg_extension import ValueManager, ActionCallbackParam
 from myscrcpy.utils import UnifiedKeys, KeyMapper, UnifiedKey, ADBKeyCode, Action
 
 
@@ -86,6 +88,8 @@ class KeyboardHandler:
             _: {} for _ in range(self.MAX_SPACE_N)
         }
 
+        self.pressed_keys = set()
+
     def switch_mode(self, mode: Mode = None):
         """
             切换模式
@@ -145,6 +149,7 @@ class KeyboardHandler:
         with dpg.handler_registry() as self.tag_handler_key:
             dpg.add_key_press_handler(callback=self.press)
             dpg.add_key_release_handler(callback=self.release)
+            dpg.add_key_down_handler(callback=self.down)
 
         if self.is_uhid_supported:
             self.session.ca.f_uhid_keyboard_create()
@@ -189,25 +194,9 @@ class KeyboardHandler:
             self.switch_space()
             return
 
-        self._press(key)
+        self._press(key, app_data)
 
-    def release(self, sender, app_data):
-        """
-            按键释放
-        :param sender:
-        :param app_data:
-        :return:
-        """
-        key = KeyMapper.dpg2uk(app_data)
-        if key == self.MODE_SWITCH_KEY:
-            return
-
-        if self.mode() == self.Mode.CTRL and key == self.MODE_SWITCH_SPACE:
-            return
-
-        self._release(key)
-
-    def _press(self, key: UnifiedKey):
+    def _press(self, key: UnifiedKey, dpg_key: int):
         """
             press 处理器
         :param key:
@@ -231,13 +220,56 @@ class KeyboardHandler:
                 UnifiedKeys.UK_KB_ALT, UnifiedKeys.UK_KB_ALT_L, UnifiedKeys.UK_KB_ALT_R
             ]:
                 self.to_adb(key)
-
             return
 
+        # 2024-09-28 1.6.4 Me2sY
+        # Key Click ONLY SEND ONE Single, Use Down To Get Pressed Infos
         if self.mode() == self.Mode.CTRL:
-            _, callback = self.registered_control_keys[self.ctrl_space()].get(key, (None, lambda _, __: None))
+            _, callback = self.registered_control_keys[self.ctrl_space()].get(key, (None, lambda _: None))
             if _:
-                threading.Thread(target=callback, args=(key, Action.DOWN,)).start()
+                threading.Thread(target=callback, args=[
+                    ActionCallbackParam(
+                        action=Action.DOWN, is_first=not dpg_key in self.pressed_keys, uk=key, app_data=dpg_key
+                    )
+                ]).start()
+            self.pressed_keys.add(dpg_key)
+
+    def down(self, sender, app_data):
+        """
+            转化为 Action.PRESSED 事件
+            以帧频率回调
+        :param sender:
+        :param app_data:
+        :return:
+        """
+        if self.mode() == self.Mode.CTRL:
+            key = KeyMapper.dpg2uk(app_data[0])
+            _, callback = self.registered_control_keys[self.ctrl_space()].get(key, (None, lambda _: None))
+            if _:
+                threading.Thread(target=callback, args=[
+                    ActionCallbackParam(
+                        action=Action.PRESSED, uk=key, action_data=app_data[1], app_data=app_data,
+                        is_first=app_data[1] == 0.0
+                    )
+                ]).start()
+
+    def release(self, sender, app_data):
+        """
+            按键释放
+        :param sender:
+        :param app_data:
+        :return:
+        """
+        key = KeyMapper.dpg2uk(app_data)
+        if key == self.MODE_SWITCH_KEY:
+            return
+
+        if self.mode() == self.Mode.CTRL and key == self.MODE_SWITCH_SPACE:
+            return
+
+        self.pressed_keys.discard(app_data)
+
+        self._release(key, app_data)
 
     def to_adb(self, key: UnifiedKey):
         """
@@ -261,10 +293,11 @@ class KeyboardHandler:
 
         threading.Thread(target=t, args=args).start()
 
-    def _release(self, key: UnifiedKey):
+    def _release(self, key: UnifiedKey, dpg_key: int):
         """
             释放
         :param key:
+        :param dpg_key:
         :return:
         """
         if not self.enabled:
@@ -278,11 +311,16 @@ class KeyboardHandler:
             return
 
         if self.mode() == self.Mode.CTRL:
-            _, callback = self.registered_control_keys[self.ctrl_space()].get(key, (None, lambda _, __: None))
+            _, callback = self.registered_control_keys[self.ctrl_space()].get(key, (None, lambda _: None))
             if _:
-                threading.Thread(target=callback, args=(key, Action.RELEASE,)).start()
+                threading.Thread(target=callback, args=[
+                    ActionCallbackParam(action=Action.RELEASE, uk=key, app_data=dpg_key)
+                ]).start()
 
-    def register_ctrl_key_callback(self, receiver: str, space: int, key: UnifiedKey, callback: Callable):
+    def register_ctrl_key_callback(
+            self, receiver: str, space: int, key: UnifiedKey,
+            callback: Callable[[ActionCallbackParam], None]
+    ):
         """
             注册 Ctrl 模式 按键回调函数
         :param receiver:
@@ -291,6 +329,9 @@ class KeyboardHandler:
         :param callback:
         :return:
         """
+        if key in [self.MODE_SWITCH_KEY, self.MODE_SWITCH_SPACE]:
+            raise KeyError(f"{self.MODE_SWITCH_KEY}/{self.MODE_SWITCH_SPACE} Not Allowed Register!")
+
         if space < 1 or space >= self.MAX_SPACE_N or type(space) is not int:
             raise KeyError(f"Register to  {' / '.join([str(_) for _ in range(1, self.MAX_SPACE_N)])} Space Only!")
 

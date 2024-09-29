@@ -4,11 +4,13 @@
     ~~~~~~~~~~~~~~~~~~
     
     Log:
+        2024-09-29 0.1.1 Me2sY 适配新回调
+
         2024-09-26 0.1.0 Me2sY 创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 __all__ = ['VirtualCam']
 
@@ -23,7 +25,8 @@ import pyvirtualcam
 
 from myscrcpy.core import AdvDevice, Session, ExtInfo
 from myscrcpy.gui.dpg.dpg_extension import DPGExtension, VDCheckBox, VDCombo, VDDragInt, VDColorPicker
-from myscrcpy.utils import Coordinate, UnifiedKey, Action
+from myscrcpy.gui.dpg.dpg_extension_cls import ActionCallbackParam
+from myscrcpy.utils import Coordinate, Action
 
 
 class VirtualCam(DPGExtension):
@@ -345,37 +348,35 @@ class VirtualCam(DPGExtension):
                         dpg.add_button(label='Preview', callback=self.show_preview, width=-80, height=35)
                         dpg.add_button(label='Stop', callback=self.stop_vcam, width=80, height=35)
 
-    def callback_key_switch(self, key: UnifiedKey, action: Action):
+    @DPGExtension.CallbackActionFilter(need_first_signal=True)
+    def callback_key_switch(self, acp: ActionCallbackParam):
         """
             Start / Stop
-        :param key:
-        :param action:
+        :param acp:
         :return:
         """
-        if action == Action.DOWN:
-            if self.camera:
-                self.stop_vcam()
-            else:
-                self.start_vcam()
+        if self.camera:
+            self.stop_vcam()
+        else:
+            self.start_vcam()
 
-    def callback_key_switch_pause(self, key: UnifiedKey, action: Action):
+    @DPGExtension.CallbackActionFilter(need_first_signal=True)
+    def callback_key_switch_pause(self, acp: ActionCallbackParam):
         """
             Switch Recording/Pause
-        :param key:
-        :param action:
+        :param acp:
         :return:
         """
-        if action == Action.DOWN:
-            self.vdi_pause(not self.vdi_pause(), callback=True)
+        self.vdi_pause(not self.vdi_pause(), callback=True)
 
-    def callback_key_pause(self, key: UnifiedKey, action: Action):
+    @DPGExtension.CallbackActionFilter([Action.DOWN, Action.RELEASE], need_first_signal=True)
+    def callback_key_pause(self, acp: ActionCallbackParam):
         """
             Press then Pause
-        :param key:
-        :param action:
+        :param acp:
         :return:
         """
-        if action == Action.DOWN:
+        if acp.action == Action.DOWN:
             self.vdi_pause(True, callback=True)
-        elif action == Action.RELEASE:
+        elif acp.action == Action.RELEASE:
             self.vdi_pause(False, callback=True)

@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.3
+# MYScrcpy V1.6.4
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -19,7 +19,8 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 ## Features
 
 ### Extensions
-#### VirtualCamera V0.1.0
+#### VirtualCamera V0.1.1
+  - Adjust to new callback
   - Automatically select the backend based on the current operating platform（OBS/unitycapture/v4l2loopback）
   - Supports output original size or custom size, custom background fill color.
   - Support output preview
@@ -29,7 +30,8 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - I start/stop | O pause/continued P | press then pause
   - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
 
-#### Capture V0.1.1 (For AI train 640x640 or whatever size you need)
+#### Capture V0.1.2 (For AI train 640x640 or whatever size you need)
+  - **0.1.2 WSAD adjust capture rect pos/size, e switch mode**
   - **0.1.1 Support Camera Stream Capture**
   - **0.1.1 Support Select Mode, use 'V' key**
   - CrossLine/Rect
@@ -42,6 +44,8 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - ![Capture](files/doc/help/extensions/capture/img.jpg)
 
 ### Develop
+- **1.6.4 NEW** Customize extensions loading paths for convenient extensions development
+- **1.6.4 NEW** Unify mouse and keyboard callback methods and parameters, add Action filters
 - **1.6.3 NEW** Allow Extension to get mouse callback
 - Function Description [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
 - Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](files/doc/help/extensions/Help_extensions_v1_6.md)
@@ -324,6 +328,10 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 1.6.4
+  - Customize extensions loading paths for convenient extensions development
+  - Unify mouse and keyboard callback methods and parameters, add Action filters
+  - WSAD adjust capture rect pos/size, e switch mode
 - 1.6.3
   - update capture extension
   - support extension mouse register and callback

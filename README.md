@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.3
+# MYScrcpy V1.6.4
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -15,7 +15,8 @@
 ## 功能特性
 
 ### 插件
-#### Virtualcam V0.1.0 虚拟摄像头
+#### Virtualcam V0.1.1 虚拟摄像头
+  - 适配新回调
   - 原有虚拟摄像头功能插件化
   - 根据当前运行平台自动选择backend（OBS/unitycapture/v4l2loopback）
   - 支持原尺寸/自定义尺寸输出，自定义背景填充颜色
@@ -26,7 +27,8 @@
   - I键开启/关闭 O键暂停/继续 P键按下暂停
   - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
 
-#### Capture V0.1.1 截图助手 （告别苦苦手拉640x640训练图）
+#### Capture V0.1.2 截图助手 （告别苦苦手拉640x640训练图）
+  - **0.1.2 NEW** 支持WSAD调节截图框位置/大小
   - **0.1.1 NEW** 支持摄像头模式截图
   - **0.1.1 NEW** V键开启拉选模式，手动拉取指定区域
   - 获取屏幕坐标、定位十字线
@@ -40,6 +42,8 @@
 
 
 ### 开发
+- **1.6.4 NEW** 统一鼠标、键盘回调方法及传参，增加过滤器
+- **1.6.4 NEW** 自定义插件加载路径，方便插件开发
 - **1.6.3 NEW** 新增鼠标抢夺模式，允许插件获取鼠标控制权，实现更多功能
 - 功能说明 [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
 - 全新插件架构！支持配置文件注入等功能 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
@@ -330,6 +334,10 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 
 ## 更新日志
+- 1.6.4
+  - 统一鼠标、键盘回调函数及传参
+  - 新增指定加载插件路径
+  - Capture 新增微调功能
 - 1.6.3 
   - 插件功能升级
   - 鼠标支持独占模式

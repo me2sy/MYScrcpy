@@ -5,13 +5,15 @@
     按键定义及转换
 
     Log:
+        2024-09-28 1.6.4 Me2sY  新增 Move uk
+
         2024-09-18 1.6.0 Me2sY  修正 ADB 部分功能键映射
 
         2024-08-24 1.3.7 Me2sY  从utils中分离，重构结构及功能
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.4'
 
 __all__ = [
     'ADBKeyCode', 'UHIDKeyCode', 'UHID_MOUSE_REPORT_DESC', 'UHID_KEYBOARD_REPORT_DESC',
@@ -451,6 +453,9 @@ class UnifiedKeys(NamedTuple):
     UK_MOUSE_WHEEL = UnifiedKey(name='MOUSE_WHEEL', code=2, device=DEVICE_MOUSE)
     UK_MOUSE_WHEEL_UP = UnifiedKey(name='MOUSE_WHEEL_UP', code=3, device=DEVICE_MOUSE)
     UK_MOUSE_WHEEL_DOWN = UnifiedKey(name='MOUSE_WHEEL_DOWN', code=4, device=DEVICE_MOUSE)
+
+    # For Mouse Move Action
+    UK_MOUSE_MOVE = UnifiedKey(name='MOUSE_MOVE', code=5, device=DEVICE_MOUSE)
 
     # Keyboard
 

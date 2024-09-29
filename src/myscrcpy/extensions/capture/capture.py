@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-29 0.1.2 Me2sY
+            1.适配新回调方法，增加条件过滤器
+            2.增加调整截图框功能
+
         2024-09-27 0.1.1 Me2sY
             1.新增 Camera 截图模式
             2.新增 Select 选择截图模式
@@ -12,19 +16,20 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 __all__ = [
     'Capture'
 ]
 
 import random
+from functools import wraps
 
 import dearpygui.dearpygui as dpg
 
 from myscrcpy.core import AdvDevice, Session, VideoArgs
 from myscrcpy.gui.dpg.dpg_extension import *
-from myscrcpy.utils import Coordinate, ScalePoint, Point, Action, UnifiedKey, Param
+from myscrcpy.utils import Coordinate, ScalePoint, Point, Action, Param, UnifiedKeys
 
 from .cpm import CPMPreview, CPMImages, CPMSelect
 
@@ -37,6 +42,9 @@ class Capture(DPGExtension):
     MODE_MAGNIFIER = 'magnifier'
     MODE_CUT = 'cut'
 
+    ADJ_MODE_POS = 'pos'
+    ADJ_MODE_WH = 'w/h'
+
     def start(self):
         """
             注册Layer Pad 及 Menu
@@ -48,14 +56,19 @@ class Capture(DPGExtension):
 
         self.tag_layer_scale = self.register_layer()
 
+        self.tag_group = dpg.generate_uuid()
+
         self.tag_handler_io = dpg.generate_uuid()
         self.tag_handler_resize = dpg.generate_uuid()
         self.tag_handler_hover = dpg.generate_uuid()
+
+        self.tag_rect = dpg.generate_uuid()
 
         self.coord_dl = None
 
         self.mouse_sp = None
         self.lock_mouse_sp = None
+        self.sp_fix = None
         self.cut_img_raw = None
         self.cut_img = None
         self.cut_img_rect = None
@@ -248,7 +261,8 @@ class Capture(DPGExtension):
                 pmin = Point(mp.x - rec_w, mp.y - rec_h)
                 pmax = Point(mp.x + rec_w, mp.y + rec_h)
 
-            dpg.draw_rectangle(pmin, pmax, parent=self.tag_layer_crossline, thickness=1, color=color)
+            dpg.does_item_exist(self.tag_rect) and dpg.delete_item(self.tag_rect)
+            dpg.draw_rectangle(pmin, pmax, parent=self.tag_layer_crossline, thickness=1, color=color, tag=self.tag_rect)
 
     def draw_texture(self):
         """
@@ -325,7 +339,7 @@ class Capture(DPGExtension):
         # 注册面板空间
         self.register_pad()
 
-        with dpg.group(parent=self.tag_pad):
+        with dpg.group(parent=self.tag_pad, tag=self.tag_group):
 
             with dpg.group(horizontal=True):
                 self.vdi_enabled = VDCheckBox(self, 'Enabled', callback=self.enabled).draw()
@@ -357,10 +371,18 @@ class Capture(DPGExtension):
                             with dpg.tooltip(dpg.last_item()):
                                 dpg.add_text(f"Lock Capture Rect")
 
+                        with dpg.group(horizontal=True):
                             self.vdi_mode = VDCombo(
                                 self, 'ss.mode', items=[self.MODE_MAGNIFIER, self.MODE_CUT],
-                                label='Mode', width=40, no_preview=True
+                                label='Mode', width=60
                             ).draw()
+                            self.vdi_adj_mode = VDCombo(
+                                self, 'ss.adjust_mode', items=[self.ADJ_MODE_POS, self.ADJ_MODE_WH],
+                                label='RM', width=60
+                            ).draw()
+                            with dpg.tooltip(dpg.last_item()):
+                                dpg.add_text(f"Adjust Mode(Pos or Width/Height)")
+                                dpg.add_text(f"Use W/S/A/D to change pos or width/height. E changed the mode")
 
                         with dpg.group(horizontal=True):
                             cfg = {
@@ -421,22 +443,34 @@ class Capture(DPGExtension):
         for _ in points:
             dpg.draw_line(**_, **cfg)
 
-    def callback_key_switch(self, key: UnifiedKey, action: Action):
+    @staticmethod
+    def filter_ready(func):
         """
-            开关
-        :param key:
-        :param action:
+            确定当前状态
+        :param func:
         :return:
         """
-        if action == Action.DOWN:
-            status = self.vdi_enabled.switch(callback=True)
-            self.show_message(f"Capture > {'Enabled' if status else 'Disabled'}")
-            if not status and self.is_select:
-                self.is_select = False
-                if self.select:
-                    self.select.clear()
-                    self.select = None
-                self.release_mouse_control()
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if args[0].vdi_enabled() and args[0].window.cpm_vc.is_hovered():
+                return func(*args, **kwargs)
+        return wrapper
+
+    @DPGExtension.CallbackActionFilter(Action.DOWN, need_first_signal=True)
+    def callback_key_switch(self, acp: ActionCallbackParam):
+        """
+            开关
+        :param acp:
+        :return:
+        """
+        status = self.vdi_enabled.switch(callback=True)
+        self.show_message(f"Capture > {'Enabled' if status else 'Disabled'}")
+        if not status and self.is_select:
+            self.is_select = False
+            if self.select:
+                self.select.clear()
+                self.select = None
+            self.release_mouse_control()
 
     def screen_shot(self):
         """
@@ -485,33 +519,25 @@ class Capture(DPGExtension):
 
         self.show_message(f"Capture > Image {image_item.name} Captured!")
 
-    def callback_key_screenshot(self, key: UnifiedKey, action: Action):
+    @DPGExtension.CallbackActionFilter(Action.DOWN)
+    @filter_ready
+    def callback_key_screenshot(self, acp: ActionCallbackParam):
         """
             截图
-        :param key:
-        :param action:
+        :param acp:
         :return:
         """
-        if not self.vdi_enabled.get_value():
-            return
+        self.lock_mouse_sp and self.screen_shot()
 
-        dpg.is_item_hovered(
-            self.window.cpm_vc.tag_dl
-        ) and action == Action.DOWN and self.lock_mouse_sp and self.screen_shot()
-
-    def callback_key_lock_rect(self, key: UnifiedKey, action: Action):
+    @DPGExtension.CallbackActionFilter(Action.DOWN, need_first_signal=True)
+    @filter_ready
+    def callback_key_lock_rect(self, acp: ActionCallbackParam):
         """
             锁定 Rect
-        :param key:
-        :param action:
+        :param acp:
         :return:
         """
-        if not self.vdi_enabled.get_value():
-            return
-
-        if action == Action.DOWN and dpg.is_item_hovered(self.window.cpm_vc.tag_dl):
-            status = self.vdi_lock_rect.switch()
-            self.show_message(f"Capture > Rect {'Freeze' if status else 'Free'}")
+        self.show_message(f"Capture > Rect {'Freeze' if self.vdi_lock_rect.switch() else 'Free'}")
 
     def callback_mg_switch(self):
         """
@@ -521,45 +547,39 @@ class Capture(DPGExtension):
         status = self.vdi_enabled.switch(callback=True)
         self.show_message(f"Capture > {'Enabled' if status else 'Disabled'}")
 
-    def callback_key_select(self, key: UnifiedKey, action: Action):
+    @DPGExtension.CallbackActionFilter(Action.DOWN, need_first_signal=True)
+    @filter_ready
+    def callback_key_select(self, acp: ActionCallbackParam):
         """
             切换框选截图模式
-        :param key:
-        :param action:
+        :param acp:
         :return:
         """
-        if not self.vdi_enabled():
-            return
+        if self.is_select:  # 关闭 select 模式
+            self.is_select = False
+            self.release_mouse_control()
+            if self.select:
+                self.select.clear()
+        else:
+            self.is_select = self.get_mouse_control()
+        self.show_message(f"Capture > Select Mode {'Enabled' if self.is_select else 'Disabled'}")
 
-        if action == Action.DOWN:
-            if self.is_select:  # 关闭 select 模式
-                self.is_select = False
-                self.release_mouse_control()
-                if self.select:
-                    self.select.clear()
-            else:
-                self.is_select = self.get_mouse_control()
-            self.show_message(f"Capture > Select Mode {'Enabled' if self.is_select else 'Disabled'}")
-
-    def callback_mouse_handler(self, action: Action, sender: str | int, app_data):
+    @DPGExtension.CallbackActionFilter([Action.DOWN, Action.MOVE, Action.RELEASE])
+    @filter_ready
+    def callback_mouse_handler(self, acp: ActionCallbackParam):
         """
             左键框选截图
-        :param action:
-        :param sender:
-        :param app_data:
+        :param acp:
         :return:
         """
-        if not self.vdi_enabled():
-            return
-
-        if action == Action.DOWN and dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
+        if acp.action == Action.DOWN and acp.uk == UnifiedKeys.UK_MOUSE_L:
             self.select = CPMSelect(self.register_layer(), self.window.is_paused)
             self.window.is_paused = True
 
-        elif action == Action.MOVE and dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
+        elif acp.action == Action.MOVE and dpg.is_mouse_button_down(dpg.mvMouseButton_Left):
             self.select.draw()
 
-        elif action == Action.RELEASE and app_data == dpg.mvMouseButton_Left:  # 释放并截图
+        elif acp.action == Action.RELEASE and acp.uk == UnifiedKeys.UK_MOUSE_L:  # 释放并截图
             self.select_screen_shot(*self.select.get_scale_points())
             self.select.clear()
             self.window.is_paused = self.select.window_pause
@@ -586,9 +606,124 @@ class Capture(DPGExtension):
             return
 
         image_item = self.cpm_images.add_image(
-            cut_img_raw.crop([
-                *ul, *dr
-            ])
+            cut_img_raw.crop([*ul, *dr])
         )
 
         self.show_message(f"Capture > Image {image_item.name} Captured!")
+
+    @DPGExtension.CallbackActionFilter(Action.DOWN, need_first_signal=True)
+    @filter_ready
+    def callback_key_adjust_mode(self, acp: ActionCallbackParam):
+        """
+            调整模式
+        :param acp:
+        :return:
+        """
+        mode = {
+                self.ADJ_MODE_WH: self.ADJ_MODE_POS,
+                self.ADJ_MODE_POS: self.ADJ_MODE_WH
+        }.get(self.vdi_adj_mode())
+        self.vdi_adj_mode(mode)
+        self.show_message(f"Capture > Adjust Mode {mode}")
+
+    def adjust_rect(self, move_sp: ScalePoint | None = None):
+        """
+            调整截图框
+        :param move_sp:
+        :return:
+        """
+        self.lock_mouse_sp += (move_sp if move_sp else ScalePoint(0, 0))
+        self.draw_rect([random.randrange(0, 255) for _ in range(3)])
+        self.draw_texture()
+
+    @DPGExtension.CallbackActionFilter(Action.DOWN)
+    @filter_ready
+    def callback_key_adjust_up(self, acp: ActionCallbackParam):
+        """
+            调整选定框 向上 或 增大高度
+        :param acp:
+        :return:
+        """
+        if self.is_select:
+            if self.select:
+                if self.vdi_adj_mode() == self.ADJ_MODE_POS:
+                    self.select.adjust(Point(0, -1), Point(0, -1))
+                else:
+                    self.select.adjust(Point(0, -1), Point(0, 1))
+            return
+        else:
+            _sp = None
+            if self.vdi_adj_mode() == self.ADJ_MODE_POS:
+                _sp = ScalePoint(0, - 1 / self.coord_dl.height)
+            elif self.vdi_adj_mode() == self.ADJ_MODE_WH:
+                self.vdi_ss_height(self.vdi_ss_height() + 1)
+            self.adjust_rect(_sp)
+
+    @DPGExtension.CallbackActionFilter(Action.DOWN)
+    @filter_ready
+    def callback_key_adjust_down(self, acp: ActionCallbackParam):
+        """
+            调整选定框 向下 或 减小高度
+        :param acp:
+        :return:
+        """
+        if self.is_select:
+            if self.select:
+                if self.vdi_adj_mode() == self.ADJ_MODE_POS:
+                    self.select.adjust(Point(0, 1), Point(0, 1))
+                else:
+                    self.select.adjust(Point(0, 1), Point(0, -1))
+            return
+        else:
+            _sp = None
+            if self.vdi_adj_mode() == self.ADJ_MODE_POS:
+                _sp = ScalePoint(0, 1 / self.coord_dl.height)
+            elif self.vdi_adj_mode() == self.ADJ_MODE_WH:
+                self.vdi_ss_height(self.vdi_ss_height() - 1)
+            self.adjust_rect(_sp)
+
+    @DPGExtension.CallbackActionFilter(Action.DOWN)
+    @filter_ready
+    def callback_key_adjust_left(self, acp: ActionCallbackParam):
+        """
+            调整选定框 向左 或 减小宽度
+        :param acp:
+        :return:
+        """
+        if self.is_select:
+            if self.select:
+                if self.vdi_adj_mode() == self.ADJ_MODE_POS:
+                    self.select.adjust(Point(-1, 0), Point(-1, 0))
+                else:
+                    self.select.adjust(Point(1, 0), Point(-1, 0))
+            return
+        else:
+            _sp = None
+            if self.vdi_adj_mode() == self.ADJ_MODE_POS:
+                _sp = ScalePoint(- 1 / self.coord_dl.width, 0)
+            elif self.vdi_adj_mode() == self.ADJ_MODE_WH:
+                self.vdi_ss_width(self.vdi_ss_width() - 1)
+            self.adjust_rect(_sp)
+
+    @DPGExtension.CallbackActionFilter(Action.DOWN)
+    @filter_ready
+    def callback_key_adjust_right(self, acp: ActionCallbackParam):
+        """
+            调整选定框 向右 或 增大宽度
+        :param acp:
+        :return:
+        """
+        if self.is_select:
+            if self.select:
+                if self.vdi_adj_mode() == self.ADJ_MODE_POS:
+                    self.select.adjust(Point(1, 0), Point(1, 0))
+                else:
+                    self.select.adjust(Point(-1, 0), Point(1, 0))
+            return
+        else:
+            _sp = None
+            if self.vdi_adj_mode() == self.ADJ_MODE_POS:
+                _sp = ScalePoint(1 / self.coord_dl.width, 0)
+            elif self.vdi_adj_mode() == self.ADJ_MODE_WH:
+                self.vdi_ss_width(self.vdi_ss_width() + 1)
+            self.adjust_rect(_sp)

@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-28 1.6.4 Me2sY  完善鼠标事件，适配ActionCallbackParam回调传参
+
         2024-09-27 1.6.3 Me2sY
             1. 新增 required handler，支持插件独占回调事件
             2. 新增 TouchPoint
@@ -12,13 +14,13 @@
             1. 解决 DPG 卡死问题，MouseMoveHandler delete 后 导致 DPG 卡死
             2. 升级结构，适配 Extensions
 
-         2024-09-01 1.4.2 Me2sY
+        2024-09-01 1.4.2 Me2sY
             1.创建，处理鼠标事件
             2.新增 右键收拾功能，模拟两点触控功能
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.3'
+__version__ = '1.6.4'
 
 __all__ = [
     'GesAction', 'TouchPoint',
@@ -26,11 +28,11 @@ __all__ = [
 ]
 
 from dataclasses import dataclass
-import random
-import time
 from enum import IntEnum
 from functools import partial
-from typing import Callable, Tuple, Dict, List, Any
+import random
+import time
+from typing import Callable, Tuple, Dict, List
 
 import dearpygui.dearpygui as dpg
 from loguru import logger
@@ -38,7 +40,8 @@ import moosegesture
 
 from myscrcpy.core import Session, AdvDevice
 from myscrcpy.gui.dpg.components.vc import CPMVC
-from myscrcpy.utils import Action, ScalePointR, ADBKeyCode
+from myscrcpy.gui.dpg.dpg_extension_cls import ActionCallbackParam
+from myscrcpy.utils import Action, ScalePointR, ADBKeyCode, UnifiedKeys
 
 
 @dataclass
@@ -390,13 +393,16 @@ class MouseHandler:
 
         self.is_control_required = False
         self.controller = None
-        self.control_callback: Callable[[Action, int|str, Any], None] = None
+        self.control_callback: Callable[[ActionCallbackParam], None] = None
 
         with dpg.handler_registry(tag=self.tag_hr):
             dpg.add_mouse_click_handler(callback=self.click_event_handler, user_data=Action.DOWN)
             dpg.add_mouse_release_handler(callback=self.release_event_handler, user_data=Action.RELEASE)
             dpg.add_mouse_wheel_handler(callback=self.wheel_event_handler, user_data=Action.ROLL)
             dpg.add_mouse_move_handler(callback=self.move_event_handler, user_data=Action.MOVE)
+            dpg.add_mouse_drag_handler(callback=self.drag_event_handler, user_data=Action.DRAG)
+            dpg.add_mouse_double_click_handler(callback=self.db_click_event_handler, user_data=Action.DB_CLICK)
+            dpg.add_mouse_down_handler(callback=self.pressed_event_handler, user_data=Action.PRESSED)
 
     def get_random_touch_id(self) -> int:
         """
@@ -425,7 +431,7 @@ class MouseHandler:
 
             self.touch_points[touch_id] = (module_name, TouchPoint(touch_id, self.session.ca.f_touch_spr))
 
-    def required_control(self, controller: str, control_callback: Callable[[Action, int|str, Any], None]) -> bool:
+    def required_control(self, controller: str, control_callback: Callable[[ActionCallbackParam], None]) -> bool:
         """
             请求独占控制
         :return:
@@ -448,6 +454,18 @@ class MouseHandler:
         self.control_callback = None
         dpg.delete_item(self.cpm_vc.tag_layer_mouse, children_only=True)
 
+    def device_connect(self, adv_device: AdvDevice, session: Session):
+        """
+            设备连接
+        :param adv_device:
+        :param session:
+        :return:
+        """
+        self.adv_device = adv_device
+        self.session = session
+
+        self.register_system_gesture()
+
     def device_disconnect(self):
         """
             关闭监听
@@ -465,13 +483,6 @@ class MouseHandler:
         :return:
         """
         self.handler_draw.register_ges_action(space, action)
-
-    def device_connect(self, adv_device: AdvDevice, session: Session):
-
-        self.adv_device = adv_device
-        self.session = session
-
-        self.register_system_gesture()
 
     def register_system_gesture(self):
         """
@@ -547,7 +558,13 @@ class MouseHandler:
 
                 if self.is_control_required:
                     self.cpm_vc.draw_mouse(self.controller)
-                    return self.control_callback(user_data, sender, app_data)
+
+                    # 2024-09-28 1.6.4 Me2sY  统一化回调函数传参
+                    acp = MouseHandler.callback2action(sender, app_data, user_data)
+                    if acp:
+                        return self.control_callback(acp)
+                    else:
+                        return False
 
                 if not self.session.is_control_ready:
                     return False
@@ -558,6 +575,49 @@ class MouseHandler:
                 logger.error(f"MouseHandler Error")
                 logger.exception(e)
         return wrapper
+
+    KEY_MAPPER = {
+        dpg.mvMouseButton_Left: UnifiedKeys.UK_MOUSE_L,
+        dpg.mvMouseButton_Right: UnifiedKeys.UK_MOUSE_R,
+        dpg.mvMouseButton_Middle: UnifiedKeys.UK_MOUSE_WHEEL,
+    }
+
+    @staticmethod
+    def callback2action(sender, app_data, user_data: Action) -> ActionCallbackParam | None:
+        """
+            将回调转为ActionCallbackParam
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :return:
+        """
+        action_data = None
+        is_first = True
+        if user_data in [Action.DOWN, Action.RELEASE, Action.DB_CLICK]:
+            uk = MouseHandler.KEY_MAPPER.get(app_data)
+
+        elif user_data == Action.ROLL:
+            uk = UnifiedKeys.UK_MOUSE_WHEEL_UP if app_data > 0 else UnifiedKeys.UK_MOUSE_WHEEL_DOWN
+            action_data = app_data
+
+        elif user_data == Action.MOVE:
+            uk = UnifiedKeys.UK_MOUSE_MOVE
+            action_data = app_data
+            is_first = False
+
+        elif user_data == [Action.PRESSED, Action.DRAG]:
+            uk = MouseHandler.KEY_MAPPER.get(app_data[0])
+            action_data = app_data[1:]
+            if len(action_data) == 1 and action_data[0] == 0.0:
+                is_first = True
+            else:
+                is_first = False
+        else:
+            return None
+
+        return ActionCallbackParam(
+            action=user_data, uk=uk, action_data=action_data, app_data=app_data, is_first=is_first
+        )
 
     @after_control_required
     def move_event_handler(self, sender, app_data, user_data, *args, **kwargs):
@@ -684,3 +744,42 @@ class MouseHandler:
         self.session.ca.f_touch_spr(
             Action.RELEASE.value, vc_draw_coord.to_scale_point_r(*sec_pos), touch_id=self.touch_id_sec()
         )
+
+    @after_control_required
+    def db_click_event_handler(self, sender, app_data, user_data, *args, **kwargs):
+        """
+            双击事件处理器器
+            一次性事件
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+    @after_control_required
+    def drag_event_handler(self, sender, app_data, user_data, *args, **kwargs):
+        """
+            Drag 事件处理器
+            循环回调
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+    @after_control_required
+    def pressed_event_handler(self, sender, app_data, user_data, *args, **kwargs):
+        """
+            按压 事件处理器
+            循环回调
+        :param sender:
+        :param app_data:
+        :param user_data:
+        :param args:
+        :param kwargs:
+        :return:
+        """

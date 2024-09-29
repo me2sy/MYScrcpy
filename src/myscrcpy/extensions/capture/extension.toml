@@ -10,7 +10,7 @@
 ext_name = "Capture"
 
 # Use N.N.N Format
-version = "0.1.1"
+version = "0.1.2"
 
 author = "Me2sY"
 email = "Me2sY@outlook.com"
@@ -43,6 +43,7 @@ ss.lock_rect = false
 ss.width = 320
 ss.height = 320
 ss.mode = "cut"
+ss.adjust_mode = 'pos'
 
 Scale = 2.0
 
@@ -60,6 +61,31 @@ Scale = 2.0
 space = 1
 uk_name = "KB_Q"
 desc = "On/Off"
+
+[keys.adjust_mode]
+space = 1
+uk_name = "KB_E"
+desc = "Switch Mode (Adjust Rect pos / Adjust Rect width or height)"
+
+[keys.adjust_up]
+space = 1
+uk_name = "KB_W"
+desc = "Rect to Up"
+
+[keys.adjust_down]
+space = 1
+uk_name = "KB_S"
+desc = "Rect to Down"
+
+[keys.adjust_left]
+space = 1
+uk_name = "KB_A"
+desc = "Rect to Up"
+
+[keys.adjust_right]
+space = 1
+uk_name = "KB_D"
+desc = "Rect to Right"
 
 [keys.screenshot]
 space = 1

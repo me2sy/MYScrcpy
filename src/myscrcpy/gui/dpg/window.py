@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-29 1.6.4 Me2sY 添加指定插件加载路径功能
+
         2024-09-27 1.6.3 Me2sY 修复部分缺陷
 
         2024-09-26 1.6.2 Me2sY
@@ -90,7 +92,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.3'
+__version__ = '1.6.4'
 
 __all__ = ['start_dpg_adv']
 
@@ -765,7 +767,7 @@ class Window:
             self.send_key_event, lambda show: switch(show)
         )
 
-    def draw(self):
+    def draw(self, ext_dev_path: pathlib.Path | None = None):
         """
             初始化Window窗口
         :return:
@@ -806,7 +808,7 @@ class Window:
         )
 
         # 增加插件管理器
-        self.ext_manager.load_extensions()
+        self.ext_manager.load_extensions(dev_extensions_base_path=ext_dev_path)
         self.ext_manager.register_extensions()
 
     def _video_resize(self, tag_texture, old_coord: Coordinate, new_coord: Coordinate):
@@ -990,7 +992,7 @@ class Window:
         threading.Thread(target=self.ext_manager.loop_call).start()
 
 
-def start_dpg_adv():
+def start_dpg_adv(ext_dev_path: pathlib.Path | None = None):
     """
         运行
     """
@@ -1035,7 +1037,7 @@ def start_dpg_adv():
     logger.info('Start ADB Server. Please Wait...')
 
     wd = Window()
-    wd.draw()
+    wd.draw(ext_dev_path)
     dpg.set_primary_window(wd.tag_window, True)
     dpg.setup_dearpygui()
     dpg.show_viewport()

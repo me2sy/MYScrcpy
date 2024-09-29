@@ -1,0 +1,67 @@
+# Extension Desc File With Toml Style
+# Toml Details : https://toml.io/en/v1.0.0
+# File Format Version 1.0.0
+
+# Info about your extension
+# Will Show in Extension Manager
+[info]
+# Your extension name
+ext_name = ""
+
+# Use N.N.N Format
+version = ""
+
+author = ""
+email = ""
+web = ""
+contact = ""
+desc = """"""
+
+
+# Defined Required Here
+# Not Check For Now
+# Only show information for reader
+[required]
+mysc_version = ">= 1.6.4"
+dependencies = []
+
+
+# Defined Settings or Values In this Table
+# Auto Loaded name value type and value when class Called/Run and Saved when value changed
+[settings]
+
+
+# Extension - keys
+# Auto Register to keyboard handler
+# Rewrite callback_key_xxx function in DPGExtension to defined your own function
+# Struct:
+# [keys.XXX]              keys.XXX  XXX is the key name
+# * space = 1/2/3         myscrcpy 1.6.x support 3 space for extensions. 0 is for proxy
+# * uk_name = ""          myscrcpy.utils.keys.UnifiedKey.name, bind function to this key
+# desc = ""             function desc
+#
+# example:
+# [keys.switch]
+# space = 1
+# uk_name = "KB_Q"
+# desc = "Switch On / Off"
+
+
+# Extension - Mouse gestures
+# Auto Register to mouse handler gesAction
+# Notice that only ges >= 2 is effective. Level1 is for system use
+# Visit Moosegesture https://github.com/asweigart/moosegesture
+# Rewrite callback_mg_xxx function in DPGExtension to defined your own function
+# Struct:
+# [mouse_ga.XXX]            mouse.XXX  XXX is the key name
+# * space = 0/1/2           MYScrcpy 1.6.x support 3 space for extensions, 0 is for mysc system use so NOT Recommended!
+# * gestures = ""           gesAction Commands. Use | to split. Directions: U/D/L/R/UL/UR/DL/DR
+# desc = ""                   function desc
+#
+# example:
+# [mouse_ga.switch]
+# space = 1
+# gestures = "D|L"
+# desc = "Switch On / Off"
+
+

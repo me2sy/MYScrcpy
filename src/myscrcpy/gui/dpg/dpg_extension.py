@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-09-28 1.6.4 Me2sY
+            1. 统一鼠标、键盘回调方法格式及参数
+            2. 新增过滤方法
+
         2024-09-27 1.6.3 Me2sY  新增鼠标独自模式
 
         2024-09-26 1.6.2 Me2sY 完善回调方法，优化部分方法
@@ -17,10 +21,10 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.3'
+__version__ = '1.6.4'
 
 __all__ = [
-    'ValueObj', 'ValueManager',
+    'ValueObj', 'ValueManager', 'ActionCallbackParam',
     'DPGExtension', 'DPGExtensionManager', 'DPGExtManagerWindow', 'ViewportCoordManager',
     'VmDPGItem',
     'VDCheckBox',
@@ -34,7 +38,7 @@ __all__ = [
 
 from abc import ABCMeta
 from dataclasses import dataclass
-from functools import partial
+from functools import partial, wraps
 import threading
 from typing import Any, Callable, Iterable, NamedTuple
 
@@ -44,7 +48,8 @@ from loguru import logger
 
 from myscrcpy.core.extension import Extension, ExtInfo, RegisteredExtension, ExtensionManager
 from myscrcpy.utils import KeyValue, KVManager, UnifiedKeys, Action, Coordinate
-from myscrcpy.gui.dpg.mouse_handler import GesAction, TouchPoint
+from myscrcpy.gui.dpg.mouse_handler import GesAction
+from myscrcpy.gui.dpg.dpg_extension_cls import *
 
 
 @dataclass
@@ -293,37 +298,6 @@ class ValueHolder(NamedTuple):
         self.vm.set_to_kv(self.attr_name, value)
 
 
-@dataclass
-class KeyInfo:
-    """
-        按键信息
-    """
-    name: str
-    space: int
-    uk_name: str
-    desc: str = ''
-
-    @property
-    def vm_name(self) -> str:
-        return f"keys.{self.name}"
-
-
-@dataclass
-class MouseGestureInfo:
-    """
-        鼠标手势信息
-    :return:
-    """
-    name: str
-    space: int
-    gestures: str
-    desc: str = ''
-
-    @property
-    def vm_name(self) -> str:
-        return f"gestures.{self.name}"
-
-
 class DPGExtension(Extension, metaclass=ABCMeta):
     """
         DearPyGui Extension
@@ -425,7 +399,8 @@ class DPGExtension(Extension, metaclass=ABCMeta):
             setattr(
                 self, function_name,
                 partial(
-                    lambda _self, unified_key, action: logger.info(f"Key > {unified_key} | {action}"),
+                    # 2024-09-28 1.6.4 Me2sY 修改回调传参
+                    lambda _self, action_callback_param: logger.info(f"Key > {action_callback_param}"),
                     self
                 )
             )
@@ -440,6 +415,35 @@ class DPGExtension(Extension, metaclass=ABCMeta):
             self.ext_info.ext_module, key_info.space, uk, getattr(self, function_name)
         )
         return True
+
+    class CallbackActionFilter:
+        """
+            Callback Action 过滤器
+        """
+        def __init__(
+                self,
+                activate_actions: Action | Iterable[Action] = Action.DOWN,
+                need_first_signal: bool = False,
+        ):
+            """
+                Action 回调函数 参数过滤器
+            :param activate_actions: 生效Actions
+            :param need_first_signal: 首次信号生效，过滤键盘Down/Pressed等多次信号
+            """
+            self.activate_actions = [activate_actions] if isinstance(activate_actions, Action) else activate_actions
+            self.need_first_signal = need_first_signal
+
+        def __call__(self, func):
+            @wraps(func)
+            def wrapper(_self, action_callback_param: ActionCallbackParam, *args, **kwargs):
+                if action_callback_param.action not in self.activate_actions:
+                    return
+                if self.need_first_signal and not action_callback_param.is_first:
+                    return
+
+                return func(_self, action_callback_param, *args, **kwargs)
+
+            return wrapper
 
     def register_pad(self) -> str | int:
         """
@@ -479,7 +483,7 @@ class DPGExtension(Extension, metaclass=ABCMeta):
         """
         return self.window.cpm_vc.register_layer()
 
-    def register_touch_point(self, touch_id: int | None = None) -> TouchPoint | None:
+    def register_touch_point(self, touch_id: int | None = None):
         """
             向 Mouse Handler 注册获取 Touch Point
         :param touch_id:
@@ -517,7 +521,9 @@ class DPGExtension(Extension, metaclass=ABCMeta):
             请求占用鼠标控制信号
         :return:
         """
-        self.required_mouse_control = self.window.mouse_handler.required_control(self.ext_info.ext_name, self.callback_mouse_handler)
+        self.required_mouse_control = self.window.mouse_handler.required_control(
+            self.ext_info.ext_name, self.callback_mouse_handler
+        )
         return self.required_mouse_control
 
     def release_mouse_control(self):
@@ -527,13 +533,11 @@ class DPGExtension(Extension, metaclass=ABCMeta):
         """
         self.window.mouse_handler.release_control()
 
-    def callback_mouse_handler(self, action: Action, sender: str | int, app_data):
+    def callback_mouse_handler(self, action_callback_param: ActionCallbackParam):
         """
             get_mouse_control() 请求占用 mouse handler 后，Mouse信号回调函数, 重新该函数以实现相应功能
             使用后需要调用 release_mouse_control 进行释放
-        :param action:
-        :param sender:
-        :param app_data:
+        :parameter action_callback_param
         :return:
         """
 
