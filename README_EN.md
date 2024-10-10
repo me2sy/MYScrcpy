@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.4
+# MYScrcpy V1.6.5
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -44,6 +44,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - ![Capture](files/doc/help/extensions/capture/img.jpg)
 
 ### Develop
+- **1.6.5 NEW** [HOW TO Develop a extension](https://blog.csdn.net/weixin_43463913/article/details/142685828)
 - **1.6.4 NEW** Customize extensions loading paths for convenient extensions development
 - **1.6.4 NEW** Unify mouse and keyboard callback methods and parameters, add Action filters
 - **1.6.3 NEW** Allow Extension to get mouse callback
@@ -328,6 +329,8 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 1.6.5
+  - Support MuMu emulator
 - 1.6.4
   - Customize extensions loading paths for convenient extensions development
   - Unify mouse and keyboard callback methods and parameters, add Action filters

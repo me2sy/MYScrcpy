@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-10-09 1.6.5 Me2sY  新增转矩形方法 
+
         2024-09-29 1.6.4 Me2sY  新增__abs__方法
 
         2024-09-27 1.6.3 Me2sY  新增部分方法
@@ -22,7 +24,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.4'
+__version__ = '1.6.5'
 
 __all__ = [
     'ROTATION_VERTICAL', 'ROTATION_HORIZONTAL',
@@ -68,6 +70,19 @@ class Point(NamedTuple):
             Point(min(point_0.x, point_1.x), min(point_0.y, point_1.y)),
             Point(max(point_0.x, point_1.x), max(point_0.y, point_1.y)),
         )
+
+    @staticmethod
+    def to_rect(
+            point_0: 'Point', point_1: 'Point'
+    ) -> tuple['Point', 'Point', 'Point', 'Point']:
+        """
+            获取矩形四个点 top_left/top_right/bottom_left/bottom_right
+        :param point_0:
+        :param point_1:
+        :return:
+        """
+        ul, dr = Point.to_uldr(point_0, point_1)
+        return ul, Point(dr.x, ul.y), Point(ul.x, dr.y), dr
 
 
 class ScalePoint(NamedTuple):
@@ -149,6 +164,7 @@ class ScalePointR(NamedTuple):
 
     def __abs__(self) -> 'ScalePointR':
         return ScalePointR(abs(self.x), abs(self.y), self.r)
+
 
 class Coordinate(NamedTuple):
     """

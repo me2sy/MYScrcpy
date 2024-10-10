@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.4
+# MYScrcpy V1.6.5
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -42,6 +42,7 @@
 
 
 ### 开发
+- **1.6.5 NEW** [插件开发教程](https://blog.csdn.net/weixin_43463913/article/details/142685828)
 - **1.6.4 NEW** 统一鼠标、键盘回调方法及传参，增加过滤器
 - **1.6.4 NEW** 自定义插件加载路径，方便插件开发
 - **1.6.3 NEW** 新增鼠标抢夺模式，允许插件获取鼠标控制权，实现更多功能
@@ -334,6 +335,8 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 
 ## 更新日志
+- 1.6.5
+  - 支持连接虚拟机
 - 1.6.4
   - 统一鼠标、键盘回调函数及传参
   - 新增指定加载插件路径

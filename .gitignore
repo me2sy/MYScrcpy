@@ -9,3 +9,4 @@ dist/myscrcpy-1.0.0-py3-none-any.whl
 /local
 /.stfolder
 .stignore
+/src/myscrcpy/test_utils

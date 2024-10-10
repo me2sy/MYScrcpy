@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-10-09 1.6.5 Me2sY  适配 MuMu模拟器
+
         2024.09.18 1.6.0 Me2sY  适配 插件 体系
 
         2024-09-13 1.5.11 Me2sY 新引入 uiautomator2，在dump/info/screenshot方面使用jsonrpc,速度很快
@@ -18,7 +20,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '1.6.5'
 
 __all__ = [
     'DeviceInfo', 'PackageInfo',
@@ -282,6 +284,8 @@ class AdvDevice:
             通过getprop 快速读取并解析设备信息
         """
 
+        u2d = uiautomator2.connect(dev.serial)
+
         prop_d = {}
 
         for _ in dev.shell('getprop', timeout=1).split('\n'):
@@ -301,22 +305,42 @@ class AdvDevice:
             except:
                 pass
 
-        release = prop_d['ro']['build']['version']['release']
+        try:
+            serial_no = prop_d['ro']['serialno']
+        except:
+            serial_no = dev.serial
+
+        try:
+            brand = prop_d['ro']['product']['brand']
+        except:
+            brand = ''
+
+        try:
+            model = prop_d['ro']['product']['model']
+        except:
+            model = u2d.info['productName']
+
+        try:
+            sdk = int(prop_d['ro']['build']['version']['sdk'])
+        except:
+            sdk = u2d.info['sdkInt']
+
+        try:
+            release = prop_d['ro']['build']['version']['release']
+        except Exception:
+            release = None
 
         if release is None or release == '':
-            release = 14
+            try:
+                release = u2d.device_info['version']
+            except:
+                release = 14
         elif '.' in release:
             release = int(release.split('.')[0])
         else:
             release = int(release)
 
-        return DeviceInfo(
-            serial_no=prop_d['ro']['serialno'],
-            brand=prop_d['ro']['product']['brand'],
-            model=prop_d['ro']['product']['model'],
-            sdk=int(prop_d['ro']['build']['version']['sdk']),
-            release=release
-        ), prop_d
+        return DeviceInfo(serial_no=serial_no, brand=brand, model=model, sdk=sdk, release=release), prop_d
 
     def __init__(
             self, adb_device: AdbDevice,
@@ -335,7 +359,7 @@ class AdvDevice:
         self.info, self.prop_d = self.analysis_device(adb_device) if device_info is None else (device_info, prop_d)
         self.serial_no = self.info.serial_no
 
-        self.kvm = KVManager(f"dev_{self.serial_no}")
+        self.kvm = KVManager(f"dev_{self.serial_no.replace('.', '_').replace(':', '__')}")
 
         self.usb_dev = adb_device if adb_device.serial == self.info.serial_no else None
         self.net_dev = None if self.usb_dev else adb_device
@@ -521,7 +545,6 @@ class AdvDevice:
         info = self.u2d.info
         return Coordinate(info['displayWidth'], info['displayHeight'])
 
-
     def get_rotation(self) -> int:
         """
             获取当前设备方向
@@ -544,7 +567,6 @@ class DeviceFactory:
             加载历史连接记录
         """
         return kv_global.get('load_history', {})
-
 
     @staticmethod
     def _connect_device(addr: str, timeout: int):
