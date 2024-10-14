@@ -28,6 +28,7 @@ size.width = 800
 size.height = 600
 trans.mode = 'raw'
 color.bg = [0, 0, 0]
+Rect = true
 
 
 [keys.switch]
@@ -44,4 +45,3 @@ desc = "Switch Pause / Play"
 space = 1
 uk_name = "KB_P"
 desc = "Press Pause/ Release Play"
-

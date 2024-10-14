@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.5
+# MYScrcpy V1.6.6
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -19,8 +19,8 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 ## Features
 
 ### Extensions
-#### VirtualCamera V0.1.1
-  - Adjust to new callback
+#### VirtualCam
+  - **0.1.2 NEW Support selecting an area. Add Status message.**
   - Automatically select the backend based on the current operating platform（OBS/unitycapture/v4l2loopback）
   - Supports output original size or custom size, custom background fill color.
   - Support output preview
@@ -30,10 +30,10 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - I start/stop | O pause/continued P | press then pause
   - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
 
-#### Capture V0.1.2 (For AI train 640x640 or whatever size you need)
-  - **0.1.2 WSAD adjust capture rect pos/size, e switch mode**
-  - **0.1.1 Support Camera Stream Capture**
-  - **0.1.1 Support Select Mode, use 'V' key**
+#### Capture (For AI train 640x640 or whatever size you need)
+  - 0.1.2 WSAD adjust capture rect pos/size, e switch mode
+  - 0.1.1 Support Camera Stream Capture
+  - 0.1.1 Support Select Mode, use 'V' key
   - CrossLine/Rect
   - Customizable screenshot frame size, with options for original or "what you see is what you get" (WYSIWYG) capture modes.
   - Use the 'C' key for taking screenshots, 'X' key to lock the screenshot frame position, and 'Q' to close the feature.
@@ -329,6 +329,9 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 1.6.6
+  - VirtualCam V0.1.2
+  - fix bugs
 - 1.6.5
   - Support MuMu emulator
 - 1.6.4

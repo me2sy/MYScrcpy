@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-10-13 1.6.6 Me2sY  修复获取Touchpoint缺陷
+
         2024-09-28 1.6.4 Me2sY  完善鼠标事件，适配ActionCallbackParam回调传参
 
         2024-09-27 1.6.3 Me2sY
@@ -20,7 +22,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.4'
+__version__ = '1.6.6'
 
 __all__ = [
     'GesAction', 'TouchPoint',
@@ -429,7 +431,11 @@ class MouseHandler:
                     logger.warning(f"Touch Id {touch_id} already registered by {self.touch_points[touch_id][0]}")
                     return None
 
-            self.touch_points[touch_id] = (module_name, TouchPoint(touch_id, self.session.ca.f_touch_spr))
+            tp = TouchPoint(touch_id, self.session.ca.f_touch_spr)
+
+            self.touch_points[touch_id] = (module_name, tp)
+
+            return tp
 
     def required_control(self, controller: str, control_callback: Callable[[ActionCallbackParam], None]) -> bool:
         """

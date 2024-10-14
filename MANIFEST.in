@@ -2,6 +2,7 @@ include README_EN.md
 
 prune src/myscrcpy/test_zone
 prune src/myscrcpy/tools/webrtc
+prune src/myscrcpy/test_utils
 graft src/myscrcpy/static
 graft src/myscrcpy/libs
 graft src/myscrcpy/extensions

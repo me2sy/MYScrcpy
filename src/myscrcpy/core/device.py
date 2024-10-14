@@ -4,6 +4,10 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-10-13 1.6.6 Me2sY
+            1. 修复prop解析错误问题
+            2. 降低 UHID 输入版本功能需求至 9
+
         2024-10-09 1.6.5 Me2sY  适配 MuMu模拟器
 
         2024.09.18 1.6.0 Me2sY  适配 插件 体系
@@ -20,7 +24,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.5'
+__version__ = '1.6.6'
 
 __all__ = [
     'DeviceInfo', 'PackageInfo',
@@ -67,7 +71,7 @@ class DeviceInfo(NamedTuple):
 
     @property
     def is_uhid_supported(self) -> bool:
-        return self.release >= 11
+        return self.release >= 9
 
 
 class PackageInfo(NamedTuple):
@@ -292,7 +296,10 @@ class AdvDevice:
             _ = _.replace('\r', '')
             if _[0] != '[' or _[-1] != ']':
                 continue
-            k, v = _.split(': ')
+            try:
+                k, v = _.split(': ')
+            except Exception as e:
+                continue
 
             cmd = "prop_d"
             for _ in k[1:-1].split('.'):

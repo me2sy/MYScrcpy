@@ -18,7 +18,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.4'
+__version__ = '1.6.6'
 
 __all__ = [
     'project_path',

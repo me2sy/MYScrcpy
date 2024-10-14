@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.5
+# MYScrcpy V1.6.6
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -15,7 +15,8 @@
 ## 功能特性
 
 ### 插件
-#### Virtualcam V0.1.1 虚拟摄像头
+#### Virtualcam 虚拟摄像头
+  - **0.1.2 NEW** 支持选择区域，增加提示框及提示信息
   - 适配新回调
   - 原有虚拟摄像头功能插件化
   - 根据当前运行平台自动选择backend（OBS/unitycapture/v4l2loopback）
@@ -27,10 +28,10 @@
   - I键开启/关闭 O键暂停/继续 P键按下暂停
   - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
 
-#### Capture V0.1.2 截图助手 （告别苦苦手拉640x640训练图）
-  - **0.1.2 NEW** 支持WSAD调节截图框位置/大小
-  - **0.1.1 NEW** 支持摄像头模式截图
-  - **0.1.1 NEW** V键开启拉选模式，手动拉取指定区域
+#### Capture 截图助手 （告别苦苦手拉640x640训练图）
+  - 0.1.2 支持WSAD调节截图框位置/大小
+  - 0.1.1 支持摄像头模式截图
+  - 0.1.1 V键开启拉选模式，手动拉取指定区域
   - 获取屏幕坐标、定位十字线
   - 自定义截图框尺寸、原始或所见所截模式
   - C键截图、X键锁定截图框位置 Q关闭功能
@@ -335,6 +336,9 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 
 ## 更新日志
+- 1.6.6
+  - VirtualCam 新增范围选择及运行状态提示
+  - 修复部分缺陷
 - 1.6.5
   - 支持连接虚拟机
 - 1.6.4

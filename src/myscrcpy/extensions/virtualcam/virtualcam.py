@@ -4,13 +4,17 @@
     ~~~~~~~~~~~~~~~~~~
     
     Log:
+        2024-10-14 0.1.2 Me2sY
+            1. 支持选择区域
+            2. 添加状态提醒及区域显示
+
         2024-09-29 0.1.1 Me2sY 适配新回调
 
         2024-09-26 0.1.0 Me2sY 创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 __all__ = ['VirtualCam']
 
@@ -26,7 +30,7 @@ import pyvirtualcam
 from myscrcpy.core import AdvDevice, Session, ExtInfo
 from myscrcpy.gui.dpg.dpg_extension import DPGExtension, VDCheckBox, VDCombo, VDDragInt, VDColorPicker
 from myscrcpy.gui.dpg.dpg_extension_cls import ActionCallbackParam
-from myscrcpy.utils import Coordinate, Action
+from myscrcpy.utils import Coordinate, Action, Point
 
 
 class VirtualCam(DPGExtension):
@@ -69,6 +73,7 @@ class VirtualCam(DPGExtension):
         self.session: Session | None = None
 
         self.coord: Coordinate = Coordinate(-1, -1)
+        self.coord_sess: Coordinate = Coordinate(-1, -1)
 
         self.tag_preview = dpg.generate_uuid()
         self.tag_win_preview = dpg.generate_uuid()
@@ -86,6 +91,43 @@ class VirtualCam(DPGExtension):
         """
         self.session: Session = session
 
+        if self.session and self.session.is_video_ready:
+            self.coord_session = self.session.va.coordinate
+            dpg.configure_item(self.tag_tl_x, max_value=self.coord_session.width)
+            dpg.configure_item(self.tag_tl_y, max_value=self.coord_session.height)
+            dpg.configure_item(
+                self.tag_br_x, max_value=self.coord_session.width, default_value=self.coord_session.width)
+            dpg.configure_item(
+                self.tag_br_y, max_value=self.coord_session.height, default_value=self.coord_session.height)
+
+            self.draw_info()
+
+    def draw_info(self):
+
+        dpg.delete_item(self.tag_layer, children_only=True)
+
+        if self.camera:
+            dpg.draw_text(
+                [10, 10], 'Rec Pause' if self.vdi_pause() else 'Rec',
+                color=[255, 0, 0, 200],
+                parent=self.tag_layer, size=28
+            )
+
+        if not self.vdi_rect():
+            return
+
+        _cpm_coord = Coordinate(*dpg.get_item_rect_size(dpg.get_item_parent(self.tag_layer)))
+        _sess_coord = self.session.va.coordinate
+
+        point_tl, point_br = self.get_tlbr()
+
+        point_tl_draw = _cpm_coord.to_point(_sess_coord.to_scale_point(*point_tl))
+        point_br_draw = _cpm_coord.to_point(_sess_coord.to_scale_point(*point_br))
+
+        dpg.draw_rectangle(
+            point_tl_draw, point_br_draw, color=[255, 0, 0, 255], parent=self.tag_layer
+        )
+
     def device_disconnect(self):
         """
             设备断联
@@ -95,7 +137,7 @@ class VirtualCam(DPGExtension):
         self.session = None
 
     def stop(self):
-        ...
+        self.stop_vcam()
 
     def callback_video_frame_update(self, frame: av.VideoFrame, frame_n: int):
         """
@@ -108,9 +150,11 @@ class VirtualCam(DPGExtension):
             return
 
         try:
-            _send_frame = self.convert_camera_frame(frame)
-
             if self.camera:
+                self.draw_info()
+
+                _send_frame = self.convert_camera_frame(frame)
+
                 _coord_camera = Coordinate(self.camera.width, self.camera.height)
                 _coord_frame = Coordinate.from_np_shape(_send_frame.shape)
                 if _coord_camera == _coord_frame:
@@ -121,7 +165,6 @@ class VirtualCam(DPGExtension):
                             dpg.set_value(self.tag_preview, _send_frame.ravel() / np.float32(255))
                         except:
                             pass
-
                 else:
                     self.required_video_frame = False
 
@@ -151,6 +194,16 @@ class VirtualCam(DPGExtension):
             dpg.configure_item(self.tag_tab_running, show=True)
             self.required_video_frame = True
 
+    def get_tlbr(self) -> tuple[Point, Point]:
+        """
+            获取绘制方框
+        :return:
+        """
+        return Point.to_uldr(
+            Point(dpg.get_value(self.tag_tl_x), dpg.get_value(self.tag_tl_y)),
+            Point(dpg.get_value(self.tag_br_x), dpg.get_value(self.tag_br_y))
+        )
+
     def _start_camera(self) -> bool:
         """
             主进程
@@ -166,7 +219,10 @@ class VirtualCam(DPGExtension):
         frame = self.session.va.get_video_frame()
 
         if self.vdi_raw.get_value():
-            self.coord = Coordinate(frame.width, frame.height)
+            point_tl, point_br = self.get_tlbr()
+            self.coord = Coordinate(
+                point_br.x - point_tl.x, point_br.y - point_tl.y
+            )
         else:
             self.coord = Coordinate(self.vdi_width(), self.vdi_height())
         try:
@@ -203,14 +259,14 @@ class VirtualCam(DPGExtension):
         dpg.configure_item(self.tag_tab_running, show=False)
 
         self.show_message('Virtual Camera Stop')
+        self.draw_info()
 
-    def _fix_scale(self, frame: av.VideoFrame) -> np.ndarray:
+    def _fix_scale(self, raw_img: Image.Image) -> np.ndarray:
         """
             将图像缩放至合适
         :return:
         """
         _img = Image.new('RGB', self.coord.t, color=self.color_bg)
-        raw_img = frame.to_image()
         max_coord = Coordinate(raw_img.width, raw_img.height).get_max_coordinate(
             self.coord.width, self.coord.height
         )
@@ -228,11 +284,16 @@ class VirtualCam(DPGExtension):
         :return:
         """
 
+        point_tl, point_br = self.get_tlbr()
+
+        _img = frame.to_image().crop([*point_tl, *point_br])
+
         # 尺寸处理
         if self.vdi_raw():  # 原始输出
-            _np_frame = frame.to_ndarray(format='rgb24')
+            # _np_frame = frame.to_ndarray(format='rgb24')
+            _np_frame = np.array(_img)
         else:               # 比例输出
-            _np_frame = self._fix_scale(frame)
+            _np_frame = self._fix_scale(_img)
 
         # CV2 转换
         return self.cv2_trans(_np_frame)
@@ -287,6 +348,7 @@ class VirtualCam(DPGExtension):
         self.required_video_frame = not app_data
         dpg.configure_item(user_data, speed=0 if app_data else 1)
         self.show_message(f"Virtual Camera {'Paused' if app_data else 'Continued'}")
+        self.draw_info()
 
     def callback_set_color(self, sender, app_data, user_data):
         """
@@ -299,12 +361,16 @@ class VirtualCam(DPGExtension):
         _color = self.vdi_color.get_value()
         self.color_bg = (_color[0], _color[1], _color[2])
 
+    def cb_draw_info(self, sender, app_data, user_data):
+        self.draw_info()
+
     def draw(self):
         """
             绘制界面
         :return:
         """
         self.register_pad()
+        self.tag_layer = self.register_layer()
 
         with dpg.group(parent=self.tag_pad):
             with dpg.tab_bar():
@@ -321,6 +387,26 @@ class VirtualCam(DPGExtension):
                         self.vdi_fps = VDDragInt(self, 'Fps', width=40).draw()
 
                     dpg.add_separator()
+
+                    with dpg.group(horizontal=True):
+                        dpg.add_text('TL:')
+                        with dpg.tooltip(dpg.last_item()):
+                            dpg.add_text("Top Left")
+                        self.tag_tl_x = dpg.add_drag_int(
+                            label='x', min_value=0, width=50, clamped=True, callback=self.cb_draw_info)
+                        self.tag_tl_y = dpg.add_drag_int(
+                            min_value=0, width=50, clamped=True, callback=self.cb_draw_info)
+                        self.vdi_rect = VDCheckBox(self, 'Rect', callback=self.cb_draw_info).draw()
+
+                    with dpg.group(horizontal=True):
+                        dpg.add_text('BR:')
+                        with dpg.tooltip(dpg.last_item()):
+                            dpg.add_text("Bottom Right")
+                        self.tag_br_x = dpg.add_drag_int(
+                            label='x', min_value=0, width=50, clamped=True, callback=self.cb_draw_info)
+                        self.tag_br_y = dpg.add_drag_int(
+                            min_value=0, width=50, clamped=True, callback=self.cb_draw_info)
+
                     dpg.add_button(label='Start', callback=self.start_vcam, width=-1, height=35)
 
                 # Running Tab
