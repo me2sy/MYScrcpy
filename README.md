@@ -1,8 +1,10 @@
-# MYScrcpy V1.6.6
+# MYScrcpy V1.7.0
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
-### python语言实现的一个 [**Scrcpy**](https://github.com/Genymobile/scrcpy/) 客户端。包含完整的视频、音频、控制解析及展现，**开发友好，引入即用！**
+### python语言实现的一个 [**Scrcpy 2.7**](https://github.com/Genymobile/scrcpy/) 客户端
+
+包含完整的视频、音频、控制解析，**开发友好，引入即用！**
 
 采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持编写插件，窗口位置记忆、右键手势控制、断线重连、文件管理器、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
 
@@ -16,7 +18,7 @@
 
 ### 插件
 #### Virtualcam 虚拟摄像头
-  - **0.1.2 NEW** 支持选择区域，增加提示框及提示信息
+  - 0.1.2 支持选择区域，增加提示框及提示信息
   - 适配新回调
   - 原有虚拟摄像头功能插件化
   - 根据当前运行平台自动选择backend（OBS/unitycapture/v4l2loopback）
@@ -41,12 +43,16 @@
   - 支持自定义十字线颜色、随机颜色，粗细等，更加醒目
   - ![Capture](files/doc/help/extensions/capture/img.jpg)
 
+#### Unlocker Ubuntu解锁助手 1.7.0 NEW
+  `mysc-unlocker` Ubuntu24 X11环境下解锁工具。通过解锁手机来解锁PC。
+  [演示_CSDN](https://blog.csdn.net/weixin_43463913/article/details/143272573)
 
 ### 开发
-- **1.6.5 NEW** [插件开发教程](https://blog.csdn.net/weixin_43463913/article/details/142685828)
-- **1.6.4 NEW** 统一鼠标、键盘回调方法及传参，增加过滤器
-- **1.6.4 NEW** 自定义插件加载路径，方便插件开发
-- **1.6.3 NEW** 新增鼠标抢夺模式，允许插件获取鼠标控制权，实现更多功能
+- 1.7.0 适配Scrcpy 2.7，支持Gamepad
+- 1.6.5 [插件开发教程](https://blog.csdn.net/weixin_43463913/article/details/142685828)
+- 1.6.4 统一鼠标、键盘回调方法及传参，增加过滤器
+- 1.6.4 自定义插件加载路径，方便插件开发
+- 1.6.3 新增鼠标抢夺模式，允许插件获取鼠标控制权，实现更多功能
 - 功能说明 [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
 - 全新插件架构！支持配置文件注入等功能 [**帮助文档**](https://github.com/me2sy/MYScrcpy/blob/main/files/doc/help/extensions/Help_extensions_v1_6.md)
 - 升级KVManager ValueManager，自动注册，自动管理 
@@ -336,6 +342,12 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 
 ## 更新日志
+- 1.7.0
+  - 支持Scrcpy 2.7
+  - 支持UHID Gamepad
+  - 升级支持 dearpygui 2.X
+  - 新增Unlocker工具
+  - 修复部分缺陷
 - 1.6.6
   - VirtualCam 新增范围选择及运行状态提示
   - 修复部分缺陷

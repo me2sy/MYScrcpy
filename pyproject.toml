@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.6.6"
+version = "1.7.0"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
@@ -40,7 +40,8 @@ dependencies = [
 # For GUI USE
 gui = [
     # GUI Framework
-    "dearpygui", "pygame",
+    "dearpygui>=2.0.0",
+    "pygame",
 
     # GUI Functions
     "moosegesture", "pyvirtualcam"
@@ -64,7 +65,7 @@ tools = [
 ]
 
 full = [
-    "dearpygui", "pygame",
+    "dearpygui>=2.0.0", "pygame",
     "pyperclip", "moosegesture", "pyvirtualcam", "opencv-python",
     "nicegui",
     "pyflac", "pyogg", "opuslib"
@@ -77,6 +78,7 @@ mysc-web = "myscrcpy.gui.ng.main:run_app"
 
 mysc-t-vc = "myscrcpy.tools.virtualcam:cli"
 
+mysc-unlocker = "myscrcpy.tools.unlocker:run"
 
 [project.gui-scripts]
 mysc-gui = "myscrcpy.run:run"

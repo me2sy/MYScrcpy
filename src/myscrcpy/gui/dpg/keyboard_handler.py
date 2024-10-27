@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-10-27 1.7.0 Me2sY  升级 Scrcpy 2.7.0 / dearpygui 2.x
+
         2024-09-28 1.6.4 Me2sY  统一回调函数及传参
 
         2024-09-19 1.6.0 Me2sY
@@ -12,7 +14,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.4'
+__version__ = '1.7.0'
 
 __all__ = [
     'KeyboardHandler'
@@ -36,15 +38,12 @@ class KeyboardHandler:
     """
 
     key_mapper = {
-        dpg.mvKey_Shift: ADBKeyCode.KB_SHIFT_L,
         dpg.mvKey_LShift: ADBKeyCode.KB_SHIFT_L,
         dpg.mvKey_RShift: ADBKeyCode.KB_SHIFT_R,
 
-        dpg.mvKey_Control: ADBKeyCode.KB_CONTROL_L,
         dpg.mvKey_LControl: ADBKeyCode.KB_CONTROL_L,
         dpg.mvKey_RControl: ADBKeyCode.KB_CONTROL_R,
 
-        dpg.mvKey_Alt: ADBKeyCode.KB_ALT_L
     }
 
     class Mode(IntEnum):

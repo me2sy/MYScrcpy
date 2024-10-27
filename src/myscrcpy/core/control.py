@@ -2,9 +2,10 @@
 """
     Control Adapter
     ~~~~~~~~~~~~~~~~~~
-    
 
     Log:
+        2024-10-27 1.7.0 Me2sY  新增 Gamepad
+
         2024-09-08 1.5.7 Me2sY  适配 Scrcpy 屏幕坐标
 
         2024-09-06 1.5.5 Me2sY  增加 PC -> Device 剪贴板功能
@@ -18,20 +19,20 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.7'
+__version__ = '1.7.0'
 
 __all__ = [
-    'KeyboardWatcher',
+    'KeyboardWatcher', 'Gamepad',
     'ControlArgs', 'ControlAdapter'
 ]
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 import queue
 import re
 import struct
 import threading
-from typing import ClassVar
+from typing import ClassVar, Callable
 
 from adbutils import AdbDevice, AdbError
 from loguru import logger
@@ -42,7 +43,10 @@ from myscrcpy.core.adapter_cls import ScrcpyAdapter
 from myscrcpy.core.connection import Connection
 from myscrcpy.utils import Action, Coordinate, ScalePointR
 from myscrcpy.utils import UnifiedKey, UnifiedKeys, KeyMapper
-from myscrcpy.utils import ROTATION_HORIZONTAL, ROTATION_VERTICAL, UHID_MOUSE_REPORT_DESC, UHID_KEYBOARD_REPORT_DESC
+from myscrcpy.utils import (
+    ROTATION_HORIZONTAL, ROTATION_VERTICAL,
+    UHID_MOUSE_REPORT_DESC, UHID_KEYBOARD_REPORT_DESC, UHID_GAMEPAD_REPORT_DESC
+)
 
 
 class KeyboardWatcher:
@@ -148,6 +152,343 @@ class KeyboardWatcher:
         )
 
 
+class Gamepad:
+
+    # A gamepad HID input report is 15 bytes long:
+    #  - bytes 0-3:   left stick state
+    #  - bytes 4-7:   right stick state
+    #  - bytes 8-11:  L2/R2 triggers state
+    #  - bytes 12-13: buttons state
+    #  - bytes 14:    hat switch position (dpad)
+    #
+    #                  +---------------+
+    #         byte 0:  |. . . . . . . .|
+    #                  |               | left stick x (0-65535, little-endian)
+    #         byte 1:  |. . . . . . . .|
+    #                  +---------------+
+    #         byte 2:  |. . . . . . . .|
+    #                  |               | left stick y (0-65535, little-endian)
+    #         byte 3:  |. . . . . . . .|
+    #                  +---------------+
+    #         byte 4:  |. . . . . . . .|
+    #                  |               | right stick x (0-65535, little-endian)
+    #         byte 5:  |. . . . . . . .|
+    #                  +---------------+
+    #         byte 6:  |. . . . . . . .|
+    #                  |               | right stick y (0-65535, little-endian)
+    #         byte 7:  |. . . . . . . .|
+    #                  +---------------+
+    #         byte 8:  |. . . . . . . .|
+    #                  |               | L2 trigger (0-32767, little-endian)
+    #         byte 9:  |0 . . . . . . .|
+    #                  +---------------+
+    #        byte 10:  |. . . . . . . .|
+    #                  |               | R2 trigger (0-32767, little-endian)
+    #        byte 11:  |0 . . . . . . .|
+    #                  +---------------+
+    #
+    #                   ,--------------- SC_GAMEPAD_BUTTON_RIGHT_SHOULDER
+    #                   | ,------------- SC_GAMEPAD_BUTTON_LEFT_SHOULDER
+    #                   | |
+    #                   | |   ,--------- SC_GAMEPAD_BUTTON_NORTH
+    #                   | |   | ,------- SC_GAMEPAD_BUTTON_WEST
+    #                   | |   | |
+    #                   | |   | |   ,--- SC_GAMEPAD_BUTTON_EAST
+    #                   | |   | |   | ,- SC_GAMEPAD_BUTTON_SOUTH
+    #                   v v   v v   v v
+    #                  +---------------+
+    #        byte 12:  |. . 0 . . 0 . .|
+    #                  |               | Buttons (16-bit little-endian)
+    #        byte 13:  |0 . . . . . 0 0|
+    #                  +---------------+
+    #                     ^ ^ ^ ^ ^
+    #                     | | | | |
+    #                     | | | | |
+    #                     | | | | `----- SC_GAMEPAD_BUTTON_BACK
+    #                     | | | `------- SC_GAMEPAD_BUTTON_START
+    #                     | | `--------- SC_GAMEPAD_BUTTON_GUIDE
+    #                     | `----------- SC_GAMEPAD_BUTTON_LEFT_STICK
+    #                     `------------- SC_GAMEPAD_BUTTON_RIGHT_STICK
+    #
+    #                  +---------------+
+    #        byte 14:  |0 0 0 . . . . .| hat switch (dpad) position (0-8)
+    #                  +---------------+
+    #                     9 possible positions and their values:
+    #                             8 1 2
+    #                             7 0 3
+    #                             6 5 4
+    #                     (8 is top-left, 1 is top, 2 is top-right, etc.)
+
+    @dataclass
+    class Axis:
+        """
+            Axis 值转换器
+        """
+        max_value: int
+        last_value: int | None = None
+        jitter: int = 0
+
+        def __post_init__(self):
+            if self.max_value < 0:
+                raise ValueError(f'Max Value must be positive')
+
+            if self.last_value is None:
+                self.last_value = int(self.max_value / 2)
+
+        def __call__(self, *args, **kwargs) -> int:
+            return self.last_value
+
+        def s2v(self, scale: float) -> tuple[bool, int]:
+            """
+                将 -1 ~ 1 转为 正值
+            :param scale:
+            :return:
+            """
+            _ = max(
+                0,
+                min(
+                    self.max_value,
+                    round((scale + 1) / 2 * self.max_value)
+                )
+            )
+            if abs(self.last_value - _) < self.jitter:
+                return False, _
+            else:
+                self.last_value = _
+                return True, _
+
+
+    @dataclass
+    class DPad:
+
+        # 9 possible positions and their values:
+        #   8 1 2
+        #   7 0 3
+        #   6 5 4
+        # (8 is top-left, 1 is top, 2 is top-right, etc.)
+
+        dpad_keys: ClassVar[tuple[UnifiedKey]] = (
+            UnifiedKeys.UK_GP_DP_U, UnifiedKeys.UK_GP_DP_D, UnifiedKeys.UK_GP_DP_L, UnifiedKeys.UK_GP_DP_R,
+            UnifiedKeys.UK_GP_DP_UL, UnifiedKeys.UK_GP_DP_UR, UnifiedKeys.UK_GP_DP_DL, UnifiedKeys.UK_GP_DP_DR
+        )
+
+        pressed: list[UnifiedKey] = field(default_factory=list)
+
+        def key_pressed(self, unified_key: UnifiedKey):
+            """
+                Dpad key pressed
+            :param unified_key:
+            :return:
+            """
+            if unified_key not in self.pressed:
+                self.pressed.append(unified_key)
+
+        def key_release(self, unified_key: UnifiedKey):
+            """
+                Dpad key release
+            :param unified_key:
+            :return:
+            """
+            if unified_key in self.pressed:
+                self.pressed.remove(unified_key)
+
+        def __call__(self, *args, **kwargs) -> int:
+            """
+                Dpad Value
+            :param args:
+            :param kwargs:
+            :return:
+            """
+            if len(self.pressed) == 1:
+                return self.pressed[0].value
+
+            elif len(self.pressed) == 2:
+                if (UnifiedKeys.UK_GP_DP_U in self.pressed) and (UnifiedKeys.UK_GP_DP_L in self.pressed):
+                    return UnifiedKeys.UK_GP_DP_UL.value
+
+                if (UnifiedKeys.UK_GP_DP_U in self.pressed) and (UnifiedKeys.UK_GP_DP_R in self.pressed):
+                    return UnifiedKeys.UK_GP_DP_UR.value
+
+                if (UnifiedKeys.UK_GP_DP_D in self.pressed) and (UnifiedKeys.UK_GP_DP_L in self.pressed):
+                    return UnifiedKeys.UK_GP_DP_DL.value
+
+                if (UnifiedKeys.UK_GP_DP_D in self.pressed) and (UnifiedKeys.UK_GP_DP_R in self.pressed):
+                    return UnifiedKeys.UK_GP_DP_DR.value
+
+            else:
+                return 0
+
+    gamepad_inited = set()
+    ID_START = 3
+    MAX_COUNT = 8
+
+    MAX_VALUE_STICK = 65535
+    MAX_VALUE_TRIGGER = 32767
+
+    @classmethod
+    def init_id(cls) -> int:
+        """
+            创建唯一ID
+            最多8个
+        :return:
+        """
+        for _ in range(cls.ID_START, cls.ID_START + cls.MAX_COUNT):
+            if _ not in cls.gamepad_inited:
+                cls.gamepad_inited.add(_)
+                return _
+        raise RuntimeError(f"Only supports 8 gamepads")
+
+    def __init__(
+            self, send_method: Callable, name: str = 'MYGP',
+            auto_create: bool = True
+    ):
+        self.gp_id = self.init_id()
+        self.name = f"{name}_{self.gp_id}"
+
+        self.send_method = send_method
+
+        self.is_created = False
+
+        self.pressed = list()
+
+        self.left_stick_x = self.Axis(self.MAX_VALUE_STICK, jitter=1500)
+        self.left_stick_y = self.Axis(self.MAX_VALUE_STICK, jitter=1500)
+
+        self.right_stick_x = self.Axis(self.MAX_VALUE_STICK, jitter=1500)
+        self.right_stick_y = self.Axis(self.MAX_VALUE_STICK, jitter=1500)
+
+        self.left_trigger = self.Axis(self.MAX_VALUE_TRIGGER)
+        self.right_trigger = self.Axis(self.MAX_VALUE_TRIGGER)
+
+        self.last_packet = None
+
+        self.dpad = self.DPad()
+
+        self.axis_mapper = {
+            0: self.left_stick_x,
+            1: self.left_stick_y,
+            2: self.right_stick_x,
+            3: self.right_stick_y,
+            4: self.left_trigger,
+            5: self.right_trigger
+        }
+
+        auto_create and self.uhid_create() and self.update_status()
+
+    def uhid_create(self):
+        """
+            Create uhid gamepad
+        :return:
+        """
+        self.is_created = True
+        self.send_method(
+            struct.pack(
+                '>BhB', *[
+                    ControlAdapter.MessageType.UHID_CREATE.value,
+                    self.gp_id,
+                    len(self.name.encode())
+                ]
+            ) + self.name.encode(
+            ) + struct.pack(
+                '>H', len(UHID_GAMEPAD_REPORT_DESC)
+            ) + UHID_GAMEPAD_REPORT_DESC
+        )
+
+    def uhid_destroy(self):
+        """
+            Destroy uhid gamepad
+        :return:
+        """
+        if self.is_created:
+            self.is_created = False
+            self.send_method(
+                ControlAdapter.packet__uhid_destroy(self.gp_id)
+            )
+            self.__class__.gamepad_inited.remove(self.gp_id)
+
+    def key_pressed(self, unified_key: UnifiedKey, auto_update: bool = True):
+        """
+            按键按下
+        :param unified_key:
+        :param auto_update:
+        :return:
+        """
+        if unified_key in self.dpad.dpad_keys:
+            self.dpad.key_pressed(unified_key)
+            auto_update and self.update_status()
+            return
+
+        elif unified_key not in self.pressed:
+            self.pressed.append(unified_key)
+            auto_update and self.update_status()
+            return
+
+    def key_release(self, unified_key: UnifiedKey, auto_update: bool = True):
+        """
+            按键释放
+        :param unified_key:
+        :param auto_update:
+        :return:
+        """
+        if unified_key in self.dpad.dpad_keys:
+            self.dpad.key_release(unified_key)
+            auto_update and self.update_status()
+            return
+
+        elif unified_key in self.pressed:
+            self.pressed.remove(unified_key)
+            auto_update and self.update_status()
+            return
+
+    def axis_value_changed(self, axis_idx: int, value_scale: float):
+        """
+            stick value changed
+            for pygame joystick
+        :param axis_idx:
+        :param value_scale:
+        :return:
+        """
+        self.axis_mapper[axis_idx].s2v(value_scale)
+
+    def update_status(self):
+        """
+            更新status
+        :return:
+        """
+
+        # Buttons Status
+        key_v = 0
+        for uk in self.pressed:
+            key_v |= uk.value
+
+        # Create gamepad HID input report
+        packet = struct.pack(
+            '<HHHHHHHB', *[
+                self.left_stick_x(),
+                self.left_stick_y(),
+                self.right_stick_x(),
+                self.right_stick_y(),
+                self.left_trigger(),
+                self.right_trigger(),
+                key_v,
+                self.dpad()
+            ]
+        )
+
+        # Send packet
+        if packet != self.last_packet:
+            self.last_packet = packet
+            self.send_method(
+                struct.pack(
+                    '>BhH', *[
+                        ControlAdapter.MessageType.UHID_INPUT.value,
+                        self.gp_id,
+                        15
+                    ]
+                ) + packet
+            )
+
+
 @dataclass
 class ControlArgs(ScrcpyConnectArgs):
     """
@@ -185,6 +526,7 @@ class ControlAdapter(ScrcpyAdapter):
         SET_SCREEN_POWER_MODE = 10
         UHID_CREATE = 12
         UHID_INPUT = 13
+        UHID_DESTROY = 14
 
     @staticmethod
     def get_window_size(adb_device: AdbDevice) -> Coordinate:
@@ -247,10 +589,11 @@ class ControlAdapter(ScrcpyAdapter):
         if self.screen_status == ControlArgs.STATUS_KEEP:
             self.screen_status = adb_device.is_screen_on()
 
-        if self.conn.connect(adb_device, ['video=false', 'audio=false']):
+        if self.conn.connect(adb_device):
             self.is_running = True
             threading.Thread(target=self.main_thread).start()
             threading.Thread(target=self.clipboard_thread).start()
+            logger.info(f"Running...")
             return True
         else:
             return False
@@ -435,9 +778,7 @@ class ControlAdapter(ScrcpyAdapter):
         :param touch_id:
         :return:
         """
-
         _coord = self.coord_hv[scale_point_r.r]
-
         self.f_touch(
             action,
             **_coord.to_point(scale_point_r).d,
@@ -473,18 +814,26 @@ class ControlAdapter(ScrcpyAdapter):
             return False
 
     @classmethod
-    def packet__uhid_mouse_create(cls, mouse_id: int = 2):
+    def packet__uhid_mouse_create(cls, mouse_name: str = 'MYScrcpy', mouse_id: int = 2):
+        """
+            Create Mouse UHID
+        :param mouse_name:
+        :param mouse_id:
+        :return:
+        """
         return struct.pack(
-            '>BhH',
-            *[
-                cls.MessageType.UHID_CREATE.value,  # 1 type                B
-                mouse_id,                               # 2 mouse_id  Short     H
-                len(UHID_MOUSE_REPORT_DESC),            # 3 byte_size           h
+            '>BhB', *[
+                cls.MessageType.UHID_CREATE.value,              # 1 type                        B
+                mouse_id,                                        # 2 mouse_id                 h
+                len(mouse_name.encode()),                        # 3 len(bytes(mouse_name))   B
             ]
-        ) + UHID_MOUSE_REPORT_DESC
+        ) + mouse_name.encode(                                   # 4 mouse_name
+        ) + struct.pack(
+            '>H', len(UHID_MOUSE_REPORT_DESC)          # 5 report_desc_len             H
+        ) + UHID_MOUSE_REPORT_DESC                               # 6 report desc
 
-    def f_uhid_mouse_create(self, mouse_id: int = 2):
-        self.send_packet(self.packet__uhid_mouse_create(mouse_id))
+    def f_uhid_mouse_create(self, mouse_name: str = 'MYScrcpy', mouse_id: int = 2):
+        self.send_packet(self.packet__uhid_mouse_create(mouse_name, mouse_id))
 
     @classmethod
     def packet__uhid_mouse_input(
@@ -529,18 +878,26 @@ class ControlAdapter(ScrcpyAdapter):
         ))
 
     @classmethod
-    def packet__uhid_keyboard_create(cls, keyboard_id: int = 1):
+    def packet__uhid_keyboard_create(cls, keyboard_name: str = 'MYScrcpy', keyboard_id: int = 1):
+        """
+            Scrcpy 1.7 add uhid name
+        :param keyboard_name:
+        :param keyboard_id:
+        :return:
+        """
         return struct.pack(
-            '>BhH',
-            *[
-                cls.MessageType.UHID_CREATE.value,      # 1 type                B
-                keyboard_id,                                # 2 mouse_id  Short     H
-                len(UHID_KEYBOARD_REPORT_DESC),             # 3 byte_size           h
+            '>BhB', *[
+                cls.MessageType.UHID_CREATE.value,              # 1 type                        B
+                keyboard_id,                                        # 2 keyboard_id                 h
+                len(keyboard_name.encode()),                        # 3 len(bytes(keyboard_name))   B
             ]
-        ) + UHID_KEYBOARD_REPORT_DESC
+        ) + keyboard_name.encode(                                   # 4 keyboard_name
+        ) + struct.pack(
+            '>H', len(UHID_KEYBOARD_REPORT_DESC)          # 5 report_desc_len             H
+        ) + UHID_KEYBOARD_REPORT_DESC                               # 6 report desc
 
-    def f_uhid_keyboard_create(self, keyboard_id: int = 1):
-        self.send_packet(self.packet__uhid_keyboard_create(keyboard_id))
+    def f_uhid_keyboard_create(self, keyboard_name: str = 'MYScrcpy', keyboard_id: int = 1):
+        self.send_packet(self.packet__uhid_keyboard_create(keyboard_name=keyboard_name, keyboard_id=keyboard_id))
 
     @classmethod
     def packet__uhid_keyboard_input(
@@ -578,6 +935,21 @@ class ControlAdapter(ScrcpyAdapter):
             keyboard_id, modifiers, key_scan_codes
         ))
 
+    @classmethod
+    def packet__uhid_destroy(cls, device_id: int):
+        """
+            Scrcpy 1.7 Destroy uhid device(keyboard/mouse/joystick)
+        :param device_id:
+        :return:
+        """
+        return struct.pack(
+            '>BB',
+            *[
+                cls.MessageType.UHID_DESTROY.value,
+                device_id
+            ]
+        )
+
 
 if __name__ == '__main__':
     """
@@ -586,7 +958,4 @@ if __name__ == '__main__':
     from adbutils import adb
     d = adb.device_list()[0]
 
-    ca = ControlAdapter(Connection(ControlArgs()))
-    ca.start(d)
-    ca.f_set_screen(True)
-    ca.stop()
+    ca = ControlAdapter.connect(d, ControlArgs())

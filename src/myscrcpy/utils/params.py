@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-10-24 1.7.0 Me2sY  适配 Scrcpy 2.7.0
+
         2024-09-29 1.6.4 Me2sY  新增 Action 分类
 
         2024-09-18 1.6.0 Me2sY  重构 Extensions 体系
@@ -18,7 +20,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.6'
+__version__ = '1.7.0'
 
 __all__ = [
     'project_path',
@@ -89,7 +91,7 @@ class Param:
     OPEN_MAX_SIZE = 1024 * 1024 * 100  # 100 MB
 
     # Scrcpy
-    SCRCPY_SERVER_VER = '2.6.1'
+    SCRCPY_SERVER_VER = '2.7'
     SCRCPY_SERVER_NAME = f"scrcpy-server"
     PATH_SCRCPY_SERVER_JAR_LOCAL = PATH_LIBS.joinpath(f"{SCRCPY_SERVER_NAME}")
     PATH_SCRCPY_PUSH = f"/data/local/tmp/{SCRCPY_SERVER_NAME}"

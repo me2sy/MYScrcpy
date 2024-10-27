@@ -1,4 +1,4 @@
-# MYScrcpy V1.6.6
+# MYScrcpy V1.7.0
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -20,7 +20,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 
 ### Extensions
 #### VirtualCam
-  - **0.1.2 NEW Support selecting an area. Add Status message.**
+  - 0.1.2 Support selecting an area. Add Status message.
   - Automatically select the backend based on the current operating platform（OBS/unitycapture/v4l2loopback）
   - Supports output original size or custom size, custom background fill color.
   - Support output preview
@@ -43,11 +43,15 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
   - Support for customizing the color, random color, and thickness of CrossLine for increased visibility.
   - ![Capture](files/doc/help/extensions/capture/img.jpg)
 
+#### Unlocker 1.7.0 NEW
+  `mysc-unlocker` Use Android Device to unlock PC in Ubuntu24 X11
+  [How To in CSDN](https://blog.csdn.net/weixin_43463913/article/details/143272573)
+
 ### Develop
-- **1.6.5 NEW** [HOW TO Develop a extension](https://blog.csdn.net/weixin_43463913/article/details/142685828)
-- **1.6.4 NEW** Customize extensions loading paths for convenient extensions development
-- **1.6.4 NEW** Unify mouse and keyboard callback methods and parameters, add Action filters
-- **1.6.3 NEW** Allow Extension to get mouse callback
+- 1.6.5 [HOW TO Develop a extension](https://blog.csdn.net/weixin_43463913/article/details/142685828)
+- 1.6.4 Customize extensions loading paths for convenient extensions development
+- 1.6.4 Unify mouse and keyboard callback methods and parameters, add Action filters
+- 1.6.3 Allow Extension to get mouse callback
 - Function Description [Window.setup_session()](/files/doc/introduce/window__setup_session.md)
 - Brand-new plugin architecture! Supports features such as configuration file injection.[**HowTo**](files/doc/help/extensions/Help_extensions_v1_6.md)
 - Upgrade KVManager and ValueManager, with automatic registration and management.
@@ -58,9 +62,9 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 - Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
-- **1.6.0 NEW** Added a bottom prompt and log bar, providing timely reminders and log viewing capabilities.
-- **1.6.0 NEW** Introducing a new plugin manager for managing plugins and custom configurations.
-- **1.6.0 NEW** Support [uiautomator2](https://github.com/openatx/uiautomator2)
+- 1.6.0 Added a bottom prompt and log bar, providing timely reminders and log viewing capabilities.
+- 1.6.0 Introducing a new plugin manager for managing plugins and custom configurations.
+- 1.6.0 Support [uiautomator2](https://github.com/openatx/uiautomator2)
 - File Manager with upload, download, delete and more [**HowTo**](files/doc/help/file_manager/Help_file_manager.md)
 - Supports file transfer on Windows systems
   - Use the right-click gesture Down|Up to quickly copy
@@ -96,10 +100,10 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 - Support switching sound output devices, with VB-Cables to simulate microphone input
 
 ### Control
-- **1.6.0 NEW** Optimize the mouse controller
+- 1.6.0 Optimize the mouse controller
   - Support gesture switching feature space, gesture: DR
   - Support extension configuration injection
-- **1.6.0 NEW** Added a new keyboard switcher
+- 1.6.0 Added a new keyboard switcher
   - Use F12 switch mode(UHID/ADB/Ctrl), F11 switch control space
 - TouchProxyEditor, supports keyboard, mouse and other control mapping methods, Windows/Linux applicable
 - Support UHID-Mouse, can realize the Android interface mouse and PC mixed use
@@ -329,6 +333,11 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 1.7.0
+  - Support Scrcpy 2.7
+  - Add UHID Gamepad protocol
+  - Upgrade to dearpygui 2.x
+  - fix bugs
 - 1.6.6
   - VirtualCam V0.1.2
   - fix bugs

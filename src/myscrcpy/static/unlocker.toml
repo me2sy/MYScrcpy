@@ -1,0 +1,20 @@
+# Config File for Unlocker
+#
+# Author: Me2sY
+# Version: 0.1.0
+
+# Android Device Serial_No
+serial = ''
+
+# check android lock status after pc locked every x seconds
+loop_sec = 3
+
+# pc unlock password
+psw = ''
+
+# auto switch to desktop after unlock
+# -1 disabled
+desktop_index = -1
+
+# power off device after pc unlock
+power_off_after_unlock = true

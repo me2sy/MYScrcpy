@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-10-27 1.7.0 Me2sY  适配 Dearpygui 2.X
+
         2024-10-13 1.6.6 Me2sY  修复获取Touchpoint缺陷
 
         2024-09-28 1.6.4 Me2sY  完善鼠标事件，适配ActionCallbackParam回调传参
@@ -22,7 +24,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.6'
+__version__ = '1.7.0'
 
 __all__ = [
     'GesAction', 'TouchPoint',
@@ -708,7 +710,7 @@ class MouseHandler:
         # 每次移动距离
         step = 1 * (1 if app_data > 0 else -1)
 
-        if dpg.is_key_down(dpg.mvKey_Control):  # Ctrl Press Then Wheel to Zoom
+        if dpg.is_key_down(dpg.mvKey_LControl) or dpg.is_key_down(dpg.mvKey_RControl):  # Ctrl Press Then Wheel to Zoom
 
             self.session.ca.f_touch_spr(
                 Action.DOWN.value, vc_draw_coord.to_scale_point_r(*sec_pos), touch_id=self.touch_id_sec(),

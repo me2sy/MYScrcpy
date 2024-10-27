@@ -5,6 +5,10 @@
     按键定义及转换
 
     Log:
+        2024-10-26 1.7.0 Me2sY
+            1. 新增Gamepad Report desc
+            2. 新增Gamepad 键值
+
         2024-09-28 1.6.4 Me2sY  新增 Move uk
 
         2024-09-18 1.6.0 Me2sY  修正 ADB 部分功能键映射
@@ -13,10 +17,12 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.4'
+__version__ = '1.7.0'
 
 __all__ = [
-    'ADBKeyCode', 'UHIDKeyCode', 'UHID_MOUSE_REPORT_DESC', 'UHID_KEYBOARD_REPORT_DESC',
+    'ADBKeyCode', 'UHIDKeyCode',
+    'UHID_MOUSE_REPORT_DESC', 'UHID_KEYBOARD_REPORT_DESC',
+    'UHID_GAMEPAD_REPORT_DESC',
     'UnifiedKey', 'UnifiedKeys',
     'KeyMapper'
 ]
@@ -52,8 +58,8 @@ class ADBKeyCode(IntEnum):
     KB_7 = 14
     KB_8 = 15
     KB_9 = 16
-    STAR = 17       # *
-    POUND = 18      # #
+    STAR = 17  # *
+    POUND = 18  # #
 
     KB_UP = 19
     KB_DOWN = 20
@@ -336,7 +342,7 @@ class UHIDKeyCode(IntEnum):
     KB_CONTROL = 224
     KB_CONTROL_L = 224
 
-    KB_SHIFT = 225      # No This One, Use Left Key
+    KB_SHIFT = 225  # No This One, Use Left Key
     KB_SHIFT_L = 225
 
     KB_ALT = 226
@@ -416,12 +422,53 @@ UHID_KEYBOARD_REPORT_DESC = bytearray([
     0xC0  # End Collection
 ])
 
+UHID_GAMEPAD_REPORT_DESC = bytearray([
+    0x05, 0x01,  # Usage Page(Generic Desktop)
+    0x09, 0x05,  # Usage(Gamepad)
+    0xA1, 0x01,  # Collection(Application)
+    0xA1, 0x00,  # Collection(Physical)
+    0x05, 0x01,  # Usage Page(Generic Desktop)
+    0x09, 0x30,  # Usage (X)   Left stick x
+    0x09, 0x31,  # Usage (Y)   Left stick y
+    0x09, 0x32,  # Usage (Z)   Right stick x
+    0x09, 0x35,  # Usage (Rz)  Right stick y
+    0x15, 0x00,  # Logical Minimum(0)
+    0x27, 0xFF, 0xFF, 0x00, 0x00,  # Logical Maximum(65535) little - endian
+    0x75, 0x10,  # Report Size(16)
+    0x95, 0x04,  # Report Count (4)
+    0x81, 0x02,  # Input (Data, Variable, Absolute): 4 bytes (X, Y, Z, Rz)
+    0x05, 0x02,  # Usage Page(Simulation Controls)
+    0x09, 0xC5,  # Usage(Brake)
+    0x09, 0xC4,  # Usage(Accelerator)
+    0x15, 0x00,  # Logical Minimum(0)
+    0x26, 0xFF, 0x7F,  # Logical Maximum(32767)
+    0x75, 0x10,  # Report Size(16)
+    0x95, 0x02,  # Report Count(2)
+    0x81, 0x02,  # Input(Data, Variable, Absolute): 2 bytes(L2, R2)
+    0x05, 0x09,  # Usage Page(Buttons)
+    0x19, 0x01,  # Usage Minimum(1)
+    0x29, 0x10,  # Usage Maximum(16)
+    0x15, 0x00,  # Logical Minimum(0)
+    0x25, 0x01,  # Logical Maximum(1)
+    0x95, 0x10,  # Report Count(16)
+    0x75, 0x01,  # Report Size(1)
+    0x81, 0x02,  # Input(Data, Variable, Absolute): 16 buttons bits
+    0x05, 0x01,  # Usage Page(Generic Desktop)
+    0x09, 0x39,  # Usage(Hat switch)
+    0x15, 0x01,  # Logical Minimum(1)
+    0x25, 0x08,  # Logical Maximum(8)
+    0x75, 0x04,  # Report Size(4)
+    0x95, 0x01,  # Report Count(1)
+    0x81, 0x42,  # Input(Data, Variable, Null State): 4 - bit value
+    0xC0,  # End Collection
+    0xC0,  # End Collection
+])
 
 DEVICE_UNKNOWN = 0
 DEVICE_KEYBOARD = 1
 DEVICE_MOUSE = 2
 DEVICE_ANDROID = 3
-DEVICE_JOYSTICK = 4
+DEVICE_GAMEPAD = 4
 
 
 @dataclass
@@ -672,6 +719,28 @@ class UnifiedKeys(NamedTuple):
     UK_A_COPY = UnifiedKey(name='A_COPY', code=678, device=DEVICE_ANDROID)
     UK_A_PASTE = UnifiedKey(name='A_PASTE', code=679, device=DEVICE_ANDROID)
     UK_A_ALLAPPS = UnifiedKey(name='A_ALLAPPS', code=684, device=DEVICE_ANDROID)
+
+    UK_GP_S = UnifiedKey(name='GP_S', code=700, device=DEVICE_GAMEPAD, value=1 << 0)
+    UK_GP_E = UnifiedKey(name='GP_E', code=701, device=DEVICE_GAMEPAD, value=1 << 1)
+    UK_GP_W = UnifiedKey(name='GP_W', code=702, device=DEVICE_GAMEPAD, value=1 << 3)
+    UK_GP_N = UnifiedKey(name='GP_N', code=703, device=DEVICE_GAMEPAD, value=1 << 4)
+    UK_GP_L1 = UnifiedKey(name='GP_L1', code=704, device=DEVICE_GAMEPAD, value=1 << 6)
+    UK_GP_R1 = UnifiedKey(name='GP_R1', code=705, device=DEVICE_GAMEPAD, value=1 << 7)
+    UK_GP_BACK = UnifiedKey(name='GP_BACK', code=706, device=DEVICE_GAMEPAD, value=1 << 10)
+    UK_GP_START = UnifiedKey(name='GP_START', code=707, device=DEVICE_GAMEPAD, value=1 << 11)
+    UK_GP_GUIDE = UnifiedKey(name='GP_GUIDE', code=708, device=DEVICE_GAMEPAD, value=1 << 12)
+    UK_GP_LS = UnifiedKey(name='GP_LS', code=709, device=DEVICE_GAMEPAD, value=1 << 13)
+    UK_GP_RS = UnifiedKey(name='GP_RS', code=710, device=DEVICE_GAMEPAD, value=1 << 14)
+
+    UK_GP_DP_U = UnifiedKey(name='GP_DP_U', code=720, device=DEVICE_GAMEPAD, value=1)
+    UK_GP_DP_D = UnifiedKey(name='GP_DP_D', code=721, device=DEVICE_GAMEPAD, value=5)
+    UK_GP_DP_L = UnifiedKey(name='GP_DP_L', code=722, device=DEVICE_GAMEPAD, value=7)
+    UK_GP_DP_R = UnifiedKey(name='GP_DP_R', code=723, device=DEVICE_GAMEPAD, value=3)
+
+    UK_GP_DP_UL = UnifiedKey(name='GP_DP_UL', code=724, device=DEVICE_GAMEPAD, value=8)
+    UK_GP_DP_UR = UnifiedKey(name='GP_DP_UR', code=725, device=DEVICE_GAMEPAD, value=2)
+    UK_GP_DP_DL = UnifiedKey(name='GP_DP_DL', code=726, device=DEVICE_GAMEPAD, value=6)
+    UK_GP_DP_DR = UnifiedKey(name='GP_DP_DR', code=727, device=DEVICE_GAMEPAD, value=4)
 
     @classmethod
     def filter_name(cls, name: str) -> UnifiedKey | None:

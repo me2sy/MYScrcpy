@@ -5,6 +5,10 @@
     工具类
 
     Log:
+        2024-10-26 1.7.0 Me2sY
+            1.适配 Scrcpy 2.7
+            2.支持 Gamepad
+
         2024-08-31 1.4.1 Me2sY  重写 KeyValueManager, 弃用 TinyDB，改用 SQLite
 
         2024-08-25 1.4.0 Me2sY  新增 ScalePointR
@@ -13,14 +17,15 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.1'
+__version__ = '1.7.0'
 
 __all__ = [
     # Params
     'project_path', 'Param', 'Action',
 
     # Keys
-    'ADBKeyCode', 'UHIDKeyCode', 'UHID_MOUSE_REPORT_DESC', 'UHID_KEYBOARD_REPORT_DESC',
+    'ADBKeyCode', 'UHIDKeyCode',
+    'UHID_MOUSE_REPORT_DESC', 'UHID_KEYBOARD_REPORT_DESC', 'UHID_GAMEPAD_REPORT_DESC',
     'UnifiedKey', 'UnifiedKeys', 'KeyMapper',
 
     # Vector

@@ -2,9 +2,10 @@
 """
     Gui Utils
     ~~~~~~~~~~~~~~~~~~
-    
 
     Log:
+        2024-10-27 1.7.0 Me2sY  适配 dearpygui 2.X
+
         2024-08-24 1.3.7 Me2sY  配合utils分离接key_mapper进行改造
 
         2024-08-21 1.3.5 Me2sY
@@ -12,7 +13,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.3.7'
+__version__ = '1.7.0'
 
 __all__ = [
     'inject_dpg_key_mapper', 'inject_pg_key_mapper'
@@ -33,7 +34,7 @@ def inject_dpg_key_mapper():
 
     key_mapper = {
         dpg.mvKey_Return: UnifiedKeys.UK_KB_ENTER,
-        dpg.mvKey_Capital: UnifiedKeys.UK_KB_CAPSLOCK,
+        dpg.mvKey_CapsLock: UnifiedKeys.UK_KB_CAPSLOCK,
         dpg.mvKey_Spacebar: UnifiedKeys.UK_KB_SPACE,
         dpg.mvKey_Prior: UnifiedKeys.UK_KB_PAGE_UP,
         dpg.mvKey_Next: UnifiedKeys.UK_KB_PAGE_DOWN,
@@ -52,8 +53,8 @@ def inject_dpg_key_mapper():
         dpg.mvKey_RShift: UnifiedKeys.UK_KB_SHIFT_R,
         dpg.mvKey_LControl: UnifiedKeys.UK_KB_CONTROL_L,
         dpg.mvKey_RControl: UnifiedKeys.UK_KB_CONTROL_R,
-        dpg.mvKey_LMenu: UnifiedKeys.UK_KB_MENU_L,
-        dpg.mvKey_RMenu: UnifiedKeys.UK_KB_MENU_R,
+        dpg.mvKey_Menu: UnifiedKeys.UK_KB_MENU_L,
+
         dpg.mvKey_Plus: UnifiedKeys.UK_KB_EQUALS,
         dpg.mvKey_Tilde: UnifiedKeys.UK_KB_BACKQUOTE,
         dpg.mvKey_Open_Brace: UnifiedKeys.UK_KB_BRACKET_L,
