@@ -11,7 +11,7 @@
 
         2024-07-28 1.0.0 Me2sY  发布初版
 
-        2024-07-23 0.1.1 Me2sY  适配 scrcpy-server-2.5
+        2024-07-23 0.1.1 Me2sY  适配 scrcpy-server-v3.2-v2.7-2.5
 
         2024-06-28 0.1.0 Me2sY  创建，形成Controller 统一处理 Resize Rotation等事件后的重绘制工作
 """

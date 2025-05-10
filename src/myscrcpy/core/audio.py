@@ -5,6 +5,10 @@
     音频相关类
 
     Log:
+        2025-04-23 3.2.0 Me2sY
+            1.增加更多 audio source
+            2.优化退出逻辑，避免卡线程
+
         2024-09-18 1.6.0 Me2sY  适配插件体系，支持输出 last_pcm
 
         2024-09-09 1.5.8 Me2sY  新增raw_stream
@@ -25,7 +29,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '3.2.0'
 
 __all__ = [
     'AudioArgs', 'AudioAdapter'
@@ -388,7 +392,16 @@ class AudioArgs(ScrcpyConnectArgs):
     """
 
     SOURCE_OUTPUT: ClassVar[str] = 'output'
+    SOURCE_PLAYBACK: ClassVar[str] = 'playback'
     SOURCE_MIC: ClassVar[str] = 'mic'
+    SOURCE_MIC_UNPROCESSED: ClassVar[str] = 'mic-unprocessed'
+    SOURCE_MIC_CAMCORDER: ClassVar[str] = 'mic-camcorder'
+    SOURCE_MIC_VOICE_RECOGNITION: ClassVar[str] = 'mic-voice-recognition'
+    SOURCE_MIC_VOICE_COMMUNICATION: ClassVar[str] = 'mic-voice-communication'
+    SOURCE_VOICE_CALL: ClassVar[str] = 'voice-call'
+    SOURCE_VOICE_CALL_UPLINK: ClassVar[str] = 'voice-call-uplink'
+    SOURCE_VOICE_CALL_DOWNLINK: ClassVar[str] = 'voice-call-downlink'
+    SOURCE_VOICE_PERFORMANCE: ClassVar[str] = 'voice-performance'
 
     CODEC_OPUS: ClassVar[str] = 'opus'
     CODEC_FLAC: ClassVar[str] = 'flac'
@@ -401,7 +414,13 @@ class AudioArgs(ScrcpyConnectArgs):
     device_index: int | None = None
 
     def __post_init__(self):
-        if self.audio_source not in [self.SOURCE_OUTPUT, self.SOURCE_MIC]:
+        if self.audio_source not in [
+            self.SOURCE_OUTPUT, self.SOURCE_PLAYBACK,
+            self.SOURCE_MIC, self.SOURCE_MIC_UNPROCESSED, self.SOURCE_MIC_CAMCORDER,
+            self.SOURCE_MIC_VOICE_RECOGNITION, self.SOURCE_MIC_VOICE_COMMUNICATION,
+            self.SOURCE_VOICE_CALL, self.SOURCE_VOICE_CALL_UPLINK, self.SOURCE_VOICE_CALL_DOWNLINK,
+            self.SOURCE_VOICE_PERFORMANCE
+        ]:
             raise ValueError(f"Invalid Audio Source: {self.audio_source}")
 
         if self.audio_codec not in [self.CODEC_OPUS, self.CODEC_FLAC, self.CODEC_RAW]:
@@ -422,7 +441,7 @@ class AudioArgs(ScrcpyConnectArgs):
         :return:
         """
         return [
-            'audio=true',
+            f"audio={'true' if self.is_activate else 'false'}",
             f"audio_codec={self.audio_codec}",
             f"audio_source={self.audio_source}"
         ]
@@ -434,6 +453,7 @@ class AudioArgs(ScrcpyConnectArgs):
             kwargs['device_index'] = AudioAdapter.get_device_index_by_name(kwargs.get('device_name'))
 
         return cls(
+            kwargs.get('is_activate', True),
             kwargs.get('audio_source', cls.SOURCE_OUTPUT),
             kwargs.get('audio_codec', cls.CODEC_RAW),
             kwargs.get('device_index', None),
@@ -518,8 +538,12 @@ class AudioAdapter(ScrcpyAdapter):
             try:
                 _ = self.conn.recv(AudioArgs.RECEIVE_FRAMES_PER_BUFFER * 2)
                 not self.mute and self.decoder.process(_)
-            except:
+            except OSError:
                 ...
+            except Exception as e:
+                logger.error(f"Audio Socket {self.conn.scid} Error: {e}")
+
+        self.is_ready = False
 
         logger.warning(f"{self.__class__.__name__} Main Thread {self.conn.scid} Closed.")
 
@@ -582,6 +606,17 @@ class AudioAdapter(ScrcpyAdapter):
         return AudioAdapter.get_output_device_info_by_index(self.player.device_index)
 
     @staticmethod
+    def get_default_device():
+        """
+            获取默认外放设备
+        :return:
+        """
+        _p = pyaudio.PyAudio()
+        info = _p.get_default_output_device_info()
+        _p.terminate()
+        return info
+
+    @staticmethod
     def get_output_devices() -> List[Mapping]:
         """
             获取播放设备信息列表
@@ -623,7 +658,7 @@ class AudioAdapter(ScrcpyAdapter):
         return None
 
     @classmethod
-    def connect(cls, adb_device: AdbDevice, audio_args: AudioArgs, **kwargs) -> 'AudioAdapter':
+    def connect(cls, adb_device: AdbDevice, audio_args: AudioArgs, **kwargs):
         """
             根据 AudioArgs 快速创建连接
         :param adb_device:
@@ -631,6 +666,9 @@ class AudioAdapter(ScrcpyAdapter):
         :param kwargs:
         :return:
         """
+        if not audio_args.is_activate:
+            return None
+
         _ = cls(Connection(audio_args))
         if _.start(adb_device, **kwargs):
             return _
@@ -669,9 +707,9 @@ if __name__ == '__main__':
         DEMO Here
     """
     from adbutils import adb
-    d = adb.device_list()[0]
+    dev = adb.device_list()[0]
 
-    aa1 = AudioAdapter.connect(d, AudioArgs(audio_codec=AudioArgs.CODEC_FLAC, audio_source=AudioArgs.SOURCE_MIC))
+    aa1 = AudioAdapter.connect(dev, AudioArgs(audio_codec=AudioArgs.CODEC_FLAC, audio_source=AudioArgs.SOURCE_MIC))
 
     time.sleep(5)
 

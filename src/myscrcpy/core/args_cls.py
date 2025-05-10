@@ -5,11 +5,13 @@
     
 
     Log:
+        2025-05-10 3.2.0 Me2sY  定版
+
         2024-08-28 1.4.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.4.0'
+__version__ = '3.2.0'
 
 __all__ = [
     'ScrcpyConnectArgs'
@@ -21,8 +23,7 @@ from dataclasses import dataclass, asdict
 @dataclass
 class ScrcpyConnectArgs:
 
-    def __init__(self, *args, **kwargs):
-        ...
+    is_activate: bool = True
 
     def to_args(self) -> list:
         """

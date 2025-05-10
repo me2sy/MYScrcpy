@@ -5,6 +5,8 @@
     连接控制
 
     Log:
+        2025-04-23 3.2.0 Me2sY  默认关闭 heartbeat
+
         2024-09-22 1.6.0 Me2sY  支持视频帧回调方法
 
         2024-08-29 1.4.0 Me2sY
@@ -12,7 +14,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '3.2.0'
 
 __all__ = [
     'Session'
@@ -42,7 +44,7 @@ class Session:
             video_args: VideoArgs = None,
             audio_args: AudioArgs = None,
             control_args: ControlArgs = None,
-            heartbeat: bool = True,
+            heartbeat: bool = False,
             frame_update_callback: Callable = None,
             **kwargs
     ):
@@ -111,17 +113,17 @@ class Session:
         """
         try:
             self.ca.stop()
-        except:
+        except Exception as e:
             ...
 
         try:
             self.aa.stop()
-        except:
+        except Exception as e:
             ...
 
         try:
             self.va.stop()
-        except:
+        except Exception as e:
             ...
 
         self.is_running = False
@@ -184,7 +186,7 @@ if __name__ == '__main__':
     sess = Session.connect_by_configs(
         d,
         **{'video': True, 'audio': True},
-        **VideoArgs(1200).dump(),
+        **VideoArgs().dump(),
         **AudioArgs(audio_codec=AudioArgs.CODEC_RAW).dump()
     )
 

@@ -1,12 +1,14 @@
-# MYScrcpy V1.7.0
+# MYScrcpy V3.2.0
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
-A [**Scrcpy**](https://github.com/Genymobile/scrcpy/) client implemented in **Python**. 
+A [**Scrcpy**](https://github.com/Genymobile/scrcpy/) client implemented in **Python**. Support Scrcpy 3.2.
 
 Includes comprehensive video, audio, and control flow parsing and presentation. **Developer-friendly, Just pip install and ready to go!**
 
-Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, Virtual Cameras, File Manager, Chinese input, unlocking screen passwords, and other features.
+V3.2.0 Uses [**Kivy**](https://kivy.org/) / [**KivyMD**](https://kivymd.readthedocs.io/en/latest/) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, and other features.
+
+[**About V1.7.0**](/files/doc/README_EN_V17.md) Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, Virtual Cameras, File Manager, Chinese input, unlocking screen passwords, and other features.
 
 In some control proxy scenarios, [**pygame**](https://www.pygame.org/) is used for mouse and keyboard control mapping GUI. 
 
@@ -14,40 +16,11 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 
 ### :tv: Video Introduction: [BiliBili](https://www.bilibili.com/video/BV1DxWKeXEyA/)
 
-![dpg Screenshot](/files/images/mys_1_3_4.jpg)
+![dpg Screenshot](/files/images/v3/main.png)
 
-## Features
-
-### Extensions
-#### VirtualCam
-  - 0.1.2 Support selecting an area. Add Status message.
-  - Automatically select the backend based on the current operating platform（OBS/unitycapture/v4l2loopback）
-  - Supports output original size or custom size, custom background fill color.
-  - Support output preview
-  - Automatically switch between landscape and portrait mode
-  - Support (Edges/Gray/Cartoon) Convert
-    - > opencv-python Required
-  - I start/stop | O pause/continued P | press then pause
-  - ![VirtualCamera To OBS](files/doc/help/extensions/virtualcam/img.png)
-
-#### Capture (For AI train 640x640 or whatever size you need)
-  - 0.1.2 WSAD adjust capture rect pos/size, e switch mode
-  - 0.1.1 Support Camera Stream Capture
-  - 0.1.1 Support Select Mode, use 'V' key
-  - CrossLine/Rect
-  - Customizable screenshot frame size, with options for original or "what you see is what you get" (WYSIWYG) capture modes.
-  - Use the 'C' key for taking screenshots, 'X' key to lock the screenshot frame position, and 'Q' to close the feature.
-  - Capture the device's 1:1 actual graphics, ensuring high-resolution output.
-  - Preview screenshot history, with options for custom save formats and batch saving.
-  - Support for magnifier mode.
-  - Support for customizing the color, random color, and thickness of CrossLine for increased visibility.
-  - ![Capture](files/doc/help/extensions/capture/img.jpg)
-
-#### Unlocker 1.7.0 NEW
-  `mysc-unlocker` Use Android Device to unlock PC in Ubuntu24 X11
-  [How To in CSDN](https://blog.csdn.net/weixin_43463913/article/details/143272573)
 
 ### Develop
+- 3.2.0 Use Kivy/KivyMD
 - 1.6.5 [HOW TO Develop a extension](https://blog.csdn.net/weixin_43463913/article/details/142685828)
 - 1.6.4 Customize extensions loading paths for convenient extensions development
 - 1.6.4 Unify mouse and keyboard callback methods and parameters, add Action filters
@@ -62,6 +35,7 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 - Minimize references on demand. Core can be deployed in **Termux**, Web GUI in LAN. [**Installation Tutorial**](files/doc/MYScrcpy_with_Termux.md)
 
 ### GUI
+- 3.2.0 Use Kivy/KivyMD as main gui. Support Windows/Ubuntu(X11)/MacOSX
 - 1.6.0 Added a bottom prompt and log bar, providing timely reminders and log viewing capabilities.
 - 1.6.0 Introducing a new plugin manager for managing plugins and custom configurations.
 - 1.6.0 Support [uiautomator2](https://github.com/openatx/uiautomator2)
@@ -80,26 +54,21 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
     - With cast screen, then all configuration, and save as the cast screen configuration combination
 - Automatically record the size of the window according to the device and the current connection parameters, and record the position of the window before rotation.
   - There is no need to adjust the window position frequently when switching between landscape and portrait
-- Support for Windows/Linux (no macOS devices yet, test later)
+- Support for Windows/Linux/MacOSX
 - Support heartbeat detection and automatic reconnection
 
 ### Video
 - Support h264/h265 video stream parsing
 - Support screen projection and camera projection at the same time according to the device conditions
 - Support for resizing Windows proportionally
-  - Equal scale to the original video scale
   - Pull the window for free scaling
   - Automatically scale the window to video based on height/width
-- Support for virtual cameras
-  - **CLI start ```mysc-t-vc```** [**HowTo**](files/doc/help/Help_tools_vc_v1.md)
-  - On, off, switch devices at any time
-  - Support OBS Virtual Camera /Unity Capture(windows)/v4l2loopback(Linux)
 
 ### Audio
 - Supports opus/flac/raw
-- Support switching sound output devices, with VB-Cables to simulate microphone input
 
 ### Control
+- 3.2.0 Support Proxy Touch with Kivy/KivyMD
 - 1.6.0 Optimize the mouse controller
   - Support gesture switching feature space, gesture: DR
   - Support extension configuration injection
@@ -130,11 +99,16 @@ Pygame provides features such as mouse hiding and key event listening, suitable 
 ## Basic Usage
 
 ### 1.1 Pypi (Recommend)
+
+**V3.2.0 Use KivyMD 2.X**
+
+[KivyMD getting-started](https://kivymd.readthedocs.io/en/latest/getting-started/)
+
+
 ```bash
 # Full installation
 pip install mysc[full]
 # NOT myscrcpy... my-scrcpy already exists in pypi...
-
 
 # Only Core
 pip install mysc
@@ -157,10 +131,10 @@ pip install mysc[gui, opus]
 
 # After install
 # For a console
-mysc-cli
+mysc-k-cli
 
 # GUI without log console
-mysc-gui
+mysc-k
 ```
 
 ### 1.2 Package Install or clone the project
@@ -169,7 +143,9 @@ pip install mysc-X.X.X.tar.gz
 pip install loguru adbutils numpy av pyaudio
 
 # GUI
-pip install pyperclip moosegesture dearpygui pygame pyvirtualcam 
+pip install kivy>=2.3.1
+pip install https://github.com/kivymd/KivyMD/archive/master.zip
+pip install pyperclip moosegesture pynput
 
 # Web GUI
 pip install nicegui
@@ -190,6 +166,7 @@ pip install pyogg opuslib
 6. **extension/** Official Extensions
 7. **~/.myscrcpy/** Localization configuration file, including running config file *.db, keypress mapping file tps/*.json
 8. **tools/*** CLI Tools
+9. **gui/k** Kivy/KivyMD GUI
 
 
 ### 3.For developer
@@ -262,11 +239,8 @@ sudo apt install build-essential python3-dev ffmpeg libav-tools portaudio19-dev
 
 #### Run DearPyGui GUI
 ```bash
-mysc-cli # With Log Console
-mysc-gui # Only GUI
-
-# or
-python -m myscrcpy.run
+mysc-k-cli # With Log Console
+mysc-k # Only GUI
 ```
 
 #### Run Nicegui GUI (WEB DEMO)
@@ -278,21 +252,21 @@ python -m myscrcpy.gui.ng.main
 ## Screenshots
 
 ### Main interface
-![dpg Screenshot](/files/images/myscrcpy_1_3_0_main.jpg)
+![dpg Screenshot](/files/images/v3/main.png)
 
 ### Right-Click Gesture Control Feature
-![dpg_gesture](/files/images/myscrcpy_1_4_2_g.jpg)
+![dpg_gesture](/files/images/v3/ges.png)
 
 ### Nicegui Web Interface（DEMO）
 ![Nicegui Demo](/files/images/Nicegui_DEMO.jpg)
 
 ### Key mapping editor (TPEditor)
-![Touch Proxy Editor](/files/images/edit_touch_proxy.jpg)
+![Touch Proxy Editor](/files/images/v3/proxy.png)
 
-### Extension Manager
-![img_1.png](/files/images/myscrcpy_1_6_0.png)
 
 ## Thoughts
+
+2025-05-10 V3.2.0 I recently welcomed a new baby, which has significantly slowed down my update pace. Thank you all for your understanding and support. In the blink of an eye, I've reached the 50+ star milestone. Your support and encouragement are what keep me going! Thank you all again!
 
 As a long-time user of Scrcpy since the 1.X era, I am amazed by its development and magical features. I've always wanted to do something, but due to other projects (laziness), I never got started.
 
@@ -316,6 +290,8 @@ Finally, I deeply appreciate the support from my beloved during the development.
 Thanks to [**Scrcpy**](https://github.com/Genymobile/scrcpy/) Project and Author [**@rom1v**](https://github.com/rom1v)
 There is not MYScrcpy without Scrcpy.
 
+Thanks to Kivy/KivyMD Dearpygui pygame adbutils and so on.
+
 Thanks to the packages/projects and the authors. Thanks to your efforts, we have such a great software development environment.
 
 Thanks to all the users for your support and assistance. Hope that MYScrcpy can become a handy tool and helper for you.
@@ -333,6 +309,10 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 3.2.0
+  - Support Scrcpy 3.2
+  - New Kivy/KivyMD GUI
+  - fix bugs
 - 1.7.0
   - Support Scrcpy 2.7
   - Add UHID Gamepad protocol

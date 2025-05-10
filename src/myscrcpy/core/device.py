@@ -32,7 +32,6 @@ __all__ = [
 ]
 
 import datetime
-import re
 import stat
 import threading
 import time

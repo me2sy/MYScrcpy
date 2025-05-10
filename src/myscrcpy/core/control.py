@@ -4,6 +4,11 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2025-04-23 3.2.0 Me2sY
+            1.适配 Scrcpy 3.2 增加 vendorId ProductId
+            2.优化关闭逻辑，避免卡线程
+            3. 2025-05-06 增加 ignore_repeat 忽略重复输入，提高控制精确度
+
         2024-10-27 1.7.0 Me2sY  新增 Gamepad
 
         2024-09-08 1.5.7 Me2sY  适配 Scrcpy 屏幕坐标
@@ -19,12 +24,13 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.7.0'
+__version__ = '3.2.0'
 
 __all__ = [
     'KeyboardWatcher', 'Gamepad',
     'ControlArgs', 'ControlAdapter'
 ]
+
 
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -383,9 +389,11 @@ class Gamepad:
         self.is_created = True
         self.send_method(
             struct.pack(
-                '>BhB', *[
+                '>BhhhB', *[
                     ControlAdapter.MessageType.UHID_CREATE.value,
                     self.gp_id,
+                    0,
+                    0,
                     len(self.name.encode())
                 ]
             ) + self.name.encode(
@@ -504,12 +512,16 @@ class ControlArgs(ScrcpyConnectArgs):
 
     def to_args(self) -> list:
         return [
-            'control=true'
+            f"control={'true' if self.is_activate else 'false'}"
         ]
 
     @classmethod
     def load(cls, **kwargs):
-        return cls(screen_status=kwargs.get('screen_status', cls.STATUS_KEEP))
+        return cls(
+            is_activate=kwargs.get('is_activate', True),
+            screen_status=kwargs.get('screen_status', cls.STATUS_KEEP),
+            clipboard=kwargs.get('clipboard', True),
+        )
 
 
 class ControlAdapter(ScrcpyAdapter):
@@ -593,7 +605,6 @@ class ControlAdapter(ScrcpyAdapter):
             self.is_running = True
             threading.Thread(target=self.main_thread).start()
             threading.Thread(target=self.clipboard_thread).start()
-            logger.info(f"Running...")
             return True
         else:
             return False
@@ -622,11 +633,12 @@ class ControlAdapter(ScrcpyAdapter):
             try:
                 self.conn.send(self.__packet_queue.get())
             except OSError:
-                self.is_running = False
+                continue
             except Exception as e:
                 logger.info(f"Exception while sending control {e}")
                 continue
 
+        self.is_ready = False
         logger.warning(f"{self.__class__.__name__} Main Thread {self.conn.scid} Closed.")
 
     def clipboard_thread(self):
@@ -646,8 +658,11 @@ class ControlAdapter(ScrcpyAdapter):
                     (_t, _size,) = struct.unpack('>Bi', _bs[:5])
                     if self.clipboard:
                         pyperclip.copy(_bs[5:5+_size].decode('utf-8'))
-            except:
+            except OSError:
                 pass
+            except Exception as e:
+                logger.info(f"Exception while sending clipboard {e}")
+                continue
 
     def set_clipboard_status(self, status: bool):
         """
@@ -658,7 +673,7 @@ class ControlAdapter(ScrcpyAdapter):
         self.clipboard = status
 
     @classmethod
-    def connect(cls, adb_device: AdbDevice, control_args: ControlArgs, *args, **kwargs) -> 'ControlAdapter':
+    def connect(cls, adb_device: AdbDevice, control_args: ControlArgs, *args, **kwargs):
         """
             根据 ControlArgs 快速创建连接
         :param adb_device:
@@ -667,6 +682,9 @@ class ControlAdapter(ScrcpyAdapter):
         :param kwargs:
         :return:
         """
+        if not control_args.is_activate:
+            return None
+
         _ = cls(Connection(control_args))
         if _.start(adb_device):
             return _
@@ -676,15 +694,16 @@ class ControlAdapter(ScrcpyAdapter):
 
     # ---------------------------- Functions ----------------------------
 
-    def send_packet(self, packet: bytes):
+    def send_packet(self, packet: bytes, ignore_repeat: bool = False):
         """
             发送控制数据包
         :param packet:
+        :param ignore_repeat: 忽略重复命令
         :return:
         """
-        if packet != self.last_packet:
+        if packet != self.last_packet or ignore_repeat:
             self.__packet_queue.put(packet)
-            self.last_packet = packet
+        self.last_packet = packet
 
     @classmethod
     def packet__screen(cls, status: bool) -> bytes:
@@ -758,24 +777,27 @@ class ControlAdapter(ScrcpyAdapter):
             x: int, y: int,
             width: int, height: int,
             touch_id: int,
+            ignore_repeat: bool = False
     ):
         self.send_packet(
             self.packet__touch(
                 action, x, y, width, height, touch_id
-            )
+            ), ignore_repeat=ignore_repeat
         )
 
     def f_touch_spr(
             self,
             action: int,
             scale_point_r: ScalePointR,
-            touch_id: int
+            touch_id: int,
+            ignore_repeat: bool = False
     ):
         """
             比例触摸，若方向不一致则无效
         :param action:
         :param scale_point_r:
         :param touch_id:
+        :param ignore_repeat: 忽略重复按键
         :return:
         """
         _coord = self.coord_hv[scale_point_r.r]
@@ -783,7 +805,7 @@ class ControlAdapter(ScrcpyAdapter):
             action,
             **_coord.to_point(scale_point_r).d,
             **_coord.d,
-            touch_id=touch_id
+            touch_id=touch_id, ignore_repeat=ignore_repeat
         )
 
     @classmethod
@@ -814,26 +836,37 @@ class ControlAdapter(ScrcpyAdapter):
             return False
 
     @classmethod
-    def packet__uhid_mouse_create(cls, mouse_name: str = 'MYScrcpy', mouse_id: int = 2):
+    def packet__uhid_mouse_create(
+            cls, mouse_name: str = 'MYScrcpy', mouse_id: int = 2, vendor_id: int = 0, product_id: int = 0,
+    ):
         """
             Create Mouse UHID
         :param mouse_name:
         :param mouse_id:
+        :param vendor_id:
+        :param product_id:
         :return:
         """
         return struct.pack(
-            '>BhB', *[
+            '>BhhhB', *[
                 cls.MessageType.UHID_CREATE.value,              # 1 type                        B
-                mouse_id,                                        # 2 mouse_id                 h
-                len(mouse_name.encode()),                        # 3 len(bytes(mouse_name))   B
-            ]
-        ) + mouse_name.encode(                                   # 4 mouse_name
-        ) + struct.pack(
-            '>H', len(UHID_MOUSE_REPORT_DESC)          # 5 report_desc_len             H
-        ) + UHID_MOUSE_REPORT_DESC                               # 6 report desc
+                mouse_id,                                           # 2 mouse_id                   h
 
-    def f_uhid_mouse_create(self, mouse_name: str = 'MYScrcpy', mouse_id: int = 2):
-        self.send_packet(self.packet__uhid_mouse_create(mouse_name, mouse_id))
+                # 3.X 新增 VendorId ProductId
+                vendor_id,                                          # 3 VendorId                    h
+                product_id,                                         # 4 ProductId                   h
+
+                len(mouse_name.encode()),                           # 5 len(bytes(mouse_name))       B
+            ]
+        ) + mouse_name.encode(                                      # 6 mouse_name
+        ) + struct.pack(
+            '>H', len(UHID_MOUSE_REPORT_DESC)               # 7 report_desc_len             H
+        ) + UHID_MOUSE_REPORT_DESC                                  # 8 report desc
+
+    def f_uhid_mouse_create(
+            self, mouse_name: str = 'MYScrcpy', mouse_id: int = 2, vendor_id: int = 0, product_id: int = 0
+    ):
+        self.send_packet(self.packet__uhid_mouse_create(mouse_name, mouse_id, vendor_id, product_id))
 
     @classmethod
     def packet__uhid_mouse_input(
@@ -871,33 +904,50 @@ class ControlAdapter(ScrcpyAdapter):
             left_button: bool = False,
             right_button: bool = False,
             middle_button: bool = False,
-            wheel_motion: int = 0
+            wheel_motion: int = 0,
+            ignore_repeat: bool = True,
     ):
         self.send_packet(self.packet__uhid_mouse_input(
             x_rel, y_rel, mouse_id, left_button, right_button, middle_button, wheel_motion
-        ))
+        ), ignore_repeat=ignore_repeat)
 
     @classmethod
-    def packet__uhid_keyboard_create(cls, keyboard_name: str = 'MYScrcpy', keyboard_id: int = 1):
+    def packet__uhid_keyboard_create(
+            cls,
+            keyboard_name: str = 'MYScrcpy', keyboard_id: int = 1, vendor_id: int = 0, product_id: int = 0,
+    ):
         """
             Scrcpy 1.7 add uhid name
         :param keyboard_name:
         :param keyboard_id:
+        :param vendor_id:
+        :param product_id:
         :return:
         """
         return struct.pack(
-            '>BhB', *[
-                cls.MessageType.UHID_CREATE.value,              # 1 type                        B
+            '>BhhhB', *[
+                cls.MessageType.UHID_CREATE.value,               # 1 type                        B
                 keyboard_id,                                        # 2 keyboard_id                 h
-                len(keyboard_name.encode()),                        # 3 len(bytes(keyboard_name))   B
-            ]
-        ) + keyboard_name.encode(                                   # 4 keyboard_name
-        ) + struct.pack(
-            '>H', len(UHID_KEYBOARD_REPORT_DESC)          # 5 report_desc_len             H
-        ) + UHID_KEYBOARD_REPORT_DESC                               # 6 report desc
 
-    def f_uhid_keyboard_create(self, keyboard_name: str = 'MYScrcpy', keyboard_id: int = 1):
-        self.send_packet(self.packet__uhid_keyboard_create(keyboard_name=keyboard_name, keyboard_id=keyboard_id))
+                # 3.X 新增 VendorId ProductId
+                vendor_id,                                          # 3 VendorId                    h
+                product_id,                                         # 4 ProductId                   h
+
+                len(keyboard_name.encode()),                        # 5 len(bytes(keyboard_name))   B
+            ]
+        ) + keyboard_name.encode(                                   # 6 keyboard_name
+        ) + struct.pack(
+            '>H', len(UHID_KEYBOARD_REPORT_DESC)            # 7 report_desc_len             H
+        ) + UHID_KEYBOARD_REPORT_DESC                               # 8 report desc
+
+    def f_uhid_keyboard_create(
+            self, keyboard_name: str = 'MYScrcpy', keyboard_id: int = 1, vendor_id: int = 0, product_id: int = 0
+    ):
+        self.send_packet(
+            self.packet__uhid_keyboard_create(
+                keyboard_name=keyboard_name, keyboard_id=keyboard_id, vendor_id=vendor_id, product_id=product_id
+            )
+        )
 
     @classmethod
     def packet__uhid_keyboard_input(
@@ -949,6 +999,14 @@ class ControlAdapter(ScrcpyAdapter):
                 device_id
             ]
         )
+
+    def f_uhid_destroy(self, device_id: int):
+        """
+            Destroy uhid device(keyboard/mouse/joystick)
+        :param device_id:
+        :return:
+        """
+        self.send_packet(self.packet__uhid_destroy(device_id))
 
 
 if __name__ == '__main__':

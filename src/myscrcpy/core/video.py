@@ -5,6 +5,8 @@
     视频相关类
 
     Log:
+        2025-04-23 3.2.0 Me2sY  优化关闭逻辑，避免卡线程
+
         2024-09-23 1.6.0 Me2sY  新增更新 Callback 方法
 
         2024-09-09 1.5.8 Me2sY  新增raw_stream
@@ -15,7 +17,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.6.0'
+__version__ = '3.2.0'
 
 __all__ = [
     'CameraArgs', 'VideoArgs',
@@ -48,13 +50,13 @@ class CameraArgs(ScrcpyConnectArgs):
     """
     camera_id: int = 0
     camera_fps: int = 15
-    camera_ar: str = None
-    camera_size: str = None
+    camera_ar: str | None = None
+    camera_size: str | None = None
 
     def __post_init__(self):
         if self.camera_id < 0:
             raise ValueError('Camera ID must be > 0')
-        if self.camera_fps <= 0:
+        if self.camera_fps is None or self.camera_fps <= 0:
             raise ValueError('Camera FPS must be > 0')
 
     def to_args(self) -> list:
@@ -72,6 +74,7 @@ class CameraArgs(ScrcpyConnectArgs):
     @classmethod
     def load(cls, **kwargs) -> 'CameraArgs':
         return cls(
+            kwargs.get('video_source') == 'camera',
             kwargs.get('camera_id', 0),
             kwargs.get('camera_fps', 15),
             kwargs.get('camera_ar', None),
@@ -126,7 +129,7 @@ class VideoArgs(ScrcpyConnectArgs):
         :return:
         """
         args = [
-            'video=true',
+            f"video={'true' if self.is_activate else 'false'}",
             f"max_size={self.max_size}",
             f"max_fps={self.fps}",
             f"video_codec={self.video_codec}",
@@ -140,18 +143,21 @@ class VideoArgs(ScrcpyConnectArgs):
     @classmethod
     def load(cls, **kwargs) -> 'VideoArgs':
         return cls(
+            is_activate=kwargs.get('is_activate', True),
             max_size=kwargs.get("max_size", 1200),
             fps=kwargs.get("fps", 60),
             buffer_size=kwargs.get("buffer_size", 131072),
             video_codec=kwargs.get("video_codec", "h264"),
             video_source=kwargs.get("video_source", "camera"),
-            camera=CameraArgs.load(**kwargs)
+            camera=CameraArgs.load(**kwargs) if kwargs.get("video_source") == 'camera' else None,
         )
 
     def dump(self) -> dict:
         d = {
+            'is_activate': self.is_activate,
             'max_size': self.max_size,
             'fps': self.fps,
+            'buffer_size': self.buffer_size,
             'video_codec': self.video_codec,
             'video_source': self.video_source
         }
@@ -273,15 +279,13 @@ class VideoAdapter(ScrcpyAdapter):
                                 target=self.frame_update_callback, args=[self._last_frame, self.frame_n]
                             ).start()
 
-            except OSError:
-                self.is_running = False
+            except OSError as e:
+                ...
             except Exception as e:
                 logger.info(f"Exception while reading frame {self.frame_n} | {e}")
                 continue
-        try:
-            code_context.close()
-        except ValueError:
-            ...
+
+        self.is_ready = False
 
         logger.warning(f"{self.__class__.__name__} Main Thread {self.conn.scid} Closed.")
 
@@ -323,7 +327,7 @@ class VideoAdapter(ScrcpyAdapter):
     @classmethod
     def connect(
             cls, adb_device: AdbDevice, video_args: VideoArgs, frame_update_callback: Callable = None, **kwargs
-    ) -> 'VideoAdapter':
+    ):
         """
             根据 VideoArgs 快速创建连接
         :param adb_device:
@@ -332,6 +336,9 @@ class VideoAdapter(ScrcpyAdapter):
         :param kwargs:
         :return:
         """
+        if not video_args.is_activate:
+            return None
+
         _ = cls(Connection(video_args), frame_update_callback)
         if _.start(adb_device):
             return _
@@ -365,9 +372,9 @@ if __name__ == '__main__':
         DEMO Here
     """
     from adbutils import adb
-    d = adb.device_list()[0]
+    dev = adb.device_list()[0]
 
-    va = VideoAdapter.connect(d, VideoArgs(1920))
+    va = VideoAdapter.connect(dev, VideoArgs(1920))
 
     # av.VideoFrame
     va.get_video_frame()
@@ -377,8 +384,8 @@ if __name__ == '__main__':
 
     va.stop()
 
-    va.start(d)
-    va.start(d)
+    va.start(dev)
+    va.start(dev)
 
     print(va.get_frame())
 

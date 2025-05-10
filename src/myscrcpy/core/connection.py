@@ -5,6 +5,8 @@
     连接类，用于创建 Scrcpy 连接，连接状态管理、自动重连等
 
     Log:
+        2025-04-23 3.2.0 Me2sY  增加 socket.shutdown / settimeout(1) 避免关闭 socket.recv 导致卡线程
+
         2024-09-09 1.5.8 Me2sY  新增自动屏蔽方法
 
         2024-08-28 1.4.0 Me2sY
@@ -13,14 +15,14 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.5.8'
+__version__ = '3.2.0'
 
 __all__ = [
     'Connection'
 ]
 
 import random
-from socket import socket
+import socket
 import threading
 import time
 
@@ -45,7 +47,7 @@ class Connection:
         self.args = args
 
         self._stream: AdbConnection | None = None
-        self.socket: socket | None = None
+        self.socket: socket.socket | None = None
 
         self.scid = self.random_scid()
 
@@ -75,13 +77,15 @@ class Connection:
         """
         if self.is_connected and self._stream is not None and not self._stream.closed:
             try:
+                self.socket.shutdown(2)
                 self.socket.close()
             except Exception as e:
                 logger.error(e)
+
             try:
                 self._stream.close()
-            except:
-                ...
+            except Exception as e:
+                logger.error(e)
 
         self.is_connected = False
         self.scid = self.random_scid()
@@ -120,7 +124,7 @@ class Connection:
         if _retry_n > self.retry_n:
             return False
 
-        # 2024-08-30 Me2sY  修复 因 clean导致的 scrcpy-server 自动删除问题，采用每个进程独立scrcpy-server_SCID
+        # 2024-08-30 Me2sY  修复 因 clean导致的 scrcpy-server-v3.2-v2.7 自动删除问题，采用每个进程独立scrcpy-server_SCID
         push_path = Param.PATH_SCRCPY_PUSH + f"_{self.scid}"
         adb_device.sync.push(Param.PATH_SCRCPY_SERVER_JAR_LOCAL, push_path)
 
@@ -144,7 +148,7 @@ class Connection:
             self._stream = adb_device.shell(cmd, stream=True, timeout=timeout)
         except AdbError as e:
             logger.error(f"Make Stream Error, Retrying... ERROR => {e}")
-            return self.connect(adb_device, extra_cmd, timeout, read_stream, _retry_n + 1)
+            return self.connect(adb_device, extra_cmd, timeout, read_stream, _retry_n=_retry_n + 1)
 
         wait_ms = 10
         _conn = None
@@ -158,17 +162,20 @@ class Connection:
 
         if _conn is None:
             logger.error('Failed to Create Socket. Reconnect')
-            return self.connect(adb_device, extra_cmd, timeout, read_stream, _retry_n + 1)
+            return self.connect(adb_device, extra_cmd, timeout, read_stream, _retry_n=_retry_n + 1)
         else:
             if _conn.recv(1) != b'\x00':
                 logger.error('Dummy Data Error! Reconnect')
-                return self.connect(adb_device, extra_cmd, timeout, read_stream, _retry_n + 1)
+                return self.connect(adb_device, extra_cmd, timeout, read_stream, _retry_n=_retry_n + 1)
 
         # Device Name
         _device_name = _conn.recv(64).decode('utf-8').rstrip('\x00')
 
         self.socket = _conn
         self.is_connected = True
+
+        # # 避免进程无法关闭
+        self.socket.settimeout(1)
 
         # 读取 Scrcpy Server 回传运行信息
         if read_stream:
@@ -195,7 +202,8 @@ class Connection:
                     msg += w
             except AdbError:
                 break
-            except ConnectionAbortedError:
+            except (ConnectionAbortedError, OSError):
+                logger.warning(f"Stream Lost Connection")
                 break
             except Exception as e:
                 logger.error(f"{device_name:<32} Stream Exception => {e}")

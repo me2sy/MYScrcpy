@@ -4,6 +4,9 @@
     ~~~~~~~~~~~~~~~~~~~~~
 
     Log:
+        2024-11-09 1.7.1 Me2sY
+            1. 修复因快速发送ADB命令产生的延迟导致的DPG崩溃
+
         2024-09-29 1.6.4 Me2sY 添加指定插件加载路径功能
 
         2024-09-27 1.6.3 Me2sY 修复部分缺陷
@@ -859,10 +862,9 @@ class Window:
             通过 ADB 发送 Key Event
         """
         if self.device:
-            if isinstance(keycode, int):
-                self.device.adb_dev.keyevent(keycode)
-            else:
-                self.device.adb_dev.keyevent(keycode.value)
+            # 2024-11-09 Me2sY  1.7.1 修复因快速发送ADB命令产生的延迟导致的DPG崩溃
+            keycode = keycode if isinstance(keycode, int) else keycode.value
+            threading.Thread(target=self.device.adb_dev.keyevent, args=[keycode]).start()
 
     def video_frame_callback(self, last_video_frame: av.VideoFrame, frame_n: int):
         """

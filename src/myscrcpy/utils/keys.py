@@ -5,6 +5,8 @@
     按键定义及转换
 
     Log:
+        2025-05-10 3.2.0 Me2sY  增加部分UnifiedKey Value值
+
         2024-10-26 1.7.0 Me2sY
             1. 新增Gamepad Report desc
             2. 新增Gamepad 键值
@@ -17,7 +19,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '1.7.0'
+__version__ = '3.2.0'
 
 __all__ = [
     'ADBKeyCode', 'UHIDKeyCode',
@@ -495,9 +497,9 @@ class UnifiedKeys(NamedTuple):
 
     # Mouse
 
-    UK_MOUSE_L = UnifiedKey(name='MOUSE_L', code=0, device=DEVICE_MOUSE)
-    UK_MOUSE_R = UnifiedKey(name='MOUSE_R', code=1, device=DEVICE_MOUSE)
-    UK_MOUSE_WHEEL = UnifiedKey(name='MOUSE_WHEEL', code=2, device=DEVICE_MOUSE)
+    UK_MOUSE_L = UnifiedKey(name='MOUSE_L', code=0, device=DEVICE_MOUSE, value='M_LEFT')
+    UK_MOUSE_R = UnifiedKey(name='MOUSE_R', code=1, device=DEVICE_MOUSE, value='M_RIGHT')
+    UK_MOUSE_WHEEL = UnifiedKey(name='MOUSE_WHEEL', code=2, device=DEVICE_MOUSE, value='M_WHEEL')
     UK_MOUSE_WHEEL_UP = UnifiedKey(name='MOUSE_WHEEL_UP', code=3, device=DEVICE_MOUSE)
     UK_MOUSE_WHEEL_DOWN = UnifiedKey(name='MOUSE_WHEEL_DOWN', code=4, device=DEVICE_MOUSE)
 
@@ -506,34 +508,34 @@ class UnifiedKeys(NamedTuple):
 
     # Keyboard
 
-    UK_KB_BACKSPACE = UnifiedKey(name='KB_BACKSPACE', code=8, device=DEVICE_KEYBOARD)
-    UK_KB_TAB = UnifiedKey(name='KB_TAB', code=9, device=DEVICE_KEYBOARD)
+    UK_KB_BACKSPACE = UnifiedKey(name='KB_BACKSPACE', code=8, device=DEVICE_KEYBOARD, value='BACKSPACE')
+    UK_KB_TAB = UnifiedKey(name='KB_TAB', code=9, device=DEVICE_KEYBOARD, value='TAB')
 
-    UK_KB_ENTER = UnifiedKey(name='KB_ENTER', code=13, device=DEVICE_KEYBOARD)
+    UK_KB_ENTER = UnifiedKey(name='KB_ENTER', code=13, device=DEVICE_KEYBOARD, value='ENTER')
 
-    UK_KB_SHIFT = UnifiedKey(name='KB_SHIFT', code=16, device=DEVICE_KEYBOARD)
-    UK_KB_CONTROL = UnifiedKey(name='KB_CONTROL', code=17, device=DEVICE_KEYBOARD)
-    UK_KB_ALT = UnifiedKey(name='KB_ALT', code=18, device=DEVICE_KEYBOARD)
+    UK_KB_SHIFT = UnifiedKey(name='KB_SHIFT', code=16, device=DEVICE_KEYBOARD, value='SHIFT')
+    UK_KB_CONTROL = UnifiedKey(name='KB_CONTROL', code=17, device=DEVICE_KEYBOARD, value='CTRL')
+    UK_KB_ALT = UnifiedKey(name='KB_ALT', code=18, device=DEVICE_KEYBOARD, value='ALT')
     UK_KB_PAUSE = UnifiedKey(name='KB_PAUSE', code=19, device=DEVICE_KEYBOARD)
     UK_KB_CAPSLOCK = UnifiedKey(name='KB_CAPSLOCK', code=20, device=DEVICE_KEYBOARD)
 
-    UK_KB_ESCAPE = UnifiedKey(name='KB_ESCAPE', code=27, device=DEVICE_KEYBOARD)
+    UK_KB_ESCAPE = UnifiedKey(name='KB_ESCAPE', code=27, device=DEVICE_KEYBOARD, value='ESCAPE')
 
-    UK_KB_SPACE = UnifiedKey(name='KB_SPACE', code=32, device=DEVICE_KEYBOARD, value=' ')
-    UK_KB_PAGE_UP = UnifiedKey(name='KB_PAGE_UP', code=33, device=DEVICE_KEYBOARD)
-    UK_KB_PAGE_DOWN = UnifiedKey(name='KB_PAGE_DOWN', code=34, device=DEVICE_KEYBOARD)
-    UK_KB_END = UnifiedKey(name='KB_END', code=35, device=DEVICE_KEYBOARD)
-    UK_KB_HOME = UnifiedKey(name='KB_HOME', code=36, device=DEVICE_KEYBOARD)
-    UK_KB_LEFT = UnifiedKey(name='KB_LEFT', code=37, device=DEVICE_KEYBOARD)
-    UK_KB_UP = UnifiedKey(name='KB_UP', code=38, device=DEVICE_KEYBOARD)
-    UK_KB_RIGHT = UnifiedKey(name='KB_RIGHT', code=39, device=DEVICE_KEYBOARD)
-    UK_KB_DOWN = UnifiedKey(name='KB_DOWN', code=40, device=DEVICE_KEYBOARD)
+    UK_KB_SPACE = UnifiedKey(name='KB_SPACE', code=32, device=DEVICE_KEYBOARD, value='SPACE')
+    UK_KB_PAGE_UP = UnifiedKey(name='KB_PAGE_UP', code=33, device=DEVICE_KEYBOARD, value='PAGE_UP')
+    UK_KB_PAGE_DOWN = UnifiedKey(name='KB_PAGE_DOWN', code=34, device=DEVICE_KEYBOARD, value='PAGE_DOWN')
+    UK_KB_END = UnifiedKey(name='KB_END', code=35, device=DEVICE_KEYBOARD, value='END')
+    UK_KB_HOME = UnifiedKey(name='KB_HOME', code=36, device=DEVICE_KEYBOARD, value='HOME')
+    UK_KB_LEFT = UnifiedKey(name='KB_LEFT', code=37, device=DEVICE_KEYBOARD, value='LEFT')
+    UK_KB_UP = UnifiedKey(name='KB_UP', code=38, device=DEVICE_KEYBOARD, value='UP')
+    UK_KB_RIGHT = UnifiedKey(name='KB_RIGHT', code=39, device=DEVICE_KEYBOARD, value='RIGHT')
+    UK_KB_DOWN = UnifiedKey(name='KB_DOWN', code=40, device=DEVICE_KEYBOARD, value='DOWN')
     UK_KB_SELECT = UnifiedKey(name='KB_SELECT', code=41, device=DEVICE_KEYBOARD)
     UK_KB_PRINT = UnifiedKey(name='KB_PRINT', code=42, device=DEVICE_KEYBOARD)
     UK_KB_EXECUTE = UnifiedKey(name='KB_EXECUTE', code=43, device=DEVICE_KEYBOARD)
     UK_KB_PRINTSCREEN = UnifiedKey(name='KB_PRINTSCREEN', code=44, device=DEVICE_KEYBOARD)
-    UK_KB_INSERT = UnifiedKey(name='KB_INSERT', code=45, device=DEVICE_KEYBOARD)
-    UK_KB_DELETE = UnifiedKey(name='KB_DELETE', code=46, device=DEVICE_KEYBOARD)
+    UK_KB_INSERT = UnifiedKey(name='KB_INSERT', code=45, device=DEVICE_KEYBOARD, value='INSERT')
+    UK_KB_DELETE = UnifiedKey(name='KB_DELETE', code=46, device=DEVICE_KEYBOARD, value='DELETE')
     UK_KB_HELP = UnifiedKey(name='KB_HELP', code=47, device=DEVICE_KEYBOARD)
 
     # Number
@@ -599,41 +601,41 @@ class UnifiedKeys(NamedTuple):
     UK_KB_NP_DIVIDE = UnifiedKey(name='KB_NP_DIVIDE', code=111, device=DEVICE_KEYBOARD, value='/')  # /
 
     # F1 - F24
-    UK_KB_F1 = UnifiedKey(name='KB_F1', code=112, device=DEVICE_KEYBOARD)
-    UK_KB_F2 = UnifiedKey(name='KB_F2', code=113, device=DEVICE_KEYBOARD)
-    UK_KB_F3 = UnifiedKey(name='KB_F3', code=114, device=DEVICE_KEYBOARD)
-    UK_KB_F4 = UnifiedKey(name='KB_F4', code=115, device=DEVICE_KEYBOARD)
-    UK_KB_F5 = UnifiedKey(name='KB_F5', code=116, device=DEVICE_KEYBOARD)
-    UK_KB_F6 = UnifiedKey(name='KB_F6', code=117, device=DEVICE_KEYBOARD)
-    UK_KB_F7 = UnifiedKey(name='KB_F7', code=118, device=DEVICE_KEYBOARD)
-    UK_KB_F8 = UnifiedKey(name='KB_F8', code=119, device=DEVICE_KEYBOARD)
-    UK_KB_F9 = UnifiedKey(name='KB_F9', code=120, device=DEVICE_KEYBOARD)
-    UK_KB_F10 = UnifiedKey(name='KB_F10', code=121, device=DEVICE_KEYBOARD)
-    UK_KB_F11 = UnifiedKey(name='KB_F11', code=122, device=DEVICE_KEYBOARD)
-    UK_KB_F12 = UnifiedKey(name='KB_F12', code=123, device=DEVICE_KEYBOARD)
-    UK_KB_F13 = UnifiedKey(name='KB_F13', code=124, device=DEVICE_KEYBOARD)
-    UK_KB_F14 = UnifiedKey(name='KB_F14', code=125, device=DEVICE_KEYBOARD)
-    UK_KB_F15 = UnifiedKey(name='KB_F15', code=126, device=DEVICE_KEYBOARD)
-    UK_KB_F16 = UnifiedKey(name='KB_F16', code=127, device=DEVICE_KEYBOARD)
-    UK_KB_F17 = UnifiedKey(name='KB_F17', code=128, device=DEVICE_KEYBOARD)
-    UK_KB_F18 = UnifiedKey(name='KB_F18', code=129, device=DEVICE_KEYBOARD)
-    UK_KB_F19 = UnifiedKey(name='KB_F19', code=130, device=DEVICE_KEYBOARD)
-    UK_KB_F20 = UnifiedKey(name='KB_F20', code=131, device=DEVICE_KEYBOARD)
-    UK_KB_F21 = UnifiedKey(name='KB_F21', code=132, device=DEVICE_KEYBOARD)
-    UK_KB_F22 = UnifiedKey(name='KB_F22', code=133, device=DEVICE_KEYBOARD)
-    UK_KB_F23 = UnifiedKey(name='KB_F23', code=134, device=DEVICE_KEYBOARD)
-    UK_KB_F24 = UnifiedKey(name='KB_F24', code=135, device=DEVICE_KEYBOARD)
-    UK_KB_F25 = UnifiedKey(name='KB_F25', code=136, device=DEVICE_KEYBOARD)
+    UK_KB_F1 = UnifiedKey(name='KB_F1', code=112, device=DEVICE_KEYBOARD, value='F1')
+    UK_KB_F2 = UnifiedKey(name='KB_F2', code=113, device=DEVICE_KEYBOARD, value='F2')
+    UK_KB_F3 = UnifiedKey(name='KB_F3', code=114, device=DEVICE_KEYBOARD, value='F3')
+    UK_KB_F4 = UnifiedKey(name='KB_F4', code=115, device=DEVICE_KEYBOARD, value='F4')
+    UK_KB_F5 = UnifiedKey(name='KB_F5', code=116, device=DEVICE_KEYBOARD, value='F5')
+    UK_KB_F6 = UnifiedKey(name='KB_F6', code=117, device=DEVICE_KEYBOARD, value='F6')
+    UK_KB_F7 = UnifiedKey(name='KB_F7', code=118, device=DEVICE_KEYBOARD, value='F7')
+    UK_KB_F8 = UnifiedKey(name='KB_F8', code=119, device=DEVICE_KEYBOARD, value='F8')
+    UK_KB_F9 = UnifiedKey(name='KB_F9', code=120, device=DEVICE_KEYBOARD, value='F9')
+    UK_KB_F10 = UnifiedKey(name='KB_F10', code=121, device=DEVICE_KEYBOARD, value='F10')
+    UK_KB_F11 = UnifiedKey(name='KB_F11', code=122, device=DEVICE_KEYBOARD, value='F11')
+    UK_KB_F12 = UnifiedKey(name='KB_F12', code=123, device=DEVICE_KEYBOARD, value='F12')
+    UK_KB_F13 = UnifiedKey(name='KB_F13', code=124, device=DEVICE_KEYBOARD, value='F13')
+    UK_KB_F14 = UnifiedKey(name='KB_F14', code=125, device=DEVICE_KEYBOARD, value='F14')
+    UK_KB_F15 = UnifiedKey(name='KB_F15', code=126, device=DEVICE_KEYBOARD, value='F15')
+    UK_KB_F16 = UnifiedKey(name='KB_F16', code=127, device=DEVICE_KEYBOARD, value='F16')
+    UK_KB_F17 = UnifiedKey(name='KB_F17', code=128, device=DEVICE_KEYBOARD, value='F17')
+    UK_KB_F18 = UnifiedKey(name='KB_F18', code=129, device=DEVICE_KEYBOARD, value='F18')
+    UK_KB_F19 = UnifiedKey(name='KB_F19', code=130, device=DEVICE_KEYBOARD, value='F19')
+    UK_KB_F20 = UnifiedKey(name='KB_F20', code=131, device=DEVICE_KEYBOARD, value='F20')
+    UK_KB_F21 = UnifiedKey(name='KB_F21', code=132, device=DEVICE_KEYBOARD, value='F21')
+    UK_KB_F22 = UnifiedKey(name='KB_F22', code=133, device=DEVICE_KEYBOARD, value='F22')
+    UK_KB_F23 = UnifiedKey(name='KB_F23', code=134, device=DEVICE_KEYBOARD, value='F23')
+    UK_KB_F24 = UnifiedKey(name='KB_F24', code=135, device=DEVICE_KEYBOARD, value='F24')
+    UK_KB_F25 = UnifiedKey(name='KB_F25', code=136, device=DEVICE_KEYBOARD, value='F25')
 
     UK_KB_NUMLOCK = UnifiedKey(name='KB_NUMLOCK', code=144, device=DEVICE_KEYBOARD)
     UK_KB_SCROLLLOCK = UnifiedKey(name='KB_SCROLLLOCK', code=145, device=DEVICE_KEYBOARD)
 
-    UK_KB_SHIFT_L = UnifiedKey(name='KB_SHIFT_L', code=160, device=DEVICE_KEYBOARD)
-    UK_KB_SHIFT_R = UnifiedKey(name='KB_SHIFT_R', code=161, device=DEVICE_KEYBOARD)
-    UK_KB_CONTROL_L = UnifiedKey(name='KB_CONTROL_L', code=162, device=DEVICE_KEYBOARD)
-    UK_KB_CONTROL_R = UnifiedKey(name='KB_CONTROL_R', code=163, device=DEVICE_KEYBOARD)
-    UK_KB_ALT_L = UnifiedKey(name='KB_ALT_L', code=164, device=DEVICE_KEYBOARD)
-    UK_KB_ALT_R = UnifiedKey(name='KB_ALT_R', code=165, device=DEVICE_KEYBOARD)
+    UK_KB_SHIFT_L = UnifiedKey(name='KB_SHIFT_L', code=160, device=DEVICE_KEYBOARD, value='SHIFT_L')
+    UK_KB_SHIFT_R = UnifiedKey(name='KB_SHIFT_R', code=161, device=DEVICE_KEYBOARD, value='SHIFT_R')
+    UK_KB_CONTROL_L = UnifiedKey(name='KB_CONTROL_L', code=162, device=DEVICE_KEYBOARD, value='CTRL_L')
+    UK_KB_CONTROL_R = UnifiedKey(name='KB_CONTROL_R', code=163, device=DEVICE_KEYBOARD, value='CTRL_R')
+    UK_KB_ALT_L = UnifiedKey(name='KB_ALT_L', code=164, device=DEVICE_KEYBOARD, value='ALT_L')
+    UK_KB_ALT_R = UnifiedKey(name='KB_ALT_R', code=165, device=DEVICE_KEYBOARD, value='ALT_R')
 
     UK_KB_MENU_L = UnifiedKey(name='KB_MENU_L', code=166, device=DEVICE_KEYBOARD)
     UK_KB_MENU_R = UnifiedKey(name='KB_MENU_R', code=167, device=DEVICE_KEYBOARD)

@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mysc"
-version = "1.7.0"
+version = "3.2.0"
 authors = [
     {name = "Me2sY", email = "me2sy@outlook.com"}
 ]
-description = "A Scrcpy client implemented in Python. Gui with dearpygui/pygame. With Video, Audio, also Control. GUI Supports Key Proxy, Extensions, window position record, right-click gesture control, File Manager, Virtual Camera, UHID Keyboard and Chinese input and more."
+description = "A Scrcpy client implemented in Python. Gui with Kivy/dearpygui/pygame. With Video, Audio, also Control. GUI Supports Key Proxy, Extensions, window position record, right-click gesture control, File Manager, Virtual Camera, UHID Keyboard and Chinese input and more."
 readme = "README.md"
 requires-python = ">= 3.11"
-keywords = ["scrcpy", "android", "adbutils", "av", "numpy", "DearPyGui", "Pygame", "adb", "pyaudio"]
+keywords = ["scrcpy", "android", "adbutils", "av", "numpy", "Kivy", "KivyMD", "DearPyGui", "Pygame", "adb", "pyaudio"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 4 - Beta",
@@ -22,11 +22,10 @@ classifiers = [
 
 dependencies = [
     # Base
-    "loguru", "adbutils", "click", "uiautomator2",
+    "loguru", "adbutils==2.7.2", "click", "uiautomator2",
 
     # Video
-    "av==12.3.0",
-    "numpy",
+    "av", "numpy",
 
     # Audio
     "pyaudio",
@@ -40,6 +39,7 @@ dependencies = [
 # For GUI USE
 gui = [
     # GUI Framework
+    "kivy>=2.3.1", "pynput",
     "dearpygui>=2.0.0",
     "pygame",
 
@@ -65,6 +65,7 @@ tools = [
 ]
 
 full = [
+    "kivy>=2.3.1",
     "dearpygui>=2.0.0", "pygame",
     "pyperclip", "moosegesture", "pyvirtualcam", "opencv-python",
     "nicegui",
@@ -80,8 +81,12 @@ mysc-t-vc = "myscrcpy.tools.virtualcam:cli"
 
 mysc-unlocker = "myscrcpy.tools.unlocker:run"
 
+mysc-k-cli = "myscrcpy.gui.k.main:run"
+
 [project.gui-scripts]
 mysc-gui = "myscrcpy.run:run"
+
+mysc-k = "myscrcpy.gui.k.main:run"
 
 
 [project.urls]

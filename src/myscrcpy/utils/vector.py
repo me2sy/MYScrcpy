@@ -165,6 +165,9 @@ class ScalePointR(NamedTuple):
     def __abs__(self) -> 'ScalePointR':
         return ScalePointR(abs(self.x), abs(self.y), self.r)
 
+    @property
+    def d(self) -> dict:
+        return self._asdict()
 
 class Coordinate(NamedTuple):
     """
