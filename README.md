@@ -10,6 +10,9 @@
 
 现代化界面风格，支持Windows/Ubuntu(X11)/MacOSX，支持多设备连接，鼠标及键盘映射。
 
+Windows11 pyinstaller 64位打包文件，MD5：d3ada6478ee8302d098876f8b9be9ef2
+https://pan.baidu.com/s/1ak-CM8lJhu_JcI6zcoK9HQ?pwd=w9ic 提取码: w9ic
+
 
 **V1.7.0** 采用 [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) 作为主要GUI。 支持编写插件，窗口位置记忆、右键手势控制、断线重连、文件管理器、虚拟摄像头投屏、中文输入，锁屏密码解锁等功能。
 
