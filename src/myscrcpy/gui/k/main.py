@@ -4,13 +4,15 @@
     ~~~~~~~~~~~~~~~~~~
     
     Log:
+        2025-05-24 3.2.1 Me2sY  重置配置文件位置
+
         2025-05-09 3.2.0 Me2sY  增加配置文件窗口
 
         2025-04-21 0.1.0 Me2sY 创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '3.2.0'
+__version__ = '3.2.1'
 
 __all__ = []
 
@@ -235,7 +237,7 @@ class MainGuiApp(MDApp):
         self.icon = Param.PATH_STATICS_ICON.__str__()
 
 
-        Window.clearcolor = MYColor.white
+        Window.clearcolor = MYColor.grey
         Window.raise_window()
         Window.show()
         self.main_gui = MainGui(self)
@@ -293,6 +295,16 @@ class MainGuiApp(MDApp):
         if config is self.config:
             if section == 'RunEnv' and key == 'theme_style':
                 self.theme_cls.theme_style = 'Light' if value == '明亮' else 'Dark'
+
+    def get_application_config(self, defaultpath='%(appdir)s/%(appname)s.ini'):
+        """
+            更改默认配置文件位置，避免权限问题导致无法写入
+        :param defaultpath:
+        :return:
+        """
+        return super(MainGuiApp, self).get_application_config(
+            Param.PATH_CONFIGS.__str__() + '/%(appname)s.ini')
+
 
 def run():
     MainGuiApp().run()

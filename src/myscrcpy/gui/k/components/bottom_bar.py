@@ -5,24 +5,30 @@
     底部栏
 
     Log:
+        2025-05-24 3.2.1 Me2sY
+            1.重写 resize 方法，屏蔽 Kivy BUG
+            2.增加友好提示，提示启动 ADB
+
         2025-05-06 3.2.0 Me2sY  去除单独中文引用
 
         2025-04-21 0.1.0 Me2sY  创建
 """
 
 __author__ = 'Me2sY'
-__version__ = '3.2.0'
+__version__ = '3.2.1'
 
 __all__ = [
     "BottomBar"
 ]
 
 import datetime
+from functools import partial
 from typing import Callable, Any
 
 from adbutils import AdbDevice
 
 from kivy import Logger
+from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.metrics import sp
 from kivy.uix.widget import Widget
@@ -39,6 +45,7 @@ from kivymd.uix.list import MDListItem, MDListItemLeadingIcon, MDListItemSupport
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.scrollview import MDScrollView
 
+from myscrcpy.gui.k import create_snack, MYCombineColors
 from myscrcpy.gui.k.components.device_panel import DevicePanel
 from myscrcpy.gui.k.handler.device_handler import MYDevice, DeviceConnectMode
 from myscrcpy.utils import Param
@@ -245,6 +252,17 @@ class BottomBar(MDBottomAppBar):
 
         self.mode = self.MODE_NONE
 
+    def on_size(self, *args) -> None:
+        """
+            2025-05-24 3.2.1 Me2sY 暂时屏蔽 Kivy Resize Bug
+        :param args:
+        :return:
+        """
+        try:
+            super().on_size(*args)
+        except Exception:
+            ...
+
     def select_device(self, caller):
         """
             选择设备
@@ -253,6 +271,14 @@ class BottomBar(MDBottomAppBar):
         """
         items = []
 
+        def _open(*args, **kwargs):
+            create_snack('加载设备列表中\n请耐心等待', MYCombineColors.orange, duration=1).open()
+
+        Clock.schedule_once(_open, 0)
+        Clock.schedule_once(partial(self._select_device, caller), 0.5)
+
+    def _select_device(self, caller, *args):
+        items = []
         for device in MYDevice.list_devices():
             items.append({
                 'text': device.connect_serial + (

@@ -1,4 +1,4 @@
-# MYScrcpy V3.2.0
+# MYScrcpy V3.2.1
 
 ### [README in English](https://github.com/me2sy/MYScrcpy/blob/main/README_EN.md)
 
@@ -6,7 +6,7 @@
 
 包含完整的视频、音频、控制解析，**开发友好，引入即用！**
 
-**V3.2.0** GUI采用 [**Kivy**](https://kivy.org/) / [**KivyMD**](https://kivymd.readthedocs.io/en/latest/) 
+**V3.2.1** GUI采用 [**Kivy**](https://kivy.org/) / [**KivyMD**](https://kivymd.readthedocs.io/en/latest/) 
 
 现代化界面风格，支持Windows/Ubuntu(X11)/MacOSX，支持多设备连接，鼠标及键盘映射。
 
@@ -18,11 +18,11 @@
 [**点击查看V1.7.0版本介绍**](/files/doc/README_V17.md)
 
 
-V3.2.0 主界面
+V3.2.1 主界面
 ![dpg Screenshot](/files/images/v3/main.png)
 
 
-## V3.2.0 功能特性
+## V3.2.1 功能特性
 - 支持多设备连接，切换
 - 全中文界面
 - 按键映射编辑器
@@ -96,7 +96,7 @@ V3.2.0 主界面
 
 ### 1.1 pypi直接安装使用（推荐）
 
-**注意 V3.2.0 采用KivyMD 2.X版本 需手动安装**
+**注意 V3.2.X以上 采用KivyMD 2.X版本 需手动安装**
 
 [KivyMD getting-started](https://kivymd.readthedocs.io/en/latest/getting-started/)
 
@@ -291,7 +291,7 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 欢迎访问我的 [Bilibili](https://space.bilibili.com/400525682)，之后会录制一些操作及讲解视频，希望大家喜欢。
 
-最后十分感谢我的挚爱在开发中给予的支持。 :heart_eyes:
+最后十分感谢我的挚爱YSY在开发中给予的支持。 :heart_eyes:
 
 
 ## 鸣谢
@@ -319,6 +319,11 @@ MYScrcpy是MY（Mxx & ysY）系列的开始，接下来，将继续开发完善�
 
 
 ## 更新日志
+- 3.2.1
+  - 屏蔽 Kivy BUG导致的问题
+  - adbutils 更新至 2.8.10
+  - 更改 配置文件保存地址，避免因权限问题导致无法存储
+  - 增加连接友好提示
 - 3.2.0
   - 支持Scrcpy 3.2.0
   - 全新现代风格界面，使用Kivy/KivyMD，大幅降低CPU/GPU占用

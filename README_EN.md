@@ -1,4 +1,4 @@
-# MYScrcpy V3.2.0
+# MYScrcpy V3.2.1
 
 ### [中文简介](https://github.com/me2sy/MYScrcpy/blob/main/README.md)
 
@@ -6,7 +6,7 @@ A [**Scrcpy**](https://github.com/Genymobile/scrcpy/) client implemented in **Py
 
 Includes comprehensive video, audio, and control flow parsing and presentation. **Developer-friendly, Just pip install and ready to go!**
 
-V3.2.0 Uses [**Kivy**](https://kivy.org/) / [**KivyMD**](https://kivymd.readthedocs.io/en/latest/) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, and other features.
+V3.2.1 Uses [**Kivy**](https://kivy.org/) / [**KivyMD**](https://kivymd.readthedocs.io/en/latest/) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, and other features.
 
 [**About V1.7.0**](/files/doc/README_EN_V17.md) Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, Virtual Cameras, File Manager, Chinese input, unlocking screen passwords, and other features.
 
@@ -309,6 +309,10 @@ This project is intended for educational purposes (graphics, sound, AI training,
 The author and this project are not responsible for any related consequences resulting from the above usage, and you should use it at your own discretion.
 
 ## ChangeLog
+- 3.2.1
+  - Fix Kivy BUG
+  - Update adbutils to 2.8.10
+  - Changed Config Save Path
 - 3.2.0
   - Support Scrcpy 3.2
   - New Kivy/KivyMD GUI

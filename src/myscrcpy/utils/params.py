@@ -4,6 +4,8 @@
     ~~~~~~~~~~~~~~~~~~
 
     Log:
+        2025-05-24 3.2.1 Me2sY
+
         2025-05-10 3.2.0 Me2sY
             1.与Scrcpy 版本号保持一致，
             2.升级 Scrcpy Server 3.2
@@ -25,7 +27,7 @@
 """
 
 __author__ = 'Me2sY'
-__version__ = '3.2.0'
+__version__ = '3.2.1'
 
 __all__ = [
     'project_path',
@@ -40,7 +42,7 @@ import pathlib
 PROJECT_NAME = 'myscrcpy'
 
 
-def project_path() -> pathlib.Path:
+def project_path() -> pathlib.Path | None:
     """
         获取项目根目录
     :return:
