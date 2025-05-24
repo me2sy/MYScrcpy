@@ -8,6 +8,11 @@ Includes comprehensive video, audio, and control flow parsing and presentation. 
 
 V3.2.1 Uses [**Kivy**](https://kivy.org/) / [**KivyMD**](https://kivymd.readthedocs.io/en/latest/) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, and other features.
 
+[**📺Video1(Bilibili)**](https://www.bilibili.com/video/BV1m7j4zCEFz/?share_source=copy_web&vd_source=a8f92f299a642cf1ab2b98b656ae6bcf)
+|
+[**📺Video2(Bilibili)**](https://www.bilibili.com/video/BV13DjbzfE2a/?share_source=copy_web&vd_source=a8f92f299a642cf1ab2b98b656ae6bcf)
+---
+
 [**About V1.7.0**](/files/doc/README_EN_V17.md) Uses [**DearPyGui**](https://github.com/hoffstadt/DearPyGui) as the main GUI. Supports Extensions, Window Position Record, Right-click gesture control, Virtual Cameras, File Manager, Chinese input, unlocking screen passwords, and other features.
 
 In some control proxy scenarios, [**pygame**](https://www.pygame.org/) is used for mouse and keyboard control mapping GUI. 

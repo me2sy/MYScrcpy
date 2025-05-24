@@ -8,6 +8,11 @@
 
 **V3.2.1** GUI采用 [**Kivy**](https://kivy.org/) / [**KivyMD**](https://kivymd.readthedocs.io/en/latest/) 
 
+
+[**📺连接设备指南(Bilibili)**](https://www.bilibili.com/video/BV1m7j4zCEFz/?share_source=copy_web&vd_source=a8f92f299a642cf1ab2b98b656ae6bcf)
+|
+[**📺功能介绍(Bilibili)**](https://www.bilibili.com/video/BV13DjbzfE2a/?share_source=copy_web&vd_source=a8f92f299a642cf1ab2b98b656ae6bcf)
+
 现代化界面风格，支持Windows/Ubuntu(X11)/MacOSX，支持多设备连接，鼠标及键盘映射。
 
 Windows11 pyinstaller 64位打包文件，MD5：d3ada6478ee8302d098876f8b9be9ef2
