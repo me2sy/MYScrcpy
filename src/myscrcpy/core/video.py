@@ -212,6 +212,7 @@ class VideoAdapter(ScrcpyAdapter):
             # 2024-09-09 1.5.8 Me2sY  分离
             self.is_running, video_c = self.decode_header(self.conn.socket)
             if not self.is_running:
+                self.conn.disconnect()
                 return False
 
             threading.Thread(target=self.main_thread).start()
