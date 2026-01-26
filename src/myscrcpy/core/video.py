@@ -272,13 +272,13 @@ class VideoAdapter(ScrcpyAdapter):
         :return:
         """
 
-        code_context = av.CodecContext.create(self.CODEC_AV_MAP.get(self.conn.args.video_codec), 'r')
+        codec_context = av.CodecContext.create(self.CODEC_AV_MAP.get(self.conn.args.video_codec), 'r')
 
         while self.is_running:
             try:
-                packets = code_context.parse(self.conn.recv(self.conn.args.buffer_size))
+                packets = codec_context.parse(self.conn.recv(self.conn.args.buffer_size))
                 for packet in packets:
-                    for _frame in code_context.decode(packet):
+                    for _frame in codec_context.decode(packet):
                         self._last_frame = _frame
                         self.frame_n += 1
                         if self.frame_update_callback:
