@@ -107,6 +107,7 @@ class VideoArgs(ScrcpyConnectArgs):
     SOURCE_CAMERA: ClassVar[str] = "camera"
 
     max_size: int = 0
+    crop: str | None = None
     fps: int = 60
     buffer_size: int = 131072
     video_codec: str = CODEC_H264
@@ -135,6 +136,8 @@ class VideoArgs(ScrcpyConnectArgs):
             f"video_codec={self.video_codec}",
             f"video_source={self.video_source}",
         ]
+        if self.crop:
+            args.append(f"crop={self.crop}")
         if self.video_source == VideoArgs.SOURCE_CAMERA and self.camera:
             args += self.camera.to_args()
 
@@ -145,6 +148,7 @@ class VideoArgs(ScrcpyConnectArgs):
         return cls(
             is_activate=kwargs.get('is_activate', True),
             max_size=kwargs.get("max_size", 1200),
+            crop=kwargs.get("crop", None),
             fps=kwargs.get("fps", 60),
             buffer_size=kwargs.get("buffer_size", 131072),
             video_codec=kwargs.get("video_codec", "h264"),
@@ -161,6 +165,8 @@ class VideoArgs(ScrcpyConnectArgs):
             'video_codec': self.video_codec,
             'video_source': self.video_source
         }
+        if self.crop:
+            d['crop'] = self.crop
         if self.camera:
             d.update(self.camera.dump())
         return d
