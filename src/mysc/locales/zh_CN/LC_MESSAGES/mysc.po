@@ -1,0 +1,365 @@
+# Chinese (Simplified) translations for MYScrcpy.
+# Copyright (C) 2026 Me2sY
+# This file is distributed under the same license as the MYScrcpy project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: mysc\n"
+"PO-Revision-Date: 2026-04-27 00:00+0800\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# ===================== 通用 =====================
+
+msgid "Confirm"
+msgstr "确认"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Saved"
+msgstr "已保存"
+
+msgid "Saved!"
+msgstr "已保存！"
+
+msgid "Create"
+msgstr "新建"
+
+msgid "Edit"
+msgstr "编辑"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Delete!"
+msgstr "已删除！"
+
+msgid "Copied!"
+msgstr "已复制！"
+
+msgid "File Name"
+msgstr "文件名"
+
+msgid "File Exists!"
+msgstr "文件已存在！"
+
+msgid "Address"
+msgstr "地址"
+
+msgid "Connect to"
+msgstr "连接至 "
+
+msgid " Timeout"
+msgstr " 超时"
+
+msgid "Success"
+msgstr "成功"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Warning"
+msgstr "警告"
+
+msgid "Info"
+msgstr "提示"
+
+msgid "Str"
+msgstr "字符串"
+
+msgid "Int"
+msgstr "整数"
+
+msgid "Float"
+msgstr "小数"
+
+msgid "Language"
+msgstr "语言"
+
+msgid "Language switched. Restart to fully apply."
+msgstr "语言已切换，重启后完全生效。"
+
+# ===================== 屏幕标题 =====================
+
+msgid "Devices"
+msgstr "设备"
+
+msgid "Connections"
+msgstr "连接"
+
+msgid "Modes"
+msgstr "模式"
+
+# ===================== 连接模式（配置模板） =====================
+
+msgid "Create Scrcpy Config"
+msgstr "新建 Scrcpy 配置"
+
+msgid "Changed Config Name"
+msgstr "修改配置名称"
+
+# 分区
+msgid "Video"
+msgstr "视频"
+
+msgid "Audio"
+msgstr "音频"
+
+msgid "Control"
+msgstr "控制"
+
+# Video 字段
+msgid "Enable Video"
+msgstr "启用视频"
+
+msgid "Video Codec"
+msgstr "视频编码"
+
+msgid "Video Buffer (ms)"
+msgstr "视频缓冲(ms)"
+
+msgid "Video Encoder"
+msgstr "视频编码器"
+
+msgid "Max FPS"
+msgstr "帧率上限"
+
+msgid "Max Size"
+msgstr "分辨率上限"
+
+msgid "Video Bit Rate"
+msgstr "视频码率"
+
+msgid "Crop"
+msgstr "裁剪区域"
+
+msgid "Video Source"
+msgstr "视频源"
+
+# Camera 字段
+msgid "Camera AR"
+msgstr "相机宽高比"
+
+msgid "Camera Facing"
+msgstr "相机朝向"
+
+msgid "Camera FPS"
+msgstr "相机帧率"
+
+msgid "Camera High Speed"
+msgstr "相机高速模式"
+
+msgid "Camera ID"
+msgstr "相机 ID"
+
+msgid "Camera Size"
+msgstr "相机分辨率"
+
+# Audio 字段
+msgid "Enable Audio"
+msgstr "启用音频"
+
+msgid "Audio Source"
+msgstr "音频源"
+
+msgid "Audio Codec"
+msgstr "音频编码"
+
+msgid "Audio Bit Rate"
+msgstr "音频码率"
+
+msgid "Audio Buffer (ms)"
+msgstr "音频缓冲(ms)"
+
+msgid "Audio Output Buffer (ms)"
+msgstr "音频输出缓冲(ms)"
+
+# Control 字段
+msgid "Enable Control"
+msgstr "启用控制"
+
+msgid "Show Touches"
+msgstr "显示触摸点"
+
+msgid "Clipboard Sync"
+msgstr "剪贴板同步"
+
+msgid "Screen Status"
+msgstr "屏幕状态"
+
+# ===================== 视频/连接界面 =====================
+
+msgid "Video Disabled"
+msgstr "视频已禁用"
+
+msgid "Video connection failed!"
+msgstr "视频连接失败！"
+
+msgid "Screen Changed!"
+msgstr "屏幕已切换！"
+
+msgid "Horizontal"
+msgstr "横屏"
+
+msgid "vertical"
+msgstr "竖屏"
+
+msgid "连接中"
+msgstr "连接中"
+
+# ===================== 音频界面 =====================
+
+msgid "Select Output Device"
+msgstr "选择输出设备"
+
+msgid "Mute"
+msgstr "静音"
+
+# ===================== 控制器（鼠标/键盘） =====================
+
+msgid "Device Not Support UHID Mode!"
+msgstr "设备不支持 UHID 模式！"
+
+msgid "Mouse Touch Mode. Mouse Middle Switch"
+msgstr "鼠标触摸模式（中键切换）"
+
+msgid "Mouse UHID Mode. Mouse Middle Key Switch"
+msgstr "鼠标 UHID 模式（中键切换）"
+
+msgid "Input"
+msgstr "输入"
+
+msgid "Proxy"
+msgstr "代理"
+
+msgid "Mode. Press F8 Switch Mode."
+msgstr " 模式（按 F8 切换）"
+
+# ===================== 控制层 / Proxy Group 菜单 =====================
+
+msgid "Changed Name"
+msgstr "修改名称"
+
+msgid "New Proxy Group"
+msgstr "新建代理组"
+
+msgid "Exit Edit Mode"
+msgstr "退出编辑模式"
+
+msgid "Edit Mode"
+msgstr "编辑模式"
+
+msgid "Control Mode"
+msgstr "控制模式"
+
+# ===================== Proxy 控件 =====================
+
+msgid "Bind"
+msgstr "绑定"
+
+msgid "Press Key.\nEsc to escape."
+msgstr "按下按键\nEsc 取消"
+
+msgid "Not Changed"
+msgstr "未更改"
+
+msgid "Button"
+msgstr "按钮"
+
+msgid "Indicator"
+msgstr "指示器"
+
+msgid "Setup"
+msgstr "设置"
+
+msgid "Lock"
+msgstr "锁定"
+
+msgid "Key"
+msgstr "按键"
+
+msgid "Simulate"
+msgstr "模拟"
+
+msgid "Free Mouse"
+msgstr "释放鼠标"
+
+msgid "Bind Error!"
+msgstr "绑定错误！"
+
+msgid "Hold"
+msgstr "按住"
+
+msgid "HoldSwitch"
+msgstr "按住切换"
+
+msgid "attach mouse"
+msgstr "附加鼠标"
+
+msgid "Instantly"
+msgstr "即时点击"
+
+msgid "hold ms"
+msgstr "按住时长(ms)"
+
+msgid "ms"
+msgstr "毫秒"
+
+msgid "Repeat"
+msgstr "重复"
+
+msgid "repeat_ms"
+msgstr "重复间隔(ms)"
+
+msgid "interval"
+msgstr "间隔"
+
+msgid "Switch"
+msgstr "切换"
+
+msgid "Aim"
+msgstr "瞄准"
+
+msgid "X轴灵敏度"
+msgstr "X轴灵敏度"
+
+msgid "Y轴灵敏度"
+msgstr "Y轴灵敏度"
+
+msgid "Joystick"
+msgstr "摇杆"
+
+msgid "Watch"
+msgstr "监视"
+
+msgid "Skill"
+msgstr "技能"
+
+msgid "Skill EA/W"
+msgstr "技能 EA/W"
+
+msgid "Skill EB/H"
+msgstr "技能 EB/H"
+
+msgid "Skill EY"
+msgstr "技能 EY"
+
+msgid "Real Y"
+msgstr "实际 Y"
+
+msgid "CalType"
+msgstr "计算方式"
+
+msgid "MouseMove"
+msgstr "鼠标移动"
+
+msgid "Skill Args"
+msgstr "技能参数"

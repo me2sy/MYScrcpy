@@ -44,6 +44,45 @@ from mysc.utils.storage import JSONStorage
 _ = init_language()
 
 
+# 字段名 → 用于 gettext 的英文 msgid。msgid 即英文显示文案；
+# 通过 _() 走 i18n 表得到目标语言文案。
+KWARGS_LABEL_KEYS = {
+    # Video
+    'video': 'Enable Video',
+    'video_codec': 'Video Codec',
+    'video_buffer': 'Video Buffer (ms)',
+    'video_encoder': 'Video Encoder',
+    'max_fps': 'Max FPS',
+    'max_size': 'Max Size',
+    'video_bit_rate': 'Video Bit Rate',
+    'crop': 'Crop',
+    'video_source': 'Video Source',
+    # Camera
+    'camera_ar': 'Camera AR',
+    'camera_facing': 'Camera Facing',
+    'camera_fps': 'Camera FPS',
+    'camera_high_speed': 'Camera High Speed',
+    'camera_id': 'Camera ID',
+    'camera_size': 'Camera Size',
+    # Audio
+    'audio': 'Enable Audio',
+    'audio_source': 'Audio Source',
+    'audio_codec': 'Audio Codec',
+    'audio_bit_rate': 'Audio Bit Rate',
+    'audio_buffer': 'Audio Buffer (ms)',
+    'audio_output_buffer': 'Audio Output Buffer (ms)',
+    # Control
+    'control': 'Enable Control',
+    'show_touches': 'Show Touches',
+    '_clipboard': 'Clipboard Sync',
+    '_screen_status': 'Screen Status',
+}
+
+
+def _kwargs_label(key: str) -> str:
+    return _(KWARGS_LABEL_KEYS.get(key, key))
+
+
 @dataclass
 class JSMode(JSONStorage):
     """
@@ -127,19 +166,19 @@ class ScreenListModeEdit(MYScreenList):
             text=_('Video'), role='small', font_style='Headline', adaptive_height=True
         )))
         for item in self.kwargs_video.to_items():
-            self.my_list.add_list_item(ListItemConfig(*item))
+            self.my_list.add_list_item(ListItemConfig(*item, label=_kwargs_label(item[0])))
         self.my_list.add_list_item(ListItemDivider())
 
         # Audio
         self.my_list.add_list_item(ListItemDivider(MDLabel(text=_('Audio'), role='small', font_style='Headline')))
         for item in self.kwargs_audio.to_items():
-            self.my_list.add_list_item(ListItemConfig(*item))
+            self.my_list.add_list_item(ListItemConfig(*item, label=_kwargs_label(item[0])))
         self.my_list.add_list_item(ListItemDivider())
 
         # Control
         self.my_list.add_list_item(ListItemDivider(MDLabel(text=_('Control'), role='small', font_style='Headline')))
         for item in self.kwargs_control.to_items():
-            self.my_list.add_list_item(ListItemConfig(*item))
+            self.my_list.add_list_item(ListItemConfig(*item, label=_kwargs_label(item[0])))
 
     def on_enter(self, *args):
         self.nav.clear_buttons()

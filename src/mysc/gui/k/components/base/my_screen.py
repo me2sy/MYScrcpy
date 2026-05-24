@@ -19,9 +19,9 @@ import uuid
 from typing import ClassVar
 
 from kivy.metrics import dp
-from kivymd.uix.appbar import MDTopAppBar, MDTopAppBarTitle
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.divider import MDDivider
+from kivymd.uix.label import MDLabel
 from kivymd.uix.screen import MDScreen
 
 from mysc.gui.k.components.base.my_list import MYList
@@ -96,15 +96,17 @@ class MYScreenList(MYScreen):
 
         super().__init__(nav, main, **kwargs)
 
-        self.layout = MDBoxLayout(orientation='vertical', padding=dp(10), spacing=dp(8))
+        self.layout = MDBoxLayout(orientation='vertical', padding=[dp(10), dp(2), dp(10), dp(10)], spacing=dp(4))
         self.add_widget(self.layout)
 
         """
             标题栏
         """
         self.layout.add_widget(
-            MDTopAppBar(
-                MDTopAppBarTitle(text=title, halign='center', font_style='Title')
+            MDLabel(
+                text=title, halign='center', valign='middle',
+                font_style='Title', role='small', bold=True,
+                size_hint_y=None, height=dp(24),
             )
         )
         self.layout.add_widget(MDDivider())

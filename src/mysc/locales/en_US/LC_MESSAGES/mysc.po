@@ -1,0 +1,13 @@
+# English (default) translations for MYScrcpy.
+# msgid 本身即为英文，无需翻译；保留空文件以便语言切换器识别该 locale。
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: mysc\n"
+"PO-Revision-Date: 2026-04-27 00:00+0800\n"
+"Language: en_US\n"
+"Language-Team: en_US\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"

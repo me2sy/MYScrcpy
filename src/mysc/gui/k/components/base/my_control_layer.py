@@ -16,6 +16,7 @@ from functools import wraps
 from typing import ClassVar, Optional, Callable
 
 from kivy.core.window import Window
+from kivy.graphics import Color, Line
 from kivy.input.providers.mouse import MouseMotionEvent
 from kivymd.uix.button import MDButton, MDButtonText
 from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
@@ -32,7 +33,7 @@ from mysc.gui.k.components.base.my_proxy import ProxyGroup, EnumMode, JSProxyGro
 from mysc.gui.k.components.base.my_snack_bar import MYSnackBarError, MYSnackBarSuccess, MYSnackBarInfo
 from mysc.gui.k.components.controller.keyboard import MYKeyboardController, ActionCallback
 from mysc.gui.k.components.controller.mouse import MYMouseController
-from mysc.gui.k.defs import init_language
+from mysc.gui.k.defs import CombineColors, init_language
 from mysc.utils.keys import UnifiedKey, UnifiedKeys, EnumAction
 from mysc.utils.vector import ScalePointR
 
@@ -138,6 +139,12 @@ class ControlLayer(MDRelativeLayout):
         self.mode: EnumMode = EnumMode.CONTROL
 
         self.pressed_keys: set[UnifiedKey] = set()
+
+        # Inspector 模式 hover 轮廓：面板打开时鼠标在屏幕上滑动 → 指针下元素动态描边。
+        # 懒初始化，关闭时只是把 alpha 置 0；canvas instructions 留着复用。
+        self._hover_color: Optional[Color] = None
+        self._hover_line: Optional[Line] = None
+        self._hover_window_bound: bool = False
 
     def cb__screen_light(self, caller):
         """
@@ -265,7 +272,131 @@ class ControlLayer(MDRelativeLayout):
         self.my_mouse_controller.activate()
         self.my_keyboard_controller.activate()
 
+        # 紧贴 keyboard 主按钮下方 —— 点击 toggle 主界面右侧的页面解析侧栏
+        self.eye_btn = self.nav.add_main_button(
+            'eye-outline', lambda *_a: self.cb__show_page_parse(),
+        )
+        self.eye_btn.theme_bg_color = 'Custom'
+        self.eye_btn.theme_icon_color = 'Custom'
+
+        # 监听 panel.is_open（BooleanProperty）：状态变 → 立刻同步图标 + 颜色。
+        # 这样无论用户从眼睛 / 面板 × / deactivate 关闭都能正确反映。
+        panel = getattr(self.screen.main, 'parse_panel', None)
+        if panel is not None:
+            panel.bind(is_open=self._on_panel_open_changed)
+            self._on_panel_open_changed(panel, panel.is_open)
+
         self.current_proxy_group and self.current_proxy_group.activate()
+
+    def _on_panel_open_changed(self, _panel, is_open: bool) -> None:
+        """眼睛按钮：open=填充图标+蓝色高亮，closed=轮廓图标+白色低调。
+        同时 toggle 鼠标 hover 轮廓的 Window 监听。"""
+        btn = getattr(self, 'eye_btn', None)
+        if btn is not None:
+            if is_open:
+                btn.icon = 'eye'
+                btn.md_bg_color = CombineColors.blue.value[0]
+                btn.icon_color = CombineColors.blue.value[1]
+            else:
+                btn.icon = 'eye-outline'
+                btn.md_bg_color = CombineColors.white.value[0]
+                btn.icon_color = CombineColors.white.value[1]
+
+        if is_open:
+            self._enable_hover_outline()
+        else:
+            self._disable_hover_outline()
+
+    # -------------------- Inspector hover 轮廓 --------------------
+
+    def _ensure_hover_canvas(self) -> None:
+        """懒创建 canvas.after 上的 Color + Line。alpha 控制显隐，避免反复增删指令。"""
+        if self._hover_line is not None:
+            return
+        with self.canvas.after:
+            self._hover_color = Color(0.10, 0.55, 1.00, 0)
+            self._hover_line = Line(rectangle=(0, 0, 0, 0), width=1.5)
+
+    def _enable_hover_outline(self) -> None:
+        self._ensure_hover_canvas()
+        if not self._hover_window_bound:
+            Window.bind(mouse_pos=self._on_inspector_mouse_pos)
+            self._hover_window_bound = True
+
+    def _disable_hover_outline(self) -> None:
+        if self._hover_window_bound:
+            try:
+                Window.unbind(mouse_pos=self._on_inspector_mouse_pos)
+            except Exception:
+                pass
+            self._hover_window_bound = False
+        if self._hover_color is not None:
+            self._hover_color.a = 0
+
+    def _hide_hover(self) -> None:
+        if self._hover_color is not None:
+            self._hover_color.a = 0
+
+    def _on_inspector_mouse_pos(self, _window, pos) -> None:
+        """Window mouse_pos 回调：把指针下元素 bounds 换算回本地坐标，更新 Line 矩形。"""
+        panel = self._inspector_panel()
+        if panel is None or not getattr(panel, 'is_open', False):
+            self._hide_hover()
+            return
+        if self.width <= 0 or self.height <= 0:
+            self._hide_hover()
+            return
+
+        # window 坐标 → ControlLayer 本地坐标（self 自身坐标系，左下原点）
+        try:
+            ox, oy = self.to_window(0, 0)
+        except Exception:
+            self._hide_hover()
+            return
+        local_x = pos[0] - ox
+        local_y = pos[1] - oy
+        if not (0 <= local_x <= self.width and 0 <= local_y <= self.height):
+            self._hide_hover()
+            return
+
+        # 与 touch2proxy 一致的 spr 换算（y 翻转）
+        spr_x = local_x / self.width
+        spr_y = 1 - local_y / self.height
+
+        el = panel.find_element_at(spr_x, spr_y)
+        bounds = el.get('bounds') if el else None
+        if not bounds or len(bounds) < 4:
+            self._hide_hover()
+            return
+
+        dw = panel.screen_w
+        dh = panel.screen_h
+        if dw <= 0 or dh <= 0:
+            self._hide_hover()
+            return
+
+        x1, y1, x2, y2 = bounds
+        rx = (x1 / dw) * self.width
+        ry = (1 - y2 / dh) * self.height
+        rw = max(1.0, ((x2 - x1) / dw) * self.width)
+        rh = max(1.0, ((y2 - y1) / dh) * self.height)
+        self._hover_line.rectangle = (rx, ry, rw, rh)
+        self._hover_color.a = 0.95
+
+    def cb__show_page_parse(self):
+        """
+            眼睛图标回调：toggle 主界面右侧的页面解析侧栏。
+
+            面板由 Main 持有（self.screen.main.parse_panel），dump + parse + 渲染
+            全部在面板内部完成（后台线程 + Clock.schedule_once 回 UI 线程）。
+            重复点击眼睛图标、面板内 × 关闭按钮、或离开 VAC 都会收起。
+            按钮图标 / 颜色由 _on_panel_open_changed 通过 bind 自动同步。
+        """
+        panel = getattr(self.screen.main, 'parse_panel', None)
+        if panel is None:
+            MYSnackBarError('parse_panel_missing')
+            return
+        panel.toggle(self.my_device)
 
     def deactivate(self):
         """
@@ -276,6 +407,15 @@ class ControlLayer(MDRelativeLayout):
         self.my_mouse_controller.deactivate()
         self.my_keyboard_controller.deactivate()
         self.current_proxy_group and self.current_proxy_group.deactivate()
+
+        # 离开 VAC 时连带收起页面解析侧栏，避免回到列表页时仍占据空间。
+        # 同时 unbind 眼睛按钮的状态回调，避免下次 activate 重复绑定。
+        panel = getattr(self.screen.main, 'parse_panel', None)
+        if panel is not None:
+            panel.unbind(is_open=self._on_panel_open_changed)
+            panel.close()
+        self._disable_hover_outline()
+        self.eye_btn = None
 
     # ------------------------------------------------
     # Proxy Group 相关
@@ -410,6 +550,14 @@ class ControlLayer(MDRelativeLayout):
     # Signals
     # ----------------------------------------------------------
 
+    def _inspector_panel(self):
+        """侧栏 Inspector：打开时屏幕禁控、点击改为选元素。"""
+        return getattr(self.screen.main, 'parse_panel', None)
+
+    def _inspector_active(self) -> bool:
+        panel = self._inspector_panel()
+        return panel is not None and getattr(panel, 'is_open', False)
+
     @staticmethod
     def touch2proxy(func):
         """
@@ -429,6 +577,15 @@ class ControlLayer(MDRelativeLayout):
                 self.cb__current_direction()
             )
             touch.ud['local_pos'] = self.to_local(*touch.pos)
+
+            # Inspector 模式：吃掉所有屏幕触摸，down 时换算 spr → 设备坐标拉
+            # 元素树中"包含该点的最深节点"高亮到面板。move/up 不再处理任何控制。
+            if self._inspector_active():
+                if func.__name__ == 'on_touch_down':
+                    self._inspector_panel().select_at(
+                        touch.ud['spr'].x, touch.ud['spr'].y,
+                    )
+                return True
 
             # 增加鼠标触控控制
             if self.current_proxy_group is None:

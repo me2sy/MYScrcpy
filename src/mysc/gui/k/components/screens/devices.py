@@ -19,13 +19,14 @@ from adbutils import adb, AdbDevice
 from adbutils.errors import AdbTimeout
 
 from kivy.clock import Clock
+from kivy.core.clipboard import Clipboard
 from kivy.metrics import dp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDIconButton, MDFabButton
 from kivymd.uix.card import MDCard
 from kivymd.uix.divider import MDDivider
 from kivymd.uix.gridlayout import MDGridLayout
-from kivymd.uix.label import MDLabel
+from kivymd.uix.label import MDIcon, MDLabel
 from kivymd.uix.textfield import MDTextField, MDTextFieldHintText
 
 from mysc.core.device import MYDevice
@@ -130,6 +131,9 @@ class ScreenListDevices(MYScreenList):
 
     TITLE = _('Devices')
 
+    # MCP 服务状态行的轮询间隔（秒）。服务状态平时几乎不变，给个温和的轮询足够。
+    MCP_STATUS_POLL_SEC = 3.0
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -139,6 +143,91 @@ class ScreenListDevices(MYScreenList):
             self.cfg.dump()
 
         self.app_cfg = self.main.app_cfg
+
+        # 在标题与列表之间插入 MCP 服务状态行
+        self._build_mcp_status_row()
+        self._mcp_status_event = Clock.schedule_interval(
+            lambda *_a: self._refresh_mcp_status(), self.MCP_STATUS_POLL_SEC,
+        )
+        self._refresh_mcp_status()
+
+    # ---------- MCP 状态行 ----------
+
+    def _build_mcp_status_row(self) -> None:
+        """
+            在 super() 已构建好的 layout 中（top_app_bar / divider / my_list）
+            把状态行插到 divider 与 my_list 之间。
+
+            行内容：● MCP <url>   [复制]
+            ● 颜色：绿 = 进程内服务运行中；红 = 未启动或已停止。
+        """
+        self._mcp_status_dot = MDIcon(
+            icon='circle', theme_icon_color='Custom',
+            icon_color=Colors.Red,
+            size_hint=(None, None), size=(dp(14), dp(14)),
+            pos_hint={'center_y': 0.5},
+        )
+        self._mcp_status_label = MDLabel(
+            text='MCP', font_style='Label', bold=True,
+            size_hint_x=None, width=dp(110),
+            halign='left', valign='middle',
+            shorten=True, shorten_from='right',
+        )
+        self._mcp_status_url = MDLabel(
+            text='', font_style='Body', halign='left', valign='middle',
+            shorten=True, shorten_from='right',
+        )
+        copy_btn = MDIconButton(
+            icon='content-copy', size_hint=(None, None),
+            on_release=lambda *_a: self._copy_mcp_url(),
+            pos_hint={'center_y': 0.5},
+        )
+
+        row = MDBoxLayout(
+            self._mcp_status_dot,
+            self._mcp_status_label,
+            self._mcp_status_url,
+            copy_btn,
+            orientation='horizontal',
+            size_hint_y=None, height=dp(36),
+            spacing=dp(8),
+            padding=[dp(12), 0, dp(8), 0],
+        )
+        # children=[my_list, divider, top_app_bar]；index=2 把 row 插到 top_app_bar 与 divider 之间（divider 上方）
+        self.layout.add_widget(row, index=2)
+
+    def _mcp_url(self) -> str:
+        """从 app_cfg 拼出当前应该使用的 stream 地址。"""
+        return f"http://{self.app_cfg.mcp_host}:{self.app_cfg.mcp_port}/stream"
+
+    def _refresh_mcp_status(self) -> None:
+        """周期性 / 手动调用，把当前进程内 MCP 服务状态反映到 UI。"""
+        try:
+            from mysc.mcp_service import is_running as _running, current_port as _port
+        except Exception:
+            running = False
+            port = None
+        else:
+            running = bool(_running())
+            port = _port()
+
+        url = (
+            f"http://{self.app_cfg.mcp_host}:{port}/stream"
+            if running and port else self._mcp_url()
+        )
+        self._mcp_status_url.text = url
+        self._mcp_status_dot.icon_color = Colors.Green if running else Colors.Red
+        self._mcp_status_label.text = (
+            'MCP ' + (_('running') if running else _('stopped'))
+        )
+
+    def _copy_mcp_url(self) -> None:
+        url = self._mcp_status_url.text or self._mcp_url()
+        try:
+            Clipboard.copy(url)
+            MYSnackBarInfo(f"{_('Copied')}: {url}")
+        except Exception as e:
+            MYSnackBarWarning(f"copy_failed: {e}")
 
     """
         Functions

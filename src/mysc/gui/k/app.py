@@ -30,10 +30,17 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.screenmanager import MDScreenManager
 
 from mysc.gui.k.components.base.my_navigation import MYNavigation
+from mysc.gui.k.components.base.my_page_parse import PageParsePanel
+from mysc.gui.k.components.base.my_snack_bar import MYSnackBarInfo
 from mysc.gui.k.components.screens.devices import ScreenListDevices
 from mysc.gui.k.components.screens.connections import ScreenConnections
+from mysc.gui.k.defs import EnumLanguage, I18N, init_language
 from mysc.utils.params import Param
 from mysc.utils.storage import JSONStorage
+
+from kivymd.uix.menu import MDDropdownMenu
+
+_ = init_language()
 
 Config.set('kivy', 'exit_on_escape', 0)
 Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
@@ -65,6 +72,14 @@ class MainConfig(JSONStorage):
 
     main_style: EnumStyle = EnumStyle.Light
 
+    # 界面语言（auto / en_US / zh_CN）
+    language: str = EnumLanguage.AUTO.value
+
+    # MCP server（streamable-http）
+    mcp_enabled: bool = True
+    mcp_host: str = '0.0.0.0'
+    mcp_port: int = 16165
+
     @property
     def size(self) -> tuple:
         return self.width, self.height
@@ -94,6 +109,10 @@ class Main(MDBoxLayout):
         # 定义右侧主界面
         self.layout = MDBoxLayout(orientation='vertical')
         self.add_widget(self.layout)
+
+        # VAC 页面解析面板（默认 width=0 收起，由 ControlLayer 上的眼睛按钮 toggle）
+        self.parse_panel = PageParsePanel(main=self)
+        self.add_widget(self.parse_panel)
 
         self.menu_items = {}
 
@@ -196,6 +215,37 @@ class Main(MDBoxLayout):
         """
         self.nav.add_fixed_button('animation', self.cb__btn_connections)
         self.nav.add_fixed_button('devices', self.cb__btn_devices)
+        self.nav.add_fixed_button('translate', self.cb__btn_language)
+
+    def cb__btn_language(self, caller):
+        """
+            语言切换菜单
+        :param caller:
+        :return:
+        """
+        items = [
+            dict(
+                text=lang.display_name,
+                leading_icon='check' if self.app_cfg.language == lang.value else 'translate',
+                on_release=lambda *_args, _lang=lang: menu.dismiss() or self._switch_language(_lang),
+            )
+            for lang in EnumLanguage
+        ]
+        menu = MDDropdownMenu(caller=caller, items=items)
+        menu.open()
+
+    def _switch_language(self, lang: EnumLanguage):
+        """
+            应用并持久化语言。class-level 字符串需重启生效。
+        :param lang:
+        :return:
+        """
+        if self.app_cfg.language == lang.value:
+            return
+        self.app_cfg.language = lang.value
+        self.app_cfg.dump()
+        I18N.set_language(lang.value)
+        MYSnackBarInfo(_('Language switched. Restart to fully apply.'))
 
     def cb__btn_devices(self, caller):
         """
@@ -217,6 +267,13 @@ class Main(MDBoxLayout):
 class MYScrcpyApp(MDApp):
 
     def on_stop(self):
+        # 优雅关闭 MCP server（daemon 线程会随进程结束，但优先尝试 graceful）
+        try:
+            from mysc.mcp_service import stop as _mcp_stop, is_running as _mcp_running
+            if _mcp_running():
+                _mcp_stop()
+        except Exception:
+            ...
         self.app_cfg.dump()
 
     def build(self):
@@ -228,8 +285,22 @@ class MYScrcpyApp(MDApp):
         if self.app_cfg is None:
             self.app_cfg = MainConfig('main')
 
+        # 应用语言设置（defs.py 模块加载时已读过一次，这里再确认一次以防配置写入更新）
+        I18N.set_language(self.app_cfg.language or EnumLanguage.AUTO.value)
+
         self.theme_cls.theme_style = self.app_cfg.main_style
         self.icon = Param.PATH_STATICS.joinpath('mysc.ico').__str__()
+
+        # 启动 MCP server（streamable-http）守护线程
+        if self.app_cfg.mcp_enabled:
+            try:
+                from mysc.mcp_service import start_in_thread as _mcp_start
+                from loguru import logger
+                port = _mcp_start(host=self.app_cfg.mcp_host, port=self.app_cfg.mcp_port)
+                logger.info(f"| - MCP server listening on http://{self.app_cfg.mcp_host}:{port}/stream")
+            except Exception as e:
+                from loguru import logger
+                logger.warning(f"| ! MCP server failed to start: {e}")
 
         return Main(app_cfg=self.app_cfg, md_bg_color=self.theme_cls.backgroundColor)
 

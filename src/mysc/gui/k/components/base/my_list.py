@@ -57,6 +57,7 @@ class ListItemConfig(ListItemBase):
                 bool | str | int | float | Enum
             ],
             value: Optional[Any] = None,
+            label: Optional[str] = None,
             *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -64,11 +65,12 @@ class ListItemConfig(ListItemBase):
         self.key = key
         self.value_type = value_type
         self.value = value
+        self.label = label or key
 
         self.value_widget = None
 
         if self.value_type is bool:
-            self.add_widget(MDLabel(text=key, size_hint_x=0.7))
+            self.add_widget(MDLabel(text=self.label, size_hint_x=0.7))
             self.value_widget = MDSwitch()
             if self.value is not None:
                 self.value_widget.active = self.value
@@ -77,7 +79,7 @@ class ListItemConfig(ListItemBase):
 
         elif self.value_type is str:
             self.value_widget = MDTextField(
-                MDTextFieldHintText(text=self.key),
+                MDTextFieldHintText(text=self.label),
                 MDTextFieldHelperText(text=_('Str')),
                 mode='filled'
             )
@@ -91,7 +93,7 @@ class ListItemConfig(ListItemBase):
 
         elif self.value_type is int:
             self.value_widget = MDTextField(
-                MDTextFieldHintText(text=self.key),
+                MDTextFieldHintText(text=self.label),
                 MDTextFieldHelperText(text=_('Int')),
                 mode='filled', input_filter='int', input_type='number'
             )
@@ -105,7 +107,7 @@ class ListItemConfig(ListItemBase):
 
         elif self.value_type is float:
             self.value_widget = MDTextField(
-                MDTextFieldHintText(text=self.key),
+                MDTextFieldHintText(text=self.label),
                 MDTextFieldHelperText(text=_('Float')),
                 mode='filled', input_filter='float', input_type='number'
             )
@@ -117,7 +119,7 @@ class ListItemConfig(ListItemBase):
 
         elif issubclass(self.value_type, Enum):
 
-            self.add_widget(MDLabel(text=key, size_hint_x=0.3))
+            self.add_widget(MDLabel(text=self.label, size_hint_x=0.3))
 
             if len(self.value_type) < 4:
                 self.value_widget = MDSegmentedButton()
@@ -160,7 +162,7 @@ class ListItemConfig(ListItemBase):
                 if self.value is not None:
                     self.selected_item.text = str(self.value)
                 else:
-                    self.selected_item.text = _(self.key)
+                    self.selected_item.text = self.label
 
         else:
             raise TypeError(f"{self.value_type} is not supported.")
